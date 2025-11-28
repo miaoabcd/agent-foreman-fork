@@ -32,7 +32,7 @@ import {
   getRecentEntries,
 } from "./progress-log.js";
 import { generateInitScript, generateMinimalInitScript } from "./init-script.js";
-import { generateClaudeMd, mergeClaudeMd, generateHarnessSection, generateFeatureGuidance } from "./prompts.js";
+import { generateClaudeMd, generateHarnessSection, generateFeatureGuidance } from "./prompts.js";
 import type { InitMode, Feature } from "./types.js";
 
 /**
@@ -402,12 +402,11 @@ ${harnessSection}
 \`\`\`
 
 ## Rules:
-1. If the existing file already has a "Long-Task Harness" section or agent-foreman markers, replace it with the new section
+1. If the existing file already has a "Long-Task Harness" section, replace it with the new section
 2. If the existing file doesn't have the harness section, append it at the END of the file
 3. Preserve ALL existing content that is not related to agent-foreman
 4. Do NOT modify, delete, or reorganize any existing sections (like "Project Instructions", custom rules, etc.)
 5. Keep the document structure clean and readable
-6. The harness section should be clearly separated from existing content
 
 ## Output:
 Return ONLY the complete merged CLAUDE.md content, nothing else. No explanations, no code blocks, just the raw markdown content.`;
@@ -418,11 +417,11 @@ Return ONLY the complete merged CLAUDE.md content, nothing else. No explanations
       await fs.writeFile(claudeMdPath, result.output.trim() + "\n");
       console.log(chalk.green("✓ Updated CLAUDE.md (merged by AI)"));
     } else {
-      // Fallback to programmatic merge
-      console.log(chalk.yellow("  AI merge failed, using fallback merge..."));
-      const mergedContent = mergeClaudeMd(existingClaudeMd, goal);
+      // Simple fallback: append at the end
+      console.log(chalk.yellow("  AI merge failed, appending harness section..."));
+      const mergedContent = existingClaudeMd.trimEnd() + "\n\n" + harnessSection + "\n";
       await fs.writeFile(claudeMdPath, mergedContent);
-      console.log(chalk.green("✓ Updated CLAUDE.md (fallback merge)"));
+      console.log(chalk.green("✓ Updated CLAUDE.md (appended)"));
     }
   } else {
     // Create new CLAUDE.md

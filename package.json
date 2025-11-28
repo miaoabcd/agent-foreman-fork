@@ -1,0 +1,54 @@
+{
+  "name": "agent-foreman",
+  "version": "0.1.0",
+  "description": "Long Task Harness for AI agents - feature-driven development with external memory",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "agent-foreman": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "plugins",
+    "templates"
+  ],
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc && chmod +x dist/index.js",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1",
+    "chalk": "^5.3.0",
+    "glob": "^10.3.10",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "@types/yargs": "^17.0.33",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3",
+    "vitest": "^4.0.14"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "long-task",
+    "harness",
+    "feature-driven",
+    "claude",
+    "claude-code",
+    "plugin"
+  ],
+  "author": "Lukin <mylukin@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mylukin/agent-foreman.git"
+  },
+  "homepage": "https://github.com/mylukin/agent-foreman"
+}

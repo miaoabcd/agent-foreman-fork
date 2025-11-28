@@ -146,9 +146,15 @@ async function main() {
             type: "boolean",
             default: false,
             describe: "Show plan without making changes",
+          })
+          .option("check", {
+            alias: "c",
+            type: "boolean",
+            default: false,
+            describe: "Run basic tests before showing next task",
           }),
       async (argv) => {
-        await runStep(argv.feature_id, argv.dryRun);
+        await runStep(argv.feature_id, argv.dryRun, argv.check);
       }
     )
     .command(
@@ -358,15 +364,116 @@ async function runInit(goal: string, mode: InitMode, verbose: boolean) {
   console.log(chalk.gray("Next: Run 'agent-foreman step' to start working on features"));
 }
 
-async function runStep(featureId: string | undefined, dryRun: boolean) {
+async function runStep(featureId: string | undefined, dryRun: boolean, runCheck: boolean = false) {
   const cwd = process.cwd();
+  const { spawnSync } = await import("node:child_process");
 
+  console.log(chalk.bold.blue("\n═══════════════════════════════════════════════════════════════"));
+  console.log(chalk.bold.blue("                    EXTERNAL MEMORY SYNC"));
+  console.log(chalk.bold.blue("═══════════════════════════════════════════════════════════════\n"));
+
+  // ─────────────────────────────────────────────────────────────────
+  // 1. Current Directory (pwd)
+  // ─────────────────────────────────────────────────────────────────
+  console.log(chalk.bold("📁 Current Directory:"));
+  console.log(chalk.white(`   ${cwd}\n`));
+
+  // ─────────────────────────────────────────────────────────────────
+  // 2. Git History (recent commits)
+  // ─────────────────────────────────────────────────────────────────
+  console.log(chalk.bold("📜 Recent Git Commits:"));
+  const gitLog = spawnSync("git", ["log", "--oneline", "-5"], { cwd, encoding: "utf-8" });
+  if (gitLog.status === 0 && gitLog.stdout.trim()) {
+    gitLog.stdout.trim().split("\n").forEach((line) => {
+      console.log(chalk.gray(`   ${line}`));
+    });
+  } else {
+    console.log(chalk.yellow("   No git history found"));
+  }
+  console.log("");
+
+  // ─────────────────────────────────────────────────────────────────
+  // 3. Progress Log (recent entries)
+  // ─────────────────────────────────────────────────────────────────
+  console.log(chalk.bold("📝 Recent Progress:"));
+  const recentEntries = await getRecentEntries(cwd, 5);
+  if (recentEntries.length > 0) {
+    for (const entry of recentEntries) {
+      const typeColor =
+        entry.type === "INIT" ? chalk.blue :
+        entry.type === "STEP" ? chalk.green :
+        entry.type === "CHANGE" ? chalk.yellow : chalk.magenta;
+      console.log(
+        chalk.gray(`   ${entry.timestamp.substring(0, 16)} `) +
+        typeColor(`[${entry.type}]`) +
+        chalk.white(` ${entry.summary}`)
+      );
+    }
+  } else {
+    console.log(chalk.yellow("   No progress entries yet"));
+  }
+  console.log("");
+
+  // ─────────────────────────────────────────────────────────────────
+  // 4. Feature List Status
+  // ─────────────────────────────────────────────────────────────────
   const featureList = await loadFeatureList(cwd);
   if (!featureList) {
-    console.log(chalk.red("✗ No feature list found. Run 'agent-foreman init <goal>' first."));
+    console.log(chalk.red("✗ No feature list found. Run 'agent-foreman init' first."));
     process.exit(1);
   }
 
+  const stats = getFeatureStats(featureList.features);
+  const completion = getCompletionPercentage(featureList.features);
+
+  console.log(chalk.bold("📊 Feature Status:"));
+  console.log(chalk.green(`   ✓ Passing: ${stats.passing}`) +
+    chalk.red(` | ✗ Failing: ${stats.failing}`) +
+    chalk.yellow(` | ⚠ Review: ${stats.needs_review}`) +
+    chalk.gray(` | Blocked: ${stats.blocked}`));
+
+  const barWidth = 30;
+  const filledWidth = Math.round((completion / 100) * barWidth);
+  const progressBar = chalk.green("█".repeat(filledWidth)) + chalk.gray("░".repeat(barWidth - filledWidth));
+  console.log(chalk.white(`   Progress: [${progressBar}] ${completion}%\n`));
+
+  // ─────────────────────────────────────────────────────────────────
+  // 5. Run Basic Tests (optional --check flag)
+  // ─────────────────────────────────────────────────────────────────
+  if (runCheck) {
+    console.log(chalk.bold("🧪 Running Basic Tests:"));
+    const initScript = path.join(cwd, "ai/init.sh");
+    try {
+      await fs.access(initScript);
+      const testResult = spawnSync("bash", [initScript, "check"], {
+        cwd,
+        encoding: "utf-8",
+        timeout: 60000,
+      });
+      if (testResult.status === 0) {
+        console.log(chalk.green("   ✓ All checks passed"));
+      } else {
+        console.log(chalk.red("   ✗ Some checks failed:"));
+        if (testResult.stdout) {
+          testResult.stdout.split("\n").slice(0, 10).forEach((line) => {
+            if (line.trim()) console.log(chalk.gray(`   ${line}`));
+          });
+        }
+        if (testResult.stderr) {
+          testResult.stderr.split("\n").slice(0, 5).forEach((line) => {
+            if (line.trim()) console.log(chalk.red(`   ${line}`));
+          });
+        }
+      }
+    } catch {
+      console.log(chalk.yellow("   ai/init.sh not found, skipping tests"));
+    }
+    console.log("");
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // 6. Select Next Feature
+  // ─────────────────────────────────────────────────────────────────
   let feature: Feature | undefined;
 
   if (featureId) {
@@ -383,11 +490,12 @@ async function runStep(featureId: string | undefined, dryRun: boolean) {
     }
   }
 
-  // Display feature details
-  console.log("");
-  console.log(chalk.bold.blue(`📋 Selected Feature: ${feature.id}`));
-  console.log(chalk.gray(`   Module: ${feature.module}`));
-  console.log(chalk.gray(`   Priority: ${feature.priority}`));
+  console.log(chalk.bold.blue("═══════════════════════════════════════════════════════════════"));
+  console.log(chalk.bold.blue("                     NEXT TASK"));
+  console.log(chalk.bold.blue("═══════════════════════════════════════════════════════════════\n"));
+
+  console.log(chalk.bold(`📋 Feature: ${chalk.cyan(feature.id)}`));
+  console.log(chalk.gray(`   Module: ${feature.module} | Priority: ${feature.priority}`));
   console.log(
     chalk.gray(`   Status: `) +
       (feature.status === "passing"
@@ -397,6 +505,7 @@ async function runStep(featureId: string | undefined, dryRun: boolean) {
           : chalk.red(feature.status))
   );
   console.log("");
+  console.log(chalk.bold("   Description:"));
   console.log(chalk.white(`   ${feature.description}`));
   console.log("");
   console.log(chalk.bold("   Acceptance Criteria:"));
@@ -415,15 +524,15 @@ async function runStep(featureId: string | undefined, dryRun: boolean) {
   }
 
   console.log("");
-  console.log(chalk.gray("   ─────────────────────────────────────────"));
-  console.log(chalk.gray("   When done, run: agent-foreman complete " + feature.id));
-  console.log("");
+  console.log(chalk.bold.blue("═══════════════════════════════════════════════════════════════"));
+  console.log(chalk.gray("   When done, run: ") + chalk.cyan(`agent-foreman complete ${feature.id}`));
+  console.log(chalk.bold.blue("═══════════════════════════════════════════════════════════════\n"));
 
   if (dryRun) {
     console.log(chalk.yellow("   [Dry run - no changes made]"));
   }
 
-  // Output feature guidance
+  // Output feature guidance (for AI consumption)
   console.log(generateFeatureGuidance(feature));
 }
 

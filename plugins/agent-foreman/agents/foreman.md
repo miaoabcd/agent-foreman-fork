@@ -64,7 +64,7 @@ agent-foreman survey
 cat docs/PROJECT_SURVEY.md
 
 # 3. Initialize harness (uses survey for faster feature generation)
-agent-foreman init "Project goal" --mode merge
+agent-foreman init "Project goal"
 # → Reads survey to generate features
 # → Automatically commits harness files
 
@@ -175,9 +175,9 @@ npx agent-foreman status
 
 ## Related Skills
 
-- `/project-survey` - Analyze existing projects
-- `/init-harness` - Initialize the harness
-- `/feature-step` - Work on features
+- `project-survey` - Analyze existing projects
+- `init-harness` - Initialize the harness
+- `feature-step` - Work on features
 
 ---
 

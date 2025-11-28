@@ -16,9 +16,7 @@ Automatically invoke this skill when:
 - **Understanding codebase structure** before making changes
 - **Identifying implemented features** from routes and tests
 
-**Note:** For new/empty projects, skip this skill and use `/init-harness` directly with your goal.
-
-> 注意：对于新的/空的项目，跳过此技能，直接使用 `/init-harness` 并提供你的目标。
+**Note:** For new/empty projects, skip this skill and use `init-harness` directly with your goal.
 
 ## What It Does
 
@@ -143,7 +141,7 @@ agent-foreman survey
 cat docs/PROJECT_SURVEY.md
 
 # 3. If satisfied, initialize harness (uses survey)
-agent-foreman init "Project goal" --mode merge
+agent-foreman init "Project goal"
 ```
 
 ### New Project (Skip Survey)

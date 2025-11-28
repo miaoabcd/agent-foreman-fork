@@ -56,7 +56,7 @@ agent-foreman init "goal"
 ### Merge Mode (default)
 
 ```bash
-agent-foreman init "Project goal" --mode merge
+agent-foreman init "Project goal"
 ```
 
 - Keeps existing features unchanged
@@ -220,7 +220,7 @@ agent-foreman status
 agent-foreman survey
 
 # Then initialize (uses survey for faster feature generation)
-agent-foreman init "Continue development on e-commerce platform" --mode merge
+agent-foreman init "Continue development on e-commerce platform"
 
 # Start working
 agent-foreman step

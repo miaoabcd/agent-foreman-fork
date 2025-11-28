@@ -10,6 +10,7 @@ import {
   generateAISurveyMarkdown,
   generateFeaturesFromSurvey,
   generateFeaturesFromGoal,
+  aiScanProject,
   type AIAnalysisResult,
 } from "../src/ai-scanner.js";
 import type { DirectoryStructure, ProjectSurvey } from "../src/types.js";
@@ -20,7 +21,7 @@ vi.mock("../src/agents.js", () => ({
   checkAvailableAgents: vi.fn(() => [{ name: "gemini", available: true }]),
 }));
 
-import { callAnyAvailableAgent } from "../src/agents.js";
+import { callAnyAvailableAgent, checkAvailableAgents } from "../src/agents.js";
 
 describe("AI Scanner", () => {
   describe("aiResultToSurvey", () => {
@@ -446,6 +447,202 @@ describe("AI Scanner", () => {
           preferredOrder: ["gemini", "codex", "claude"],
         })
       );
+    });
+  });
+
+  describe("aiScanProject", () => {
+    beforeEach(() => {
+      vi.mocked(callAnyAvailableAgent).mockReset();
+      // Ensure at least one agent is available by default
+      vi.mocked(checkAvailableAgents).mockReturnValue([
+        { name: "gemini", available: true },
+        { name: "claude", available: false },
+        { name: "codex", available: false },
+      ]);
+    });
+
+    it("should call agent with project path in prompt", async () => {
+      const mockResponse = JSON.stringify({
+        techStack: {
+          language: "typescript",
+          framework: "express",
+          buildTool: "tsc",
+          testFramework: "vitest",
+          packageManager: "npm",
+        },
+        modules: [{ name: "core", path: "src", description: "Core module", status: "complete" }],
+        features: [{ id: "core.init", description: "Initialize", module: "core", source: "code", confidence: 0.9 }],
+        completion: { overall: 80, notes: ["Well structured"] },
+        commands: { install: "npm install", dev: "npm run dev", build: "npm run build", test: "npm test" },
+        summary: "A TypeScript project",
+        recommendations: ["Add more tests"],
+      });
+
+      vi.mocked(callAnyAvailableAgent).mockResolvedValue({
+        success: true,
+        output: mockResponse,
+        agentUsed: "gemini",
+      });
+
+      const result = await aiScanProject("/test/project/path");
+
+      expect(result.success).toBe(true);
+      expect(callAnyAvailableAgent).toHaveBeenCalledWith(
+        expect.stringContaining("/test/project/path"),
+        expect.objectContaining({
+          cwd: "/test/project/path",
+        })
+      );
+    });
+
+    it("should pass cwd option to agent for autonomous exploration", async () => {
+      const mockResponse = JSON.stringify({
+        techStack: { language: "python", framework: "fastapi", buildTool: "pip", testFramework: "pytest", packageManager: "pip" },
+        modules: [],
+        features: [],
+        completion: { overall: 0, notes: [] },
+        commands: {},
+        summary: "Python project",
+        recommendations: [],
+      });
+
+      vi.mocked(callAnyAvailableAgent).mockResolvedValue({
+        success: true,
+        output: mockResponse,
+        agentUsed: "claude",
+      });
+
+      await aiScanProject("/my/python/project");
+
+      expect(callAnyAvailableAgent).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          cwd: "/my/python/project",
+          preferredOrder: ["gemini", "codex", "claude"],
+        })
+      );
+    });
+
+    it("should return error when no agents available", async () => {
+      // Override the mock to return no available agents
+      vi.mocked(checkAvailableAgents).mockReturnValue([
+        { name: "claude", available: false },
+        { name: "gemini", available: false },
+        { name: "codex", available: false },
+      ]);
+
+      const result = await aiScanProject("/test/path");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("No AI agents available");
+    });
+
+    it("should return parsed AI analysis result on success", async () => {
+      const mockResponse = JSON.stringify({
+        techStack: {
+          language: "go",
+          framework: "gin",
+          buildTool: "go build",
+          testFramework: "go test",
+          packageManager: "go mod",
+        },
+        modules: [
+          { name: "api", path: "internal/api", description: "REST API handlers", status: "partial" },
+          { name: "db", path: "internal/db", description: "Database layer", status: "complete" },
+        ],
+        features: [
+          { id: "api.users.list", description: "List users", module: "api", source: "route", confidence: 0.95 },
+          { id: "api.users.create", description: "Create user", module: "api", source: "route", confidence: 0.95 },
+        ],
+        completion: { overall: 70, notes: ["Missing tests for API handlers"] },
+        commands: { install: "go mod download", dev: "go run .", build: "go build", test: "go test ./..." },
+        summary: "A Go REST API with Gin framework",
+        recommendations: ["Add integration tests", "Implement authentication"],
+      });
+
+      vi.mocked(callAnyAvailableAgent).mockResolvedValue({
+        success: true,
+        output: mockResponse,
+        agentUsed: "codex",
+      });
+
+      const result = await aiScanProject("/go/project");
+
+      expect(result.success).toBe(true);
+      expect(result.techStack?.language).toBe("go");
+      expect(result.techStack?.framework).toBe("gin");
+      expect(result.modules).toHaveLength(2);
+      expect(result.features).toHaveLength(2);
+      expect(result.completion?.overall).toBe(70);
+      expect(result.agentUsed).toBe("codex");
+    });
+
+    it("should return error when agent call fails", async () => {
+      vi.mocked(callAnyAvailableAgent).mockResolvedValue({
+        success: false,
+        output: "",
+        error: "Agent timeout",
+      });
+
+      const result = await aiScanProject("/test/path");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Agent timeout");
+    });
+
+    it("should handle malformed JSON from agent", async () => {
+      vi.mocked(callAnyAvailableAgent).mockResolvedValue({
+        success: true,
+        output: "This is not valid JSON at all",
+        agentUsed: "gemini",
+      });
+
+      const result = await aiScanProject("/test/path");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Failed to parse");
+    });
+
+    it("should extract JSON from markdown code blocks", async () => {
+      const wrappedResponse = "Here is my analysis:\n\n```json\n" + JSON.stringify({
+        techStack: { language: "rust", framework: "actix", buildTool: "cargo", testFramework: "cargo test", packageManager: "cargo" },
+        modules: [{ name: "main", path: "src", description: "Main module", status: "complete" }],
+        features: [],
+        completion: { overall: 50, notes: [] },
+        commands: { install: "cargo build", dev: "cargo run", build: "cargo build --release", test: "cargo test" },
+        summary: "Rust project",
+        recommendations: [],
+      }) + "\n```\n\nHope this helps!";
+
+      vi.mocked(callAnyAvailableAgent).mockResolvedValue({
+        success: true,
+        output: wrappedResponse,
+        agentUsed: "claude",
+      });
+
+      const result = await aiScanProject("/rust/project");
+
+      expect(result.success).toBe(true);
+      expect(result.techStack?.language).toBe("rust");
+      expect(result.agentUsed).toBe("claude");
+    });
+
+    it("should include autonomous exploration instructions in prompt", async () => {
+      vi.mocked(callAnyAvailableAgent).mockResolvedValue({
+        success: true,
+        output: JSON.stringify({ features: [], modules: [], completion: { overall: 0, notes: [] }, commands: {} }),
+        agentUsed: "gemini",
+      });
+
+      await aiScanProject("/test/path");
+
+      const callArgs = vi.mocked(callAnyAvailableAgent).mock.calls[0];
+      const prompt = callArgs[0];
+
+      // Check that prompt contains key autonomous exploration elements
+      expect(prompt).toContain("Explore");
+      expect(prompt).toContain("/test/path");
+      expect(prompt).toContain("JSON");
     });
   });
 });

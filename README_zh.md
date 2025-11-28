@@ -78,7 +78,7 @@ agent-foreman init "你的项目目标"
 **Claude Code 提示词：**
 
 ```text
-调查这个现有项目并初始化 agent-foreman 框架。
+使用 foreman Agent 为这个项目初始化 agent-foreman 框架。
 ```
 
 ---

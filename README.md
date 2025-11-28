@@ -78,7 +78,7 @@ agent-foreman init "Your project goal"
 **Prompt for Claude Code:**
 
 ```text
-Survey this existing project and initialize the agent-foreman harness.
+Use the foreman agent to initialize the agent-foreman harness for this project.
 ```
 
 ---

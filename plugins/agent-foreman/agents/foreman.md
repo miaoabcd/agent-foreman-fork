@@ -79,7 +79,7 @@ The `init` command automatically chooses the best approach:
 | Condition | Action |
 |-----------|--------|
 | `PROJECT_SURVEY.md` exists | Uses survey to generate features (fast) |
-| Has source code, no survey | Scans codebase with AI (slower) |
+| Has source code, no survey | Scans codebase + **auto-generates survey** |
 | Empty project | Generates features from goal (10-20 features) |
 
 ### Daily Development Session

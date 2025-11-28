@@ -44,11 +44,11 @@ agent-foreman init "goal"
              YES            NO
               │             │
               ▼             ▼
-        ┌─────────┐  ┌─────────────┐
-        │ AI scan │  │ Generate    │
-        │ project │  │ from goal   │
-        │ (slow)  │  │ (10-20 feat)│
-        └─────────┘  └─────────────┘
+        ┌─────────────┐  ┌─────────────┐
+        │ AI scan     │  │ Generate    │
+        │ + auto-save │  │ from goal   │
+        │ survey      │  │ (10-20 feat)│
+        └─────────────┘  └─────────────┘
 ```
 
 ## Modes
@@ -175,7 +175,7 @@ git commit -m "chore: initialize agent-foreman harness"
 | Scenario | Source | Features Generated |
 |----------|--------|-------------------|
 | Has `PROJECT_SURVEY.md` | Survey document | Based on existing analysis |
-| Has source code | AI scan of codebase | From routes, tests, patterns |
+| Has source code | AI scan + **auto-saves survey** | From routes, tests, patterns |
 | Empty project | Goal description | 10-20 features from goal |
 
 ## Feature ID Convention

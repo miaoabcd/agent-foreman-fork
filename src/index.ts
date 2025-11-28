@@ -322,13 +322,24 @@ async function runInit(goal: string, mode: InitMode, verbose: boolean) {
 
       aiResult = await generateFeaturesFromGoal(goal);
     } else {
-      // Has source code: do full AI scan
-      console.log(chalk.gray("  No PROJECT_SURVEY.md found, running full AI scan..."));
+      // Has source code: auto-run survey first, then use it
+      console.log(chalk.gray("  No PROJECT_SURVEY.md found, auto-generating survey..."));
       if (verbose) {
         printAgentStatus();
       }
 
       aiResult = await aiScanProject(cwd, { verbose });
+
+      // Auto-save survey for future use
+      if (aiResult.success) {
+        const tempStructure = await scanDirectoryStructure(cwd);
+        const tempSurvey = aiResultToSurvey(aiResult, tempStructure);
+        const surveyMarkdown = generateAISurveyMarkdown(tempSurvey, aiResult);
+
+        await fs.mkdir(path.dirname(surveyPath), { recursive: true });
+        await fs.writeFile(surveyPath, surveyMarkdown);
+        console.log(chalk.green(`✓ Auto-generated docs/PROJECT_SURVEY.md`));
+      }
     }
   }
 
@@ -410,7 +421,8 @@ async function runInit(goal: string, mode: InitMode, verbose: boolean) {
 
   // Step 9: Make first git commit (PRD requirement)
   if (mode !== "scan") {
-    const addResult = spawnSync("git", ["add", "ai/", "CLAUDE.md"], { cwd, encoding: "utf-8" });
+    // Include docs/ if survey was auto-generated
+    const addResult = spawnSync("git", ["add", "ai/", "CLAUDE.md", "docs/"], { cwd, encoding: "utf-8" });
     if (addResult.status === 0) {
       const commitResult = spawnSync(
         "git",

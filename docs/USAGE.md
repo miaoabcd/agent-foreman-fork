@@ -193,7 +193,7 @@ agent-foreman init
 | Condition | Action |
 |-----------|--------|
 | `PROJECT_SURVEY.md` exists | Uses survey to generate features (fast) |
-| Has source code, no survey | Scans codebase with AI (slower) |
+| Has source code, no survey | Scans codebase + **auto-generates survey** |
 | Empty project | Generates features from goal |
 
 > **Init 自动选择最佳方式：**
@@ -201,7 +201,7 @@ agent-foreman init
 > | 条件 | 操作 |
 > |------|------|
 > | 有 `PROJECT_SURVEY.md` | 使用 survey 生成功能（快） |
-> | 有源代码，无 survey | 用 AI 扫描代码库（慢） |
+> | 有源代码，无 survey | 扫描代码库 + **自动生成 survey** |
 > | 空项目 | 从目标生成功能 |
 
 **Mode options:**
@@ -421,11 +421,11 @@ agent-foreman init "goal"
              YES            NO
               │             │
               ▼             ▼
-        ┌─────────┐  ┌─────────────┐
-        │ AI scan │  │ Generate    │
-        │ project │  │ from goal   │
-        │ (slow)  │  │ (10-20 feat)│
-        └─────────┘  └─────────────┘
+        ┌─────────────┐  ┌─────────────┐
+        │ AI scan     │  │ Generate    │
+        │ + auto-save │  │ from goal   │
+        │ survey      │  │ (10-20 feat)│
+        └─────────────┘  └─────────────┘
 ```
 
 ---

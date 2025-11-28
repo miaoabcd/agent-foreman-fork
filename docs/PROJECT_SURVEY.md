@@ -2,7 +2,7 @@
 
 ## Summary
 
-Agent Foreman is a CLI harness designed to facilitate long-running, feature-driven development tasks for AI agents. It maintains an external memory (feature list, progress log) and orchestrates AI agents (Gemini, Claude, Codex) to autonomously survey, plan, and implement features while tracking dependencies and impact.
+Agent Foreman is a CLI harness for AI agents that facilitates feature-driven development for long-running tasks. It manages a persistent feature list, tracks progress, and uses AI agents to scan and analyze projects.
 
 > Analyzed by: gemini
 
@@ -29,71 +29,71 @@ Agent Foreman is a CLI harness designed to facilitate long-running, feature-driv
 ### cli
 - **Path**: `src/index.ts`
 - **Status**: complete
-- **Description**: Main CLI entry point and command orchestration
-
-### ai-scanner
-- **Path**: `src/ai-scanner.ts`
-- **Status**: complete
-- **Description**: AI-powered project analysis using external agents (Gemini, Codex, Claude)
-
-### feature-list
-- **Path**: `src/feature-list.ts`
-- **Status**: complete
-- **Description**: Manages the JSON-based feature backlog and status tracking
-
-### progress-log
-- **Path**: `src/progress-log.ts`
-- **Status**: complete
-- **Description**: Handles the append-only markdown audit log
-
-### impact-analyzer
-- **Path**: `src/impact-analyzer.ts`
-- **Status**: complete
-- **Description**: Analyzes dependency graphs to predict impact of changes
-
-### agents
-- **Path**: `src/agents.ts`
-- **Status**: complete
-- **Description**: Abstraction layer for spawning and managing AI subprocesses
+- **Description**: Main entry point and CLI command handling using yargs
 
 ### project-scanner
 - **Path**: `src/project-scanner.ts`
 - **Status**: complete
-- **Description**: File system scanning and structure detection
+- **Description**: Scans directory structure and identifies file types
 
-## Discovered Features
+### ai-scanner
+- **Path**: `src/ai-scanner.ts`
+- **Status**: complete
+- **Description**: Interfaces with AI agents (Claude, Gemini, Codex) to analyze projects
 
-| ID | Description | Module | Source | Confidence |
-|----|-------------|--------|--------|------------|
-| cli.survey | Generate AI-powered project survey report | cli | code | 100% |
-| cli.init | Initialize harness (feature list, progress log, init script) | cli | code | 100% |
-| cli.step | Select and present the next high-priority feature to work on | cli | code | 100% |
-| cli.status | Display current project health and feature completion stats | cli | code | 100% |
-| cli.impact | Analyze dependent features for a specific change | cli | code | 100% |
-| cli.complete | Mark a feature as passing and update logs | cli | code | 100% |
-| scanner.autonomous_exploration | Agent autonomously explores codebase to discover features | ai-scanner | code | 100% |
-| scanner.generate_from_goal | Generate initial feature list from a text goal for empty projects | ai-scanner | code | 100% |
-| agents.abstraction | Unified interface for Gemini, Claude, and Codex CLIs | agents | code | 100% |
-| agents.retry | Retry logic for failed AI agent calls | agents | code | 100% |
-| features.dependency_graph | Build and traverse feature dependency graph | impact-analyzer | code | 100% |
-| features.circular_check | Detect circular dependencies in features | impact-analyzer | code | 100% |
-| logging.audit | Structured logging of all harness actions to markdown | progress-log | code | 100% |
-| init.script_gen | Generate project-specific 'ai/init.sh' bootstrap script | init-script | code | 100% |
+### agents
+- **Path**: `src/agents.ts`
+- **Status**: complete
+- **Description**: Manages subprocess execution of AI CLI tools
+
+### feature-list
+- **Path**: `src/feature-list.ts`
+- **Status**: complete
+- **Description**: Manages the JSON-based feature list (CRUD, merging, stats)
+
+### progress-log
+- **Path**: `src/progress-log.ts`
+- **Status**: complete
+- **Description**: Manages the markdown-based progress log
+
+### init-script
+- **Path**: `src/init-script.ts`
+- **Status**: complete
+- **Description**: Generates shell scripts for project bootstrapping
+
+## Feature Completion Status
+
+| ID | Description | Module | Status |
+|----|-------------|--------|--------|
+| cli.survey | Generate AI-powered project survey report | cli | ✅ passing |
+| cli.init | Initialize harness (feature list, progress log, init script) | cli | ✅ passing |
+| cli.step | Select and present the next high-priority feature to work on | cli | ✅ passing |
+| cli.status | Display current project health and feature completion stats | cli | ✅ passing |
+| cli.impact | Analyze dependent features for a specific change | cli | ✅ passing |
+| cli.complete | Mark a feature as passing and update logs | cli | ✅ passing |
+| scanner.autonomous_exploration | Agent autonomously explores codebase to discover features | ai-scanner | ✅ passing |
+| scanner.generate_from_goal | Generate initial feature list from a text goal for empty projects | ai-scanner | ✅ passing |
+| agents.abstraction | Unified interface for Gemini, Claude, and Codex CLIs | agents | ✅ passing |
+| agents.retry | Retry logic for failed AI agent calls | agents | ✅ passing |
+| features.dependency_graph | Build and traverse feature dependency graph | impact-analyzer | ✅ passing |
+| features.circular_check | Detect circular dependencies in features | impact-analyzer | ✅ passing |
+| logging.audit | Structured logging of all harness actions to markdown | progress-log | ✅ passing |
+| init.script_gen | Generate project-specific 'ai/init.sh' bootstrap script | init-script | ✅ passing |
 
 ## Completion Assessment
 
-**Overall: 90%**
+**Overall: 100%**
 
 **Notes:**
-- Core functionality is implemented and tested.
-- Plugin system structure exists but implementation details are minimal in the source scan.
-- High test coverage for core logic.
+- All features are passing
+- Completed 14/14 features
+- Last updated: 2025-11-28
 
 ## Recommendations
 
-- Formalize the plugin system architecture which currently appears as a folder structure.
-- Add more robust error handling for missing external CLI tools.
-- Consider adding a visual reporter or web UI for the status.
+- Add more unit tests for edge cases in AI response parsing.
+- Consider adding a 'rollback' command to revert the last step.
+- Implement a plugin system for custom AI agents.
 
 ## Commands
 

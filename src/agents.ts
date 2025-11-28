@@ -99,13 +99,23 @@ export function filterAvailableAgents(agents: AgentConfig[]): {
 }
 
 /**
+ * Options for calling an AI agent
+ */
+export interface CallAgentOptions {
+  timeoutMs?: number;
+  cwd?: string; // Working directory for the agent
+}
+
+/**
  * Call an AI agent with a prompt
  */
 export async function callAgent(
   config: AgentConfig,
   prompt: string,
-  timeoutMs?: number
+  options: CallAgentOptions = {}
 ): Promise<{ success: boolean; output: string; error?: string }> {
+  const { timeoutMs, cwd } = options;
+
   const state: AgentState = {
     config,
     status: "pending",
@@ -122,9 +132,11 @@ export async function callAgent(
     child = useStdin
       ? spawn(config.command[0], config.command.slice(1), {
           stdio: ["pipe", "pipe", "pipe"],
+          cwd,
         })
       : spawn(config.command[0], [...config.command.slice(1), prompt], {
           stdio: ["ignore", "pipe", "pipe"],
+          cwd,
         });
   } catch (err) {
     return {
@@ -208,9 +220,10 @@ export async function callAgentWithRetry(
     timeoutMs?: number;
     maxRetries?: number;
     verbose?: boolean;
+    cwd?: string;
   } = {}
 ): Promise<{ success: boolean; output: string; error?: string }> {
-  const { timeoutMs = 120000, maxRetries = 2, verbose = false } = options;
+  const { timeoutMs = 120000, maxRetries = 2, verbose = false, cwd } = options;
 
   let lastError: string | undefined;
 
@@ -219,7 +232,7 @@ export async function callAgentWithRetry(
       console.log(chalk.yellow(`  Retry attempt ${attempt}/${maxRetries}...`));
     }
 
-    const result = await callAgent(config, prompt, timeoutMs);
+    const result = await callAgent(config, prompt, { timeoutMs, cwd });
 
     if (result.success) {
       return result;
@@ -251,9 +264,10 @@ export async function callAnyAvailableAgent(
     preferredOrder?: string[];
     timeoutMs?: number;
     verbose?: boolean;
+    cwd?: string;
   } = {}
 ): Promise<{ success: boolean; output: string; agentUsed?: string; error?: string }> {
-  const { preferredOrder = ["gemini", "codex", "claude"], timeoutMs, verbose = false } = options;
+  const { preferredOrder = ["gemini", "codex", "claude"], timeoutMs, verbose = false, cwd } = options;
 
   for (const name of preferredOrder) {
     const agent = DEFAULT_AGENTS.find((a) => a.name === name);
@@ -279,7 +293,7 @@ export async function callAnyAvailableAgent(
       spinnerIdx = (spinnerIdx + 1) % spinner.length;
     }, 100);
 
-    const result = await callAgent(agent, prompt, timeoutMs);
+    const result = await callAgent(agent, prompt, { timeoutMs, cwd });
 
     clearInterval(spinnerInterval);
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

@@ -1,10 +1,10 @@
 /**
  * AI-powered project scanner
- * Uses Claude/Gemini to intelligently analyze codebases
+ * Uses autonomous AI agents (Claude/Gemini/Codex) to explore and analyze codebases
+ *
+ * Key principle: The agent explores the project itself using its own tools,
+ * rather than us collecting context and passing it to the agent.
  */
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import { glob } from "glob";
 import chalk from "chalk";
 import { callAnyAvailableAgent, checkAvailableAgents } from "./agents.js";
 import type {
@@ -38,274 +38,69 @@ export interface AIAnalysisResult {
  */
 export interface AIScanOptions {
   verbose?: boolean;
-  maxFiles?: number;
-  includeFileContents?: boolean;
 }
 
 /**
- * Collect project context for AI analysis
- * Language-agnostic: scans any project type
+ * Build autonomous exploration prompt for AI agent
+ * The agent explores the project using its available tools
  */
-async function collectProjectContext(
-  basePath: string,
-  options: AIScanOptions = {}
-): Promise<string> {
-  const { maxFiles = 100, includeFileContents = true } = options;
-  const context: string[] = [];
+function buildAutonomousPrompt(projectPath: string): string {
+  return `Perform a comprehensive survey of the software project located at: ${projectPath}
 
-  // 1. List directory structure (deeper scan)
-  context.push("## Project Directory Structure\n");
-  const tree = await getDirectoryTree(basePath, 4);
-  context.push("```");
-  context.push(tree);
-  context.push("```\n");
+You are currently working in this directory. Explore it thoroughly using your available tools.
 
-  // 2. Find and read ALL config/manifest files (language-agnostic)
-  const configPatterns = [
-    // Universal
-    "README*", "LICENSE*", "Makefile", "Dockerfile", "docker-compose*.yml",
-    ".env.example", "*.toml", "*.yaml", "*.yml",
-    // JavaScript/TypeScript
-    "package.json", "tsconfig*.json", "*.config.{js,ts,mjs,cjs}",
-    // Python
-    "pyproject.toml", "setup.py", "setup.cfg", "requirements*.txt", "Pipfile",
-    // Go
-    "go.mod", "go.sum",
-    // Rust
-    "Cargo.toml", "Cargo.lock",
-    // Java/Kotlin
-    "pom.xml", "build.gradle*", "settings.gradle*",
-    // Ruby
-    "Gemfile", "Rakefile", "*.gemspec",
-    // PHP
-    "composer.json",
-    // .NET
-    "*.csproj", "*.sln", "*.fsproj",
-    // Swift
-    "Package.swift", "*.xcodeproj",
-    // Elixir
-    "mix.exs",
-    // Scala
-    "build.sbt",
-  ];
+## Required Actions
 
-  const foundConfigs: string[] = [];
-  for (const pattern of configPatterns) {
-    const matches = await glob(pattern, { cwd: basePath, nodir: true });
-    foundConfigs.push(...matches);
-  }
+1. **Explore structure**: List directories and files to understand the project layout
+2. **Read configs**: Find and read configuration files (package.json, tsconfig.json, pyproject.toml, go.mod, Cargo.toml, etc.)
+3. **Examine source code**: Read key source files to understand modules and features
+4. **Check tests**: Look for test files to understand what functionality exists
+5. **Assess completeness**: Based on code quality and test coverage
 
-  // Read config files
-  for (const configFile of [...new Set(foundConfigs)].slice(0, 20)) {
-    try {
-      const content = await fs.readFile(path.join(basePath, configFile), "utf-8");
-      const ext = path.extname(configFile).slice(1) || "text";
-      context.push(`## ${configFile}\n`);
-      context.push(`\`\`\`${ext}`);
-      context.push(content.substring(0, 3000));
-      if (content.length > 3000) context.push("\n... (truncated)");
-      context.push("```\n");
-    } catch {
-      // Skip unreadable files
-    }
-  }
+## Output
 
-  // 3. Find and read source files (language-agnostic)
-  if (includeFileContents) {
-    // Common source file extensions for all languages
-    const sourceExtensions = "{ts,tsx,js,jsx,mjs,cjs,py,go,rs,java,kt,rb,php,cs,fs,swift,scala,ex,exs,clj,c,cpp,h,hpp,lua,dart,vue,svelte,astro,md,mdx}";
-
-    const sourcePatterns = [
-      // Entry points and main files
-      `**/main.${sourceExtensions}`,
-      `**/index.${sourceExtensions}`,
-      `**/app.${sourceExtensions}`,
-      `**/server.${sourceExtensions}`,
-      `**/mod.rs`, // Rust modules
-      `**/lib.rs`, // Rust library
-      // Source directories
-      `**/src/**/*.${sourceExtensions}`,
-      `**/lib/**/*.${sourceExtensions}`,
-      `**/app/**/*.${sourceExtensions}`,
-      `**/pkg/**/*.${sourceExtensions}`,
-      `**/internal/**/*.${sourceExtensions}`,
-      // API/Routes
-      `**/api/**/*.${sourceExtensions}`,
-      `**/routes/**/*.${sourceExtensions}`,
-      `**/controllers/**/*.${sourceExtensions}`,
-      `**/handlers/**/*.${sourceExtensions}`,
-      `**/views/**/*.${sourceExtensions}`,
-      `**/pages/**/*.${sourceExtensions}`,
-      `**/components/**/*.${sourceExtensions}`,
-    ];
-
-    const ignorePatterns = [
-      "node_modules/**", "dist/**", "build/**", "out/**", "target/**",
-      ".git/**", "vendor/**", "__pycache__/**", ".next/**", ".nuxt/**",
-      "*.min.js", "*.bundle.js", "coverage/**", ".cache/**",
-    ];
-
-    const sourceFiles: string[] = [];
-    for (const pattern of sourcePatterns) {
-      const matches = await glob(pattern, { cwd: basePath, ignore: ignorePatterns });
-      sourceFiles.push(...matches);
-    }
-
-    // Sort by importance (shorter paths first, main/index first)
-    const sortedFiles = [...new Set(sourceFiles)].sort((a, b) => {
-      const aIsMain = /\/(main|index|app|server)\.[^/]+$/.test(a);
-      const bIsMain = /\/(main|index|app|server)\.[^/]+$/.test(b);
-      if (aIsMain && !bIsMain) return -1;
-      if (!aIsMain && bIsMain) return 1;
-      return a.split("/").length - b.split("/").length;
-    });
-
-    const filesToRead = sortedFiles.slice(0, maxFiles);
-
-    if (filesToRead.length > 0) {
-      context.push(`## Source Files (${filesToRead.length} of ${sortedFiles.length})\n`);
-
-      for (const file of filesToRead) {
-        try {
-          const content = await fs.readFile(path.join(basePath, file), "utf-8");
-          const ext = path.extname(file).slice(1) || "text";
-          context.push(`### ${file}\n`);
-          context.push(`\`\`\`${ext}`);
-          context.push(content.substring(0, 4000));
-          if (content.length > 4000) context.push("\n// ... (truncated)");
-          context.push("```\n");
-        } catch {
-          // Skip unreadable files
-        }
-      }
-    }
-  }
-
-  // 4. Find test files (language-agnostic patterns)
-  const testPatterns = [
-    "**/*.test.*", "**/*.spec.*", "**/*_test.*", "**/test_*.*",
-    "**/tests/**/*.*", "**/test/**/*.*", "**/__tests__/**/*.*",
-    "**/spec/**/*.*", "**/specs/**/*.*",
-  ];
-
-  const testFiles: string[] = [];
-  for (const pattern of testPatterns) {
-    const matches = await glob(pattern, {
-      cwd: basePath,
-      ignore: ["node_modules/**", "dist/**", ".git/**", "vendor/**"],
-    });
-    testFiles.push(...matches);
-  }
-
-  if (testFiles.length > 0) {
-    context.push(`## Test Files (${testFiles.length} found)\n`);
-    context.push("```");
-    testFiles.slice(0, 30).forEach((f) => context.push(f));
-    if (testFiles.length > 30) context.push(`... and ${testFiles.length - 30} more`);
-    context.push("```\n");
-  }
-
-  return context.join("\n");
-}
-
-/**
- * Get directory tree as string
- */
-async function getDirectoryTree(basePath: string, maxDepth: number): Promise<string> {
-  const lines: string[] = [];
-  const ignore = ["node_modules", "dist", "build", ".git", "vendor", "__pycache__", ".next", ".nuxt"];
-
-  async function walk(dir: string, prefix: string, depth: number): Promise<void> {
-    if (depth > maxDepth) return;
-
-    try {
-      const entries = await fs.readdir(dir, { withFileTypes: true });
-      const filtered = entries.filter((e) => !ignore.includes(e.name) && !e.name.startsWith("."));
-
-      for (let i = 0; i < filtered.length; i++) {
-        const entry = filtered[i];
-        const isLast = i === filtered.length - 1;
-        const connector = isLast ? "└── " : "├── ";
-        const newPrefix = isLast ? "    " : "│   ";
-
-        if (entry.isDirectory()) {
-          lines.push(`${prefix}${connector}${entry.name}/`);
-          await walk(path.join(dir, entry.name), prefix + newPrefix, depth + 1);
-        } else {
-          lines.push(`${prefix}${connector}${entry.name}`);
-        }
-      }
-    } catch {
-      // Skip inaccessible directories
-    }
-  }
-
-  lines.push(path.basename(basePath) + "/");
-  await walk(basePath, "", 0);
-  return lines.join("\n");
-}
-
-/**
- * Build prompt for AI analysis
- * Language-agnostic: works with any programming language or framework
- */
-function buildAnalysisPrompt(projectContext: string): string {
-  return `You are an expert software architect. Analyze the following codebase and provide a comprehensive project survey.
-
-${projectContext}
-
-Based on your analysis, respond with a JSON object (ONLY JSON, no markdown code blocks):
+Return ONLY a JSON object (no markdown, no explanation):
 
 {
   "techStack": {
-    "language": "primary programming language(s) used",
-    "framework": "main framework or library (if any)",
-    "buildTool": "build/compile tool",
-    "testFramework": "testing framework",
-    "packageManager": "dependency manager"
+    "language": "primary language",
+    "framework": "main framework or 'none'",
+    "buildTool": "build tool",
+    "testFramework": "test framework",
+    "packageManager": "package manager"
   },
   "modules": [
     {
-      "name": "module/component name",
+      "name": "module name",
       "path": "relative path",
-      "description": "clear description of purpose and responsibility",
+      "description": "what this module does",
       "status": "complete|partial|stub"
     }
   ],
   "features": [
     {
-      "id": "hierarchical.feature.id",
+      "id": "module.feature.action",
       "description": "what this feature does",
-      "module": "parent module name",
-      "source": "route|test|controller|model|inferred|config",
+      "module": "parent module",
+      "source": "route|test|code|config|inferred",
       "confidence": 0.8
     }
   ],
   "completion": {
-    "overall": 65,
-    "notes": ["key observations about project completeness"]
+    "overall": 0-100,
+    "notes": ["observations"]
   },
   "commands": {
-    "install": "command to install all dependencies",
-    "dev": "command to run in development mode",
-    "build": "command to build/compile for production",
-    "test": "command to run tests"
+    "install": "install command",
+    "dev": "dev command",
+    "build": "build command",
+    "test": "test command"
   },
-  "summary": "2-3 sentence executive summary describing what this project does and its current state",
-  "recommendations": [
-    "actionable improvement suggestion 1",
-    "actionable improvement suggestion 2"
-  ]
+  "summary": "2-3 sentences describing what this project is and does",
+  "recommendations": ["improvement suggestions"]
 }
 
-Analysis guidelines:
-1. Identify ALL modules/components based on directory structure and code organization
-2. Extract features from: API endpoints, CLI commands, test cases, exported functions, class methods
-3. Use hierarchical IDs: module.submodule.action (e.g., auth.user.login, api.orders.create)
-4. Assess completion realistically based on code implementation, not just file existence
-5. Detect the tech stack automatically from config files and code patterns
-6. Provide specific, actionable recommendations for next steps
-7. If commands are unclear, infer from common patterns for the detected language/framework`;
+Begin exploration now.`;
 }
 
 /**
@@ -349,9 +144,12 @@ function parseAIResponse(response: string): AIAnalysisResult {
 }
 
 /**
- * Perform AI-powered project scan
+ * Perform AI-powered project scan using autonomous exploration
+ *
+ * The agent explores the project itself using its own tools,
+ * rather than us collecting context and passing it to the agent.
+ *
  * Priority order: Gemini > Codex > Claude
- * No timeout by default - let the AI agent complete
  */
 export async function aiScanProject(
   basePath: string,
@@ -370,35 +168,21 @@ export async function aiScanProject(
     };
   }
 
-  // Progress: Step 1 - Collecting context
-  process.stdout.write(chalk.gray("  [1/3] Collecting project context..."));
-  const startCollect = Date.now();
-
-  // Collect project context
-  const projectContext = await collectProjectContext(basePath, options);
-
-  const collectTime = ((Date.now() - startCollect) / 1000).toFixed(1);
-  console.log(chalk.green(` done (${collectTime}s)`));
+  // Build autonomous exploration prompt
+  console.log(chalk.gray("  [1/2] Preparing autonomous exploration..."));
+  const prompt = buildAutonomousPrompt(basePath);
 
   if (verbose) {
-    console.log(chalk.gray(`        Context size: ${(projectContext.length / 1024).toFixed(1)}KB`));
+    console.log(chalk.gray(`        Project path: ${basePath}`));
   }
 
-  // Progress: Step 2 - Building prompt
-  process.stdout.write(chalk.gray("  [2/3] Building analysis prompt..."));
-  const prompt = buildAnalysisPrompt(projectContext);
-  console.log(chalk.green(" done"));
-
-  if (verbose) {
-    console.log(chalk.gray(`        Prompt size: ${(prompt.length / 1024).toFixed(1)}KB`));
-  }
-
-  // Progress: Step 3 - AI Analysis
-  console.log(chalk.gray("  [3/3] Waiting for AI analysis..."));
+  // Launch agent - it will explore the project autonomously
+  console.log(chalk.gray("  [2/2] Agent exploring project..."));
 
   const result = await callAnyAvailableAgent(prompt, {
-    preferredOrder: ["gemini", "codex", "claude"], // Priority: Gemini > Codex > Claude
-    verbose: true, // Always show which agent is being used
+    preferredOrder: ["gemini", "codex", "claude"],
+    verbose: true,
+    cwd: basePath, // Run agent in project directory so it can explore
   });
 
   if (!result.success) {
@@ -408,8 +192,8 @@ export async function aiScanProject(
     };
   }
 
-  // Progress: Parsing response
-  process.stdout.write(chalk.gray("  [✓] Parsing AI response..."));
+  // Parse the exploration results
+  process.stdout.write(chalk.gray("  [✓] Parsing exploration results..."));
   const analysis = parseAIResponse(result.output);
   console.log(chalk.green(" done"));
 

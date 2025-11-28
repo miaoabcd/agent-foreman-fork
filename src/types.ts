@@ -185,9 +185,11 @@ export interface DiscoveredFeature {
   /** Inferred module */
   module: string;
   /** Source of discovery */
-  source: "route" | "test" | "controller" | "model" | "inferred";
+  source: "route" | "test" | "controller" | "model" | "inferred" | "feature_list";
   /** Confidence score (0-1) */
   confidence: number;
+  /** Actual status from feature_list.json (optional) */
+  status?: FeatureStatus;
 }
 
 /**

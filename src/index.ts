@@ -756,6 +756,49 @@ async function runComplete(featureId: string, notes?: string) {
     console.log(chalk.gray(`\n  Next up: ${next.id}`));
   } else {
     console.log(chalk.green("\n  🎉 All features are now passing!"));
+
+    // Auto-regenerate PROJECT_SURVEY.md when all features complete
+    console.log(chalk.blue("\n📊 Regenerating project survey..."));
+    try {
+      const aiResult = await aiScanProject(cwd, { verbose: false });
+      if (aiResult.success) {
+        const structure = await scanDirectoryStructure(cwd);
+        const survey = aiResultToSurvey(aiResult, structure);
+
+        // Replace survey.features with actual features from feature_list.json
+        // Show actual status (passing/failing) instead of AI confidence
+        survey.features = featureList.features.map((f) => ({
+          id: f.id,
+          description: f.description,
+          module: f.module,
+          source: "feature_list" as const,
+          confidence: f.status === "passing" ? 1.0 : 0.0,
+          status: f.status,
+        }));
+
+        // Override completion to 100% since all features are passing
+        const passingCount = featureList.features.filter((f) => f.status === "passing").length;
+        const totalCount = featureList.features.length;
+        survey.completion = {
+          overall: Math.round((passingCount / totalCount) * 100),
+          byModule: Object.fromEntries(
+            survey.modules.map((m) => [m.name, 100])
+          ),
+          notes: [
+            "All features are passing",
+            `Completed ${passingCount}/${totalCount} features`,
+            `Last updated: ${new Date().toISOString().split("T")[0]}`
+          ]
+        };
+        const markdown = generateAISurveyMarkdown(survey, aiResult);
+        const surveyPath = path.join(cwd, "docs/PROJECT_SURVEY.md");
+        await fs.mkdir(path.dirname(surveyPath), { recursive: true });
+        await fs.writeFile(surveyPath, markdown);
+        console.log(chalk.green("✓ Updated docs/PROJECT_SURVEY.md (100% complete)"));
+      }
+    } catch {
+      console.log(chalk.yellow("⚠ Could not regenerate survey (AI agent unavailable)"));
+    }
   }
 }
 

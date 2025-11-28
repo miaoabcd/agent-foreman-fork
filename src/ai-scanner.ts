@@ -693,12 +693,25 @@ export function generateAISurveyMarkdown(
 
   // Discovered Features
   if (survey.features.length > 0) {
-    lines.push("## Discovered Features\n");
-    lines.push("| ID | Description | Module | Source | Confidence |");
-    lines.push("|----|-------------|--------|--------|------------|");
-    for (const f of survey.features.slice(0, 100)) {
-      const confidence = typeof f.confidence === "number" ? `${Math.round(f.confidence * 100)}%` : "-";
-      lines.push(`| ${f.id} | ${f.description} | ${f.module} | ${f.source} | ${confidence} |`);
+    // Check if features have actual status (from feature_list.json)
+    const hasStatus = survey.features.some((f) => f.status);
+
+    if (hasStatus) {
+      lines.push("## Feature Completion Status\n");
+      lines.push("| ID | Description | Module | Status |");
+      lines.push("|----|-------------|--------|--------|");
+      for (const f of survey.features.slice(0, 100)) {
+        const statusIcon = f.status === "passing" ? "✅" : f.status === "failing" ? "❌" : "⏸️";
+        lines.push(`| ${f.id} | ${f.description} | ${f.module} | ${statusIcon} ${f.status} |`);
+      }
+    } else {
+      lines.push("## Discovered Features\n");
+      lines.push("| ID | Description | Module | Source | Confidence |");
+      lines.push("|----|-------------|--------|--------|------------|");
+      for (const f of survey.features.slice(0, 100)) {
+        const confidence = typeof f.confidence === "number" ? `${Math.round(f.confidence * 100)}%` : "-";
+        lines.push(`| ${f.id} | ${f.description} | ${f.module} | ${f.source} | ${confidence} |`);
+      }
     }
     if (survey.features.length > 100) {
       lines.push(`\n*... and ${survey.features.length - 100} more features*`);

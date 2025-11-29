@@ -52,9 +52,10 @@ describe("Prompts", () => {
       expect(section).toContain("3. **Plan**");
       expect(section).toContain("4. **Implement**");
       expect(section).toContain("5. **Test**");
-      expect(section).toContain("6. **Update**");
-      expect(section).toContain("7. **Log**");
-      expect(section).toContain("8. **Commit**");
+      expect(section).toContain("6. **Verify**");
+      expect(section).toContain("7. **Complete**");
+      expect(section).toContain("8. **Log**");
+      expect(section).toContain("9. **Commit**");
     });
 
     it("should include rules section", () => {

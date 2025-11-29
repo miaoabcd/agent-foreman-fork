@@ -95,14 +95,23 @@ agent-foreman step
 # 3. Implement the feature
 # ... your development work ...
 
-# 4. Mark complete when done
+# 4. Run tests
+./ai/init.sh check
+
+# 5. Verify with AI analysis
+agent-foreman verify <feature_id>
+# → Runs automated checks + AI analysis
+# → Stores results in ai/verification/results.json
+# → Logs VERIFY entry to ai/progress.md
+
+# 6. Mark complete when verification passes
 agent-foreman complete <feature_id>
 # → Shows suggested git commit command
 
-# 5. Follow the suggested commit
+# 7. Follow the suggested commit
 git add -A && git commit -m "feat(module): description"
 
-# 6. Check for impact on other features (optional)
+# 8. Check for impact on other features (optional)
 agent-foreman impact <feature_id>
 ```
 
@@ -148,10 +157,11 @@ Follow the suggested command to maintain clean git history.
 ## Best Practices
 
 1. **One feature at a time** - Complete or cleanly pause before switching
-2. **Follow suggested commits** - Use the commit command shown after `complete`
-3. **Update status promptly** - Mark features passing when criteria are met
-4. **Review impact** - After changes, run impact analysis
-5. **Read before coding** - Always read feature list and progress log first
+2. **Always verify before complete** - Run `verify` before marking features as passing
+3. **Follow suggested commits** - Use the commit command shown after `complete`
+4. **Update status promptly** - Mark features passing when criteria are met
+5. **Review impact** - After changes, run impact analysis
+6. **Read before coding** - Always read feature list and progress log first
 
 ## Feature Selection Priority
 

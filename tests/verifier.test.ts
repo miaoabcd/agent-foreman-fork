@@ -410,7 +410,7 @@ describe("Verifier", () => {
       expect(result.size).toBe(5);
     });
 
-    it("should respect maxFiles limit", async () => {
+    it("should read all source files without limit", async () => {
       const srcDir = path.join(testDir, "src");
       await fs.mkdir(srcDir, { recursive: true });
 
@@ -420,9 +420,10 @@ describe("Verifier", () => {
 
       const changedFiles = Array.from({ length: 10 }, (_, i) => `src/file${i}.ts`);
 
-      const result = await readRelatedFiles(testDir, changedFiles, 3);
+      const result = await readRelatedFiles(testDir, changedFiles);
 
-      expect(result.size).toBe(3);
+      // Should read all 10 files without any limit
+      expect(result.size).toBe(10);
     });
 
     it("should skip path traversal attempts", async () => {

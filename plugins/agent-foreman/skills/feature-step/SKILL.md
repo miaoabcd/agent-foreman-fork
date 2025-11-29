@@ -144,15 +144,24 @@ agent-foreman step
 npm run test
 ```
 
-### 5. Verify Acceptance
+### 5. AI Verification
 
-Go through each criterion:
+Run AI-powered verification to check acceptance criteria:
 
-- [ ] User enters valid credentials
-- [ ] System returns JWT token
-- [ ] User is redirected to dashboard
+```bash
+agent-foreman verify auth.login
+```
+
+This will:
+- Run automated checks (tests, typecheck, lint, build)
+- Analyze code changes with AI
+- Evaluate each acceptance criterion
+- Store results in `ai/verification/results.json`
+- Log a VERIFY entry in `ai/progress.md`
 
 ### 6. Mark Complete
+
+Only mark complete if verification passes:
 
 ```bash
 agent-foreman complete auth.login

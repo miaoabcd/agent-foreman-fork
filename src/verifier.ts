@@ -219,8 +219,7 @@ export async function runAutomatedChecks(
  */
 export async function readRelatedFiles(
   cwd: string,
-  changedFiles: string[],
-  maxFiles: number = 5
+  changedFiles: string[]
 ): Promise<Map<string, string>> {
   const relatedFiles = new Map<string, string>();
 
@@ -236,7 +235,8 @@ export async function readRelatedFiles(
       f.endsWith(".rs")
   );
 
-  for (const file of sourceFiles.slice(0, maxFiles)) {
+  // Read all source files without limit
+  for (const file of sourceFiles) {
     // Validate path stays within project root to prevent path traversal
     if (!isPathWithinRoot(cwd, file)) {
       // Skip files that would escape project directory
@@ -394,7 +394,7 @@ export async function verifyFeature(
     overallReasoning: aiResult.overallReasoning,
     suggestions: aiResult.suggestions,
     codeQualityNotes: aiResult.codeQualityNotes,
-    relatedFilesAnalyzed: changedFiles.slice(0, 5),
+    relatedFilesAnalyzed: changedFiles,
   };
 
   // Step 5: Save result

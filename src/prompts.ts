@@ -37,9 +37,10 @@ ${goal}
 3. **Plan** - Review acceptance criteria before coding
 4. **Implement** - Work on ONE feature at a time
 5. **Test** - Run \`./ai/init.sh check\` to verify
-6. **Update** - Mark feature as \`passing\` if criteria met
-7. **Log** - Entry automatically added to progress log
-8. **Commit** - Create clean commit with feature ID
+6. **Verify** - Run \`agent-foreman verify <feature_id>\` for AI-powered verification
+7. **Complete** - Run \`agent-foreman complete <feature_id>\` if verification passes
+8. **Log** - Entry automatically added to progress log
+9. **Commit** - Create clean commit with feature ID
 
 ### Rules
 
@@ -59,7 +60,7 @@ CHANGE 2025-01-15T11:00:00Z feature=auth.login action=refactor reason="Improved 
 REPLAN 2025-01-15T12:00:00Z summary="Splitting auth into submodules" note="Original scope too large"
 \`\`\`
 
-**Log types**: \`INIT\` | \`STEP\` | \`CHANGE\` | \`REPLAN\`
+**Log types**: \`INIT\` | \`STEP\` | \`CHANGE\` | \`REPLAN\` | \`VERIFY\`
 
 **IMPORTANT**: Do NOT write verbose Markdown session notes. Keep each entry as a single line.
 
@@ -74,6 +75,12 @@ agent-foreman step
 
 # Work on specific feature
 agent-foreman step <feature_id>
+
+# Verify feature with AI analysis
+agent-foreman verify <feature_id>
+
+# Mark feature as complete (after verification passes)
+agent-foreman complete <feature_id>
 
 # Analyze impact of changes
 agent-foreman impact <feature_id>

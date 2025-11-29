@@ -51,10 +51,9 @@ describe("Prompts", () => {
       expect(section).toContain("2. **Select**");
       expect(section).toContain("3. **Plan**");
       expect(section).toContain("4. **Implement**");
-      expect(section).toContain("5. **Test**");
-      expect(section).toContain("6. **Complete**");
-      expect(section).toContain("7. **Log**");
-      expect(section).toContain("8. **Next**");
+      expect(section).toContain("5. **Complete**");
+      expect(section).toContain("6. **Log**");
+      expect(section).toContain("7. **Next**");
     });
 
     it("should include rules section", () => {
@@ -308,8 +307,7 @@ describe("Prompts", () => {
       expect(guidance).toContain("### Workflow");
       expect(guidance).toContain("1. Review acceptance criteria above");
       expect(guidance).toContain("2. Implement the feature");
-      expect(guidance).toContain("3. Run `./ai/init.sh check` to verify");
-      expect(guidance).toContain("4. Run `agent-foreman complete");
+      expect(guidance).toContain("3. Run `agent-foreman complete");
       expect(guidance).toContain("(auto-verifies + commits)");
     });
   });

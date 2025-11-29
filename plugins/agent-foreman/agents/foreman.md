@@ -95,17 +95,14 @@ agent-foreman step
 # 3. Implement the feature
 # ... your development work ...
 
-# 4. Run tests
-./ai/init.sh check
-
-# 5. Complete the feature (auto-verifies + auto-commits)
+# 4. Complete the feature (auto-verifies + auto-commits)
 agent-foreman complete <feature_id>
 # → Runs AI verification first
 # → If pass: marks as passing + auto-commits
 # → If fail: shows errors, does NOT complete
 # → If needs_review: asks for confirmation
 
-# 6. Check for impact on other features (optional)
+# 5. Check for impact on other features (optional)
 agent-foreman impact <feature_id>
 ```
 

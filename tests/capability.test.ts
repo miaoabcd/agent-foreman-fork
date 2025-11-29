@@ -23,7 +23,10 @@ import {
   collectProjectContext,
   buildCapabilityDiscoveryPrompt,
   parseCapabilityResponse,
+  discoverCapabilitiesWithAI,
 } from "../src/ai-capability-discovery.js";
+
+import * as agents from "../src/agents.js";
 
 import type { ExtendedCapabilities, CapabilityCache } from "../src/verification-types.js";
 
@@ -403,6 +406,108 @@ describe("AI Capability Discovery", () => {
       expect(context.sampleFiles[0].path).toContain("Main.java");
       expect(context.sampleFiles[0].content).toContain("public class Main");
     });
+
+    it("should handle deeply nested source files", async () => {
+      const deepDir = path.join(tempDir, "src", "main", "java");
+      await fs.mkdir(deepDir, { recursive: true });
+      await fs.writeFile(
+        path.join(deepDir, "App.java"),
+        "package main; public class App {}"
+      );
+
+      const context = await collectProjectContext(tempDir);
+
+      // Should find files up to maxDepth (2)
+      expect(context.directoryStructure).toContain("src");
+    });
+
+    it("should ignore node_modules and hidden directories", async () => {
+      await fs.mkdir(path.join(tempDir, "node_modules", "test"), { recursive: true });
+      await fs.mkdir(path.join(tempDir, ".git"), { recursive: true });
+      await fs.mkdir(path.join(tempDir, "src"), { recursive: true });
+
+      const context = await collectProjectContext(tempDir);
+
+      expect(context.directoryStructure).not.toContain("node_modules");
+      expect(context.directoryStructure).not.toContain(".git");
+      expect(context.directoryStructure).toContain("src");
+    });
+
+    it("should handle empty directory", async () => {
+      const context = await collectProjectContext(tempDir);
+
+      expect(context.configFiles).toHaveLength(0);
+      expect(context.buildFiles).toHaveLength(0);
+      expect(context.sampleFiles).toHaveLength(0);
+      expect(context.directoryStructure).toBeTruthy();
+    });
+
+    it("should limit sample file content", async () => {
+      const srcDir = path.join(tempDir, "src");
+      await fs.mkdir(srcDir, { recursive: true });
+      // Create a file with content longer than MAX_CONTENT_PER_FILE (1000)
+      const longContent = "x".repeat(2000);
+      await fs.writeFile(path.join(srcDir, "Large.java"), longContent);
+
+      const context = await collectProjectContext(tempDir);
+
+      if (context.sampleFiles.length > 0) {
+        expect(context.sampleFiles[0].content.length).toBeLessThanOrEqual(1000);
+      }
+    });
+
+    it("should find source files in lib directory", async () => {
+      const libDir = path.join(tempDir, "lib");
+      await fs.mkdir(libDir, { recursive: true });
+      await fs.writeFile(
+        path.join(libDir, "helper.rb"),
+        "module Helper; end"
+      );
+
+      const context = await collectProjectContext(tempDir);
+
+      expect(context.sampleFiles.some(f => f.path.includes("helper.rb"))).toBe(true);
+    });
+
+    it("should find source files in app directory", async () => {
+      const appDir = path.join(tempDir, "app");
+      await fs.mkdir(appDir, { recursive: true });
+      await fs.writeFile(
+        path.join(appDir, "main.swift"),
+        "import Foundation"
+      );
+
+      const context = await collectProjectContext(tempDir);
+
+      expect(context.sampleFiles.some(f => f.path.includes("main.swift"))).toBe(true);
+    });
+
+    it("should skip hidden and ignored directories when finding source files", async () => {
+      const vendorDir = path.join(tempDir, "src", "vendor");
+      await fs.mkdir(vendorDir, { recursive: true });
+      await fs.writeFile(
+        path.join(vendorDir, "external.java"),
+        "// Vendor code"
+      );
+
+      const context = await collectProjectContext(tempDir);
+
+      // vendor directory should be skipped
+      expect(context.sampleFiles.every(f => !f.path.includes("vendor"))).toBe(true);
+    });
+
+    it("should skip __pycache__ directories", async () => {
+      const pycacheDir = path.join(tempDir, "src", "__pycache__");
+      await fs.mkdir(pycacheDir, { recursive: true });
+      await fs.writeFile(
+        path.join(pycacheDir, "module.cpython-311.pyc"),
+        "compiled"
+      );
+
+      const context = await collectProjectContext(tempDir);
+
+      expect(context.directoryStructure).not.toContain("__pycache__");
+    });
   });
 
   describe("buildCapabilityDiscoveryPrompt", () => {
@@ -450,6 +555,47 @@ describe("AI Capability Discovery", () => {
       expect(prompt).toContain('"languages"');
       expect(prompt).toContain('"test"');
       expect(prompt).toContain('"confidence"');
+    });
+
+    it("should handle context with no config files", () => {
+      const context = {
+        configFiles: [],
+        buildFiles: ["Makefile"],
+        directoryStructure: "src/",
+        sampleFiles: [],
+      };
+
+      const prompt = buildCapabilityDiscoveryPrompt(context);
+
+      expect(prompt).toContain("None detected");
+      expect(prompt).toContain("Makefile");
+    });
+
+    it("should handle context with no build files", () => {
+      const context = {
+        configFiles: ["tsconfig.json"],
+        buildFiles: [],
+        directoryStructure: "src/",
+        sampleFiles: [],
+      };
+
+      const prompt = buildCapabilityDiscoveryPrompt(context);
+
+      expect(prompt).toContain("tsconfig.json");
+      expect(prompt).toMatch(/Build Files Found\s*\n\s*None detected/);
+    });
+
+    it("should handle context with no source files", () => {
+      const context = {
+        configFiles: [],
+        buildFiles: [],
+        directoryStructure: "docs/",
+        sampleFiles: [],
+      };
+
+      const prompt = buildCapabilityDiscoveryPrompt(context);
+
+      expect(prompt).toContain("No source files found");
     });
   });
 
@@ -550,6 +696,245 @@ That's my recommendation.`;
         expect(result.data.customRules).toHaveLength(1);
         expect(result.data.customRules![0].id).toBe("integration-test");
       }
+    });
+
+    it("should handle custom rules with unknown type", () => {
+      const response = JSON.stringify({
+        languages: ["java"],
+        customRules: [
+          {
+            id: "deploy",
+            description: "Deploy to production",
+            command: "./deploy.sh",
+            type: "unknown-type",
+          },
+        ],
+      });
+
+      const result = parseCapabilityResponse(response);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.customRules![0].type).toBe("unknown-type");
+      }
+    });
+  });
+
+  describe("discoverCapabilitiesWithAI", () => {
+    let consoleSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleSpy.mockRestore();
+      vi.restoreAllMocks();
+    });
+
+    it("should return minimal capabilities when AI agent fails", async () => {
+      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+        success: false,
+        error: "No agent available",
+      });
+
+      const result = await discoverCapabilitiesWithAI(tempDir);
+
+      expect(result.source).toBe("ai-discovered");
+      expect(result.confidence).toBe(0);
+      expect(result.languages).toHaveLength(0);
+      expect(result.hasTests).toBe(false);
+    });
+
+    it("should return minimal capabilities when AI response parsing fails", async () => {
+      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+        success: true,
+        output: "This is not valid JSON",
+        model: "test",
+      });
+
+      const result = await discoverCapabilitiesWithAI(tempDir);
+
+      expect(result.source).toBe("ai-discovered");
+      expect(result.confidence).toBe(0);
+      expect(result.languages).toHaveLength(0);
+    });
+
+    it("should parse valid AI response and return capabilities", async () => {
+      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["java"],
+          test: {
+            available: true,
+            command: "./gradlew test",
+            framework: "junit",
+            confidence: 0.95,
+          },
+          typecheck: {
+            available: true,
+            command: "./gradlew compileJava",
+            confidence: 0.9,
+          },
+          lint: {
+            available: false,
+          },
+          build: {
+            available: true,
+            command: "./gradlew build",
+            confidence: 0.92,
+          },
+        }),
+        model: "test",
+      });
+
+      const result = await discoverCapabilitiesWithAI(tempDir);
+
+      expect(result.source).toBe("ai-discovered");
+      expect(result.languages).toContain("java");
+      expect(result.hasTests).toBe(true);
+      expect(result.testCommand).toBe("./gradlew test");
+      expect(result.testFramework).toBe("junit");
+      expect(result.hasTypeCheck).toBe(true);
+      expect(result.hasBuild).toBe(true);
+      expect(result.hasLint).toBe(false);
+      // Average of 0.95, 0.9, 0.92 = ~0.923
+      expect(result.confidence).toBeGreaterThan(0.9);
+    });
+
+    it("should handle AI response with no confidence values", async () => {
+      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["python"],
+          test: {
+            available: true,
+            command: "pytest",
+          },
+        }),
+        model: "test",
+      });
+
+      const result = await discoverCapabilitiesWithAI(tempDir);
+
+      expect(result.languages).toContain("python");
+      // With no confidence values, should use default 0.5
+      expect(result.confidence).toBe(0.5);
+      expect(result.testInfo?.confidence).toBe(0.8); // Default when available=true
+    });
+
+    it("should handle AI response with custom rules", async () => {
+      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["java"],
+          customRules: [
+            {
+              id: "integration-test",
+              description: "Run integration tests",
+              command: "./gradlew integrationTest",
+              type: "test",
+            },
+            {
+              id: "e2e-test",
+              description: "Run E2E tests",
+              command: "./gradlew e2eTest",
+              type: "custom",
+            },
+          ],
+        }),
+        model: "test",
+      });
+
+      const result = await discoverCapabilitiesWithAI(tempDir);
+
+      expect(result.customRules).toHaveLength(2);
+      expect(result.customRules![0].id).toBe("integration-test");
+      expect(result.customRules![0].type).toBe("test");
+      expect(result.customRules![1].type).toBe("custom");
+    });
+
+    it("should handle AI response with empty custom rules", async () => {
+      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["go"],
+          customRules: [],
+        }),
+        model: "test",
+      });
+
+      const result = await discoverCapabilitiesWithAI(tempDir);
+
+      expect(result.customRules).toBeUndefined();
+    });
+
+    it("should detect git availability in project directory", async () => {
+      // Create a git repo in temp dir
+      const { execSync } = await import("node:child_process");
+      try {
+        execSync("git init", { cwd: tempDir, stdio: "pipe" });
+      } catch {
+        // Git might not be available
+      }
+
+      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["typescript"],
+        }),
+        model: "test",
+      });
+
+      const result = await discoverCapabilitiesWithAI(tempDir);
+
+      // hasGit should be true if git init succeeded
+      // (may be false if git not installed)
+      expect(typeof result.hasGit).toBe("boolean");
+    });
+
+    it("should handle capability info without optional fields", async () => {
+      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["ruby"],
+          test: {
+            available: false,
+          },
+          lint: {
+            available: true,
+            command: "rubocop",
+            // No confidence provided
+          },
+        }),
+        model: "test",
+      });
+
+      const result = await discoverCapabilitiesWithAI(tempDir);
+
+      expect(result.testInfo?.available).toBe(false);
+      expect(result.testInfo?.confidence).toBe(0);
+      expect(result.lintInfo?.available).toBe(true);
+      expect(result.lintInfo?.confidence).toBe(0.8); // Default for available=true
+    });
+
+    it("should handle undefined capability info", async () => {
+      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["c"],
+          // No test, typecheck, lint, build info
+        }),
+        model: "test",
+      });
+
+      const result = await discoverCapabilitiesWithAI(tempDir);
+
+      expect(result.testInfo?.available).toBe(false);
+      expect(result.testInfo?.confidence).toBe(0);
+      expect(result.typeCheckInfo?.available).toBe(false);
+      expect(result.lintInfo?.available).toBe(false);
+      expect(result.buildInfo?.available).toBe(false);
     });
   });
 });

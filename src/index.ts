@@ -46,6 +46,7 @@ import {
 } from "./capability-detector.js";
 import type { FeatureVerificationSummary } from "./verification-types.js";
 import type { InitMode, Feature } from "./types.js";
+import { isGitRepo, hasUncommittedChanges, gitAdd, gitCommit } from "./git-utils.js";
 
 /**
  * Auto-detect project goal from README or package.json
@@ -164,9 +165,14 @@ async function main() {
             type: "boolean",
             default: false,
             describe: "Run basic tests before showing next task",
+          })
+          .option("allow-dirty", {
+            type: "boolean",
+            default: false,
+            describe: "Allow running with uncommitted changes",
           }),
       async (argv) => {
-        await runStep(argv.feature_id, argv.dryRun, argv.check);
+        await runStep(argv.feature_id, argv.dryRun, argv.check, argv.allowDirty);
       }
     )
     .command(
@@ -204,9 +210,14 @@ async function main() {
             alias: "n",
             type: "string",
             describe: "Additional notes",
+          })
+          .option("no-commit", {
+            type: "boolean",
+            default: false,
+            describe: "Skip automatic git commit",
           }),
       async (argv) => {
-        await runComplete(argv.feature_id!, argv.notes);
+        await runComplete(argv.feature_id!, argv.notes, !argv.noCommit);
       }
     )
     .command(
@@ -513,9 +524,21 @@ Return ONLY the complete merged CLAUDE.md content, nothing else. No explanations
   console.log(chalk.gray("Next: Run 'agent-foreman step' to start working on features"));
 }
 
-async function runStep(featureId: string | undefined, dryRun: boolean, runCheck: boolean = false) {
+async function runStep(featureId: string | undefined, dryRun: boolean, runCheck: boolean = false, allowDirty: boolean = false) {
   const cwd = process.cwd();
   const { spawnSync } = await import("node:child_process");
+
+  // ─────────────────────────────────────────────────────────────────
+  // Clean Working Directory Check (PRD requirement)
+  // ─────────────────────────────────────────────────────────────────
+  if (!allowDirty && isGitRepo(cwd) && hasUncommittedChanges(cwd)) {
+    console.log(chalk.red("\n✗ Working directory is not clean."));
+    console.log(chalk.yellow("  You have uncommitted changes. Before starting a new task:"));
+    console.log(chalk.white("  • Commit your changes: git add -A && git commit -m \"...\""));
+    console.log(chalk.white("  • Or stash them: git stash"));
+    console.log(chalk.gray("\n  Use --allow-dirty to bypass this check."));
+    process.exit(1);
+  }
 
   console.log(chalk.bold.blue("\n═══════════════════════════════════════════════════════════════"));
   console.log(chalk.bold.blue("                    EXTERNAL MEMORY SYNC"));
@@ -884,7 +907,7 @@ async function runVerify(featureId: string, verbose: boolean, skipChecks: boolea
   }
 }
 
-async function runComplete(featureId: string, notes?: string) {
+async function runComplete(featureId: string, notes?: string, autoCommit: boolean = true) {
   const cwd = process.cwd();
 
   const featureList = await loadFeatureList(cwd);
@@ -918,12 +941,41 @@ async function runComplete(featureId: string, notes?: string) {
 
   console.log(chalk.green(`✓ Marked '${featureId}' as passing`));
 
-  // Suggest git commit (PRD: write clear commit message)
+  // Auto-commit or suggest (PRD: write clear commit message)
   const shortDesc = feature.description.length > 50
     ? feature.description.substring(0, 47) + "..."
     : feature.description;
-  console.log(chalk.cyan("\n📝 Suggested commit:"));
-  console.log(chalk.white(`   git add -A && git commit -m "feat(${feature.module}): ${shortDesc}"`));
+
+  const commitMessage = `feat(${feature.module}): ${feature.description}
+
+Feature: ${featureId}
+
+🤖 Generated with agent-foreman`;
+
+  if (autoCommit && isGitRepo(cwd)) {
+    // Auto-commit all changes
+    const addResult = gitAdd(cwd, "all");
+    if (!addResult.success) {
+      console.log(chalk.yellow(`\n⚠ Failed to stage changes: ${addResult.error}`));
+      console.log(chalk.cyan("📝 Suggested commit:"));
+      console.log(chalk.white(`   git add -A && git commit -m "feat(${feature.module}): ${shortDesc}"`));
+    } else {
+      const commitResult = gitCommit(cwd, commitMessage);
+      if (commitResult.success) {
+        console.log(chalk.green(`\n✓ Committed: ${commitResult.commitHash?.substring(0, 7)}`));
+        console.log(chalk.gray(`  feat(${feature.module}): ${shortDesc}`));
+      } else if (commitResult.error === "Nothing to commit") {
+        console.log(chalk.gray("\n  No changes to commit"));
+      } else {
+        console.log(chalk.yellow(`\n⚠ Failed to commit: ${commitResult.error}`));
+        console.log(chalk.cyan("📝 Suggested commit:"));
+        console.log(chalk.white(`   git add -A && git commit -m "feat(${feature.module}): ${shortDesc}"`));
+      }
+    }
+  } else {
+    console.log(chalk.cyan("\n📝 Suggested commit:"));
+    console.log(chalk.white(`   git add -A && git commit -m "feat(${feature.module}): ${shortDesc}"`));
+  }
 
   // Show next feature
   const next = selectNextFeature(featureList.features);

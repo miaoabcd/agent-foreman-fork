@@ -6,6 +6,7 @@ import { EventEmitter } from "node:events";
 import {
   DEFAULT_AGENTS,
   commandExists,
+  getPlatform,
   getAvailableAgent,
   filterAvailableAgents,
   checkAvailableAgents,
@@ -60,6 +61,27 @@ describe("Agents", () => {
     });
   });
 
+  describe("getPlatform", () => {
+    it("should return 'windows' or 'unix' based on process.platform", () => {
+      const platform = getPlatform();
+      expect(["windows", "unix"]).toContain(platform);
+    });
+
+    it("should return 'unix' on darwin (macOS)", () => {
+      // On macOS, process.platform is 'darwin' which is not 'win32'
+      if (process.platform === "darwin") {
+        expect(getPlatform()).toBe("unix");
+      }
+    });
+
+    it("should return 'unix' on linux", () => {
+      // On Linux, process.platform is 'linux' which is not 'win32'
+      if (process.platform === "linux") {
+        expect(getPlatform()).toBe("unix");
+      }
+    });
+  });
+
   describe("commandExists", () => {
     beforeEach(() => {
       vi.mocked(spawnSync).mockReset();
@@ -75,10 +97,30 @@ describe("Agents", () => {
       expect(commandExists("nonexistent-command")).toBe(false);
     });
 
-    it("should call which to check command", () => {
+    it("should use 'which' on Unix platforms", () => {
+      vi.mocked(spawnSync).mockReturnValue({ status: 0 } as any);
+      // Since we're on Unix (macOS/Linux), it should use 'which'
+      if (process.platform !== "win32") {
+        commandExists("test-cmd");
+        expect(spawnSync).toHaveBeenCalledWith("which", ["test-cmd"], { stdio: "pipe", shell: false });
+      }
+    });
+
+    it("should pass shell option appropriately for platform", () => {
       vi.mocked(spawnSync).mockReturnValue({ status: 0 } as any);
       commandExists("test-cmd");
-      expect(spawnSync).toHaveBeenCalledWith("which", ["test-cmd"], { stdio: "pipe" });
+      // On Unix, shell should be false; on Windows, shell should be true
+      const expectedShell = process.platform === "win32";
+      expect(spawnSync).toHaveBeenCalledWith(
+        expect.any(String),
+        ["test-cmd"],
+        expect.objectContaining({ shell: expectedShell })
+      );
+    });
+
+    it("should return false when spawnSync returns null status", () => {
+      vi.mocked(spawnSync).mockReturnValue({ status: null } as any);
+      expect(commandExists("some-cmd")).toBe(false);
     });
   });
 

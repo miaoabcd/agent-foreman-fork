@@ -119,9 +119,20 @@ async function main() {
             type: "boolean",
             default: false,
             describe: "Show detailed output",
+          })
+          .option("bilingual", {
+            alias: "b",
+            type: "boolean",
+            default: false,
+            describe: "Include inline Chinese translations (legacy format)",
+          })
+          .option("zh", {
+            type: "boolean",
+            default: false,
+            describe: "Also generate Chinese translation file (PROJECT_SURVEY.zh-CN.md)",
           }),
       async (argv) => {
-        await runSurvey(argv.output, argv.verbose);
+        await runSurvey(argv.output, argv.verbose, argv.bilingual, argv.zh);
       }
     )
     .command(
@@ -343,7 +354,7 @@ async function main() {
 // Command Implementations
 // ============================================================================
 
-async function runSurvey(outputPath: string, verbose: boolean) {
+async function runSurvey(outputPath: string, verbose: boolean, bilingual: boolean = false, generateZh: boolean = false) {
   const cwd = process.cwd();
 
   console.log(chalk.blue("🤖 AI-powered project scan (priority: Codex > Gemini > Claude)"));
@@ -363,13 +374,24 @@ async function runSurvey(outputPath: string, verbose: boolean) {
 
   const structure = await scanDirectoryStructure(cwd);
   const survey = aiResultToSurvey(aiResult, structure);
-  const markdown = generateAISurveyMarkdown(survey, aiResult);
+
+  // Generate English-only markdown by default, or bilingual if flag is set
+  const markdown = generateAISurveyMarkdown(survey, aiResult, { bilingual });
   const fullPath = path.join(cwd, outputPath);
 
   await fs.mkdir(path.dirname(fullPath), { recursive: true });
   await fs.writeFile(fullPath, markdown);
 
   console.log(chalk.green(`✓ Survey written to ${outputPath}`));
+
+  // Generate Chinese translation file if requested
+  if (generateZh) {
+    const zhPath = outputPath.replace(/\.md$/, ".zh-CN.md");
+    const zhMarkdown = generateAISurveyMarkdown(survey, aiResult, { language: "zh-CN" });
+    await fs.writeFile(path.join(cwd, zhPath), zhMarkdown);
+    console.log(chalk.green(`✓ Chinese translation written to ${zhPath}`));
+  }
+
   console.log(chalk.gray(`  Tech stack: ${survey.techStack.language}/${survey.techStack.framework}`));
   console.log(chalk.gray(`  Modules: ${survey.modules.length}`));
   console.log(chalk.gray(`  Features: ${survey.features.length}`));

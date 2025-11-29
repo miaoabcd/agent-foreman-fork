@@ -175,17 +175,40 @@ async function main() {
             type: "boolean",
             default: false,
             describe: "Allow running with uncommitted changes",
+          })
+          .option("json", {
+            type: "boolean",
+            default: false,
+            describe: "Output as JSON for scripting",
+          })
+          .option("quiet", {
+            alias: "q",
+            type: "boolean",
+            default: false,
+            describe: "Suppress decorative output",
           }),
       async (argv) => {
-        await runStep(argv.feature_id, argv.dryRun, argv.check, argv.allowDirty);
+        await runStep(argv.feature_id, argv.dryRun, argv.check, argv.allowDirty, argv.json, argv.quiet);
       }
     )
     .command(
       "status",
       "Show current harness status",
-      {},
-      async () => {
-        await runStatus();
+      (yargs) =>
+        yargs
+          .option("json", {
+            type: "boolean",
+            default: false,
+            describe: "Output as JSON for scripting",
+          })
+          .option("quiet", {
+            alias: "q",
+            type: "boolean",
+            default: false,
+            describe: "Suppress decorative output",
+          }),
+      async (argv) => {
+        await runStatus(argv.json, argv.quiet);
       }
     )
     .command(
@@ -393,7 +416,14 @@ async function runInit(goal: string, mode: InitMode, verbose: boolean) {
   console.log(chalk.gray("Next: Run 'agent-foreman step' to start working on features"));
 }
 
-async function runStep(featureId: string | undefined, dryRun: boolean, runCheck: boolean = false, allowDirty: boolean = false) {
+async function runStep(
+  featureId: string | undefined,
+  dryRun: boolean,
+  runCheck: boolean = false,
+  allowDirty: boolean = false,
+  outputJson: boolean = false,
+  quiet: boolean = false
+) {
   const cwd = process.cwd();
   const { spawnSync } = await import("node:child_process");
 
@@ -401,12 +431,89 @@ async function runStep(featureId: string | undefined, dryRun: boolean, runCheck:
   // Clean Working Directory Check (PRD requirement)
   // ─────────────────────────────────────────────────────────────────
   if (!allowDirty && isGitRepo(cwd) && hasUncommittedChanges(cwd)) {
-    console.log(chalk.red("\n✗ Working directory is not clean."));
-    console.log(chalk.yellow("  You have uncommitted changes. Before starting a new task:"));
-    console.log(chalk.white("  • Commit your changes: git add -A && git commit -m \"...\""));
-    console.log(chalk.white("  • Or stash them: git stash"));
-    console.log(chalk.gray("\n  Use --allow-dirty to bypass this check."));
+    if (outputJson) {
+      console.log(JSON.stringify({ error: "Working directory not clean" }));
+    } else {
+      console.log(chalk.red("\n✗ Working directory is not clean."));
+      console.log(chalk.yellow("  You have uncommitted changes. Before starting a new task:"));
+      console.log(chalk.white("  • Commit your changes: git add -A && git commit -m \"...\""));
+      console.log(chalk.white("  • Or stash them: git stash"));
+      console.log(chalk.gray("\n  Use --allow-dirty to bypass this check."));
+    }
     process.exit(1);
+  }
+
+  // Load feature list
+  const featureList = await loadFeatureList(cwd);
+  if (!featureList) {
+    if (outputJson) {
+      console.log(JSON.stringify({ error: "No feature list found" }));
+    } else {
+      console.log(chalk.red("✗ No feature list found. Run 'agent-foreman init' first."));
+    }
+    process.exit(1);
+  }
+
+  // Select feature
+  let feature: Feature | undefined;
+  if (featureId) {
+    feature = findFeatureById(featureList.features, featureId);
+    if (!feature) {
+      if (outputJson) {
+        console.log(JSON.stringify({ error: `Feature '${featureId}' not found` }));
+      } else {
+        console.log(chalk.red(`✗ Feature '${featureId}' not found.`));
+      }
+      process.exit(1);
+    }
+  } else {
+    feature = selectNextFeature(featureList.features) ?? undefined;
+    if (!feature) {
+      if (outputJson) {
+        console.log(JSON.stringify({ complete: true, message: "All features passing" }));
+      } else {
+        console.log(chalk.green("🎉 All features are passing or blocked. Nothing to do!"));
+      }
+      return;
+    }
+  }
+
+  // JSON output mode - return feature data and exit
+  if (outputJson) {
+    const stats = getFeatureStats(featureList.features);
+    const completion = getCompletionPercentage(featureList.features);
+    const output = {
+      feature: {
+        id: feature.id,
+        description: feature.description,
+        module: feature.module,
+        priority: feature.priority,
+        status: feature.status,
+        acceptance: feature.acceptance,
+        dependsOn: feature.dependsOn,
+        notes: feature.notes || null,
+      },
+      stats: {
+        passing: stats.passing,
+        failing: stats.failing,
+        needsReview: stats.needs_review,
+        total: featureList.features.length,
+      },
+      completion,
+      cwd,
+    };
+    console.log(JSON.stringify(output, null, 2));
+    return;
+  }
+
+  // Quiet mode - minimal output
+  if (quiet) {
+    console.log(`Feature: ${feature.id}`);
+    console.log(`Description: ${feature.description}`);
+    console.log(`Status: ${feature.status}`);
+    console.log(`Acceptance:`);
+    feature.acceptance.forEach((a, i) => console.log(`  ${i + 1}. ${a}`));
+    return;
   }
 
   console.log(chalk.bold.blue("\n═══════════════════════════════════════════════════════════════"));
@@ -456,14 +563,8 @@ async function runStep(featureId: string | undefined, dryRun: boolean, runCheck:
   console.log("");
 
   // ─────────────────────────────────────────────────────────────────
-  // 4. Feature List Status
+  // 4. Feature List Status (already loaded above)
   // ─────────────────────────────────────────────────────────────────
-  const featureList = await loadFeatureList(cwd);
-  if (!featureList) {
-    console.log(chalk.red("✗ No feature list found. Run 'agent-foreman init' first."));
-    process.exit(1);
-  }
-
   const stats = getFeatureStats(featureList.features);
   const completion = getCompletionPercentage(featureList.features);
 
@@ -513,24 +614,8 @@ async function runStep(featureId: string | undefined, dryRun: boolean, runCheck:
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // 6. Select Next Feature
+  // 6. Display Feature Info
   // ─────────────────────────────────────────────────────────────────
-  let feature: Feature | undefined;
-
-  if (featureId) {
-    feature = findFeatureById(featureList.features, featureId);
-    if (!feature) {
-      console.log(chalk.red(`✗ Feature '${featureId}' not found.`));
-      process.exit(1);
-    }
-  } else {
-    feature = selectNextFeature(featureList.features) ?? undefined;
-    if (!feature) {
-      console.log(chalk.green("🎉 All features are passing or blocked. Nothing to do!"));
-      return;
-    }
-  }
-
   console.log(chalk.bold.blue("═══════════════════════════════════════════════════════════════"));
   console.log(chalk.bold.blue("                     NEXT TASK"));
   console.log(chalk.bold.blue("═══════════════════════════════════════════════════════════════\n"));
@@ -577,19 +662,61 @@ async function runStep(featureId: string | undefined, dryRun: boolean, runCheck:
   console.log(generateFeatureGuidance(feature));
 }
 
-async function runStatus() {
+async function runStatus(outputJson: boolean = false, quiet: boolean = false) {
   const cwd = process.cwd();
 
   const featureList = await loadFeatureList(cwd);
   if (!featureList) {
-    console.log(chalk.red("✗ No feature list found. Run 'agent-foreman init <goal>' first."));
+    if (outputJson) {
+      console.log(JSON.stringify({ error: "No feature list found" }));
+    } else {
+      console.log(chalk.red("✗ No feature list found. Run 'agent-foreman init <goal>' first."));
+    }
     return;
   }
 
   const stats = getFeatureStats(featureList.features);
   const completion = getCompletionPercentage(featureList.features);
   const recentEntries = await getRecentEntries(cwd, 5);
+  const next = selectNextFeature(featureList.features);
 
+  // JSON output mode
+  if (outputJson) {
+    const output = {
+      goal: featureList.metadata.projectGoal,
+      updatedAt: featureList.metadata.updatedAt,
+      stats: {
+        passing: stats.passing,
+        failing: stats.failing,
+        needsReview: stats.needs_review,
+        blocked: stats.blocked,
+        deprecated: stats.deprecated,
+        total: featureList.features.length,
+      },
+      completion,
+      recentActivity: recentEntries.map((e) => ({
+        type: e.type,
+        timestamp: e.timestamp,
+        summary: e.summary,
+      })),
+      nextFeature: next
+        ? { id: next.id, description: next.description, status: next.status }
+        : null,
+    };
+    console.log(JSON.stringify(output, null, 2));
+    return;
+  }
+
+  // Quiet mode - minimal output
+  if (quiet) {
+    console.log(`${completion}% complete | ${stats.passing}/${featureList.features.length} passing`);
+    if (next) {
+      console.log(`Next: ${next.id}`);
+    }
+    return;
+  }
+
+  // Normal output
   console.log("");
   console.log(chalk.bold.blue("📊 Project Status"));
   console.log(chalk.gray(`   Goal: ${featureList.metadata.projectGoal}`));
@@ -634,7 +761,6 @@ async function runStatus() {
   }
 
   // Next feature
-  const next = selectNextFeature(featureList.features);
   if (next) {
     console.log(chalk.bold("   Next Up:"));
     console.log(chalk.white(`   → ${next.id}: ${next.description}`));

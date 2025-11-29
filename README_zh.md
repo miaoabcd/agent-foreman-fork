@@ -72,7 +72,7 @@ agent-foreman 可作为 Claude Code 插件使用：
 
 ```bash
 # 安装插件
-/plugin marketplace add mylukin/foreman
+/plugin marketplace add mylukin/agent-foreman
 /plugin install foreman
 ```
 

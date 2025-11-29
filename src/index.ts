@@ -226,7 +226,7 @@ async function main() {
     )
     .command(
       "complete <feature_id>",
-      "Mark a feature as complete",
+      "Verify and mark a feature as complete",
       (yargs) =>
         yargs
           .positional("feature_id", {
@@ -243,9 +243,20 @@ async function main() {
             type: "boolean",
             default: false,
             describe: "Skip automatic git commit",
+          })
+          .option("skip-verify", {
+            type: "boolean",
+            default: false,
+            describe: "Skip AI verification (not recommended)",
+          })
+          .option("verbose", {
+            alias: "v",
+            type: "boolean",
+            default: false,
+            describe: "Show detailed verification output",
           }),
       async (argv) => {
-        await runComplete(argv.feature_id!, argv.notes, !argv.noCommit);
+        await runComplete(argv.feature_id!, argv.notes, !argv.noCommit, argv.skipVerify, argv.verbose);
       }
     )
     .command(
@@ -902,7 +913,31 @@ async function runVerify(featureId: string, verbose: boolean, skipChecks: boolea
   }
 }
 
-async function runComplete(featureId: string, notes?: string, autoCommit: boolean = true) {
+/**
+ * Prompt user for yes/no confirmation
+ */
+async function promptConfirmation(message: string): Promise<boolean> {
+  const readline = await import("node:readline");
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(`${message} (y/n): `, (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes");
+    });
+  });
+}
+
+async function runComplete(
+  featureId: string,
+  notes?: string,
+  autoCommit: boolean = true,
+  skipVerify: boolean = false,
+  verbose: boolean = false
+) {
   const cwd = process.cwd();
 
   const featureList = await loadFeatureList(cwd);
@@ -917,7 +952,77 @@ async function runComplete(featureId: string, notes?: string, autoCommit: boolea
     process.exit(1);
   }
 
-  // Update status
+  // Step 1: Run verification (unless skipped)
+  if (skipVerify) {
+    console.log(chalk.yellow("⚠ Skipping verification (--skip-verify flag)"));
+    console.log(chalk.gray("  Note: It's recommended to run verification before marking complete"));
+  } else {
+    console.log(chalk.bold.blue("\n═══════════════════════════════════════════════════════════════"));
+    console.log(chalk.bold.blue("                    FEATURE VERIFICATION"));
+    console.log(chalk.bold.blue("═══════════════════════════════════════════════════════════════\n"));
+
+    console.log(chalk.bold(`📋 Feature: ${chalk.cyan(feature.id)}`));
+    console.log(chalk.gray(`   Module: ${feature.module} | Priority: ${feature.priority}`));
+    console.log("");
+    console.log(chalk.bold("📝 Acceptance Criteria:"));
+    feature.acceptance.forEach((a, i) => {
+      console.log(chalk.white(`   ${i + 1}. ${a}`));
+    });
+
+    // Run verification
+    const result = await verifyFeature(cwd, feature, {
+      verbose,
+      skipChecks: false,
+    });
+
+    // Display result
+    console.log(formatVerificationResult(result, verbose));
+
+    // Update feature with verification summary
+    const summary = createVerificationSummary(result);
+    featureList.features = updateFeatureVerification(
+      featureList.features,
+      featureId,
+      summary
+    );
+
+    // Save verification summary to feature list
+    await saveFeatureList(cwd, featureList);
+
+    // Log verification to progress
+    await appendProgressLog(
+      cwd,
+      createVerifyEntry(
+        featureId,
+        result.verdict,
+        `Verified ${featureId}: ${result.verdict}`
+      )
+    );
+
+    console.log(chalk.gray(`\n   Results saved to ai/verification/results.json`));
+
+    // Handle verdict
+    if (result.verdict === "fail") {
+      console.log(chalk.red("\n   ✗ Verification failed. Feature NOT marked as complete."));
+      console.log(chalk.yellow("   Fix the issues above and run again."));
+      process.exit(1);
+    }
+
+    if (result.verdict === "needs_review") {
+      console.log(chalk.yellow("\n   ⚠ Some criteria could not be verified automatically."));
+      const confirmed = await promptConfirmation(chalk.yellow("   Do you still want to mark this feature as complete?"));
+      if (!confirmed) {
+        console.log(chalk.gray("\n   Feature NOT marked as complete."));
+        process.exit(0);
+      }
+      console.log(chalk.gray("   Proceeding with user confirmation..."));
+    }
+
+    // Verdict is "pass" or user confirmed "needs_review"
+    console.log(chalk.green("\n   ✓ Verification passed!"));
+  }
+
+  // Step 2: Update status to passing
   featureList.features = updateFeatureStatus(
     featureList.features,
     featureId,
@@ -934,7 +1039,7 @@ async function runComplete(featureId: string, notes?: string, autoCommit: boolea
     createStepEntry(featureId, "passing", "./ai/init.sh check", `Completed ${featureId}`)
   );
 
-  console.log(chalk.green(`✓ Marked '${featureId}' as passing`));
+  console.log(chalk.green(`\n✓ Marked '${featureId}' as passing`));
 
   // Auto-commit or suggest (PRD: write clear commit message)
   const shortDesc = feature.description.length > 50

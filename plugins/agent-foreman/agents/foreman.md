@@ -98,20 +98,14 @@ agent-foreman step
 # 4. Run tests
 ./ai/init.sh check
 
-# 5. Verify with AI analysis
-agent-foreman verify <feature_id>
-# → Runs automated checks + AI analysis
-# → Stores results in ai/verification/results.json
-# → Logs VERIFY entry to ai/progress.md
-
-# 6. Mark complete when verification passes
+# 5. Complete the feature (auto-verifies + auto-commits)
 agent-foreman complete <feature_id>
-# → Shows suggested git commit command
+# → Runs AI verification first
+# → If pass: marks as passing + auto-commits
+# → If fail: shows errors, does NOT complete
+# → If needs_review: asks for confirmation
 
-# 7. Follow the suggested commit
-git add -A && git commit -m "feat(module): description"
-
-# 8. Check for impact on other features (optional)
+# 6. Check for impact on other features (optional)
 agent-foreman impact <feature_id>
 ```
 

@@ -144,27 +144,30 @@ agent-foreman step
 npm run test
 ```
 
-### 5. AI Verification
+### 5. Complete (with Integrated Verification)
 
-Run AI-powered verification to check acceptance criteria:
-
-```bash
-agent-foreman verify auth.login
-```
-
-This will:
-- Run automated checks (tests, typecheck, lint, build)
-- Analyze code changes with AI
-- Evaluate each acceptance criterion
-- Store results in `ai/verification/results.json`
-- Log a VERIFY entry in `ai/progress.md`
-
-### 6. Mark Complete
-
-Only mark complete if verification passes:
+Run complete - it automatically verifies first:
 
 ```bash
 agent-foreman complete auth.login
+```
+
+This will:
+1. Run AI-powered verification (tests, typecheck, lint, build + AI analysis)
+2. If verification passes → marks feature as passing + auto-commits
+3. If verification fails → shows errors, does NOT mark complete
+4. If needs_review → prompts for confirmation
+
+**Skip verification (not recommended):**
+
+```bash
+agent-foreman complete auth.login --skip-verify
+```
+
+**Preview verification only:**
+
+```bash
+agent-foreman verify auth.login
 ```
 
 **Output with suggested commit:**

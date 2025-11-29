@@ -37,10 +37,9 @@ ${goal}
 3. **Plan** - Review acceptance criteria before coding
 4. **Implement** - Work on ONE feature at a time
 5. **Test** - Run \`./ai/init.sh check\` to verify
-6. **Verify** - Run \`agent-foreman verify <feature_id>\` for AI-powered verification
-7. **Complete** - Run \`agent-foreman complete <feature_id>\` if verification passes
-8. **Log** - Entry automatically added to progress log
-9. **Commit** - Create clean commit with feature ID
+6. **Complete** - Run \`agent-foreman complete <feature_id>\` (auto-verifies + commits)
+7. **Log** - Entry automatically added to progress log
+8. **Next** - Move to next feature or celebrate completion
 
 ### Rules
 
@@ -76,11 +75,14 @@ agent-foreman step
 # Work on specific feature
 agent-foreman step <feature_id>
 
-# Verify feature with AI analysis
-agent-foreman verify <feature_id>
-
-# Mark feature as complete (after verification passes)
+# Verify and mark feature as complete (AI verification + auto-commit)
 agent-foreman complete <feature_id>
+
+# Skip verification (not recommended)
+agent-foreman complete <feature_id> --skip-verify
+
+# Preview verification without completing
+agent-foreman verify <feature_id>
 
 # Analyze impact of changes
 agent-foreman impact <feature_id>

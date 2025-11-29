@@ -4,7 +4,7 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 import { callAnyAvailableAgent } from "./agents.js";
 import type {
@@ -217,23 +217,76 @@ async function findBuildFiles(cwd: string): Promise<string[]> {
 }
 
 /**
- * Get directory structure using tree command or fallback
+ * Get directory structure using safe Node.js file system operations
+ * Avoids shell commands to prevent command injection
  */
 async function getDirectoryStructure(cwd: string): Promise<string> {
+  const ignoreDirs = new Set([
+    "node_modules",
+    ".git",
+    "__pycache__",
+    ".venv",
+    "target",
+    "dist",
+    "build",
+    ".next",
+    ".nuxt",
+    "coverage",
+    ".cache",
+  ]);
+
+  const lines: string[] = [];
+  const maxDepth = 2;
+  const maxItems = 50;
+
+  /**
+   * Recursively build directory tree using pure Node.js
+   */
+  async function buildTree(dir: string, prefix: string, depth: number): Promise<void> {
+    if (depth > maxDepth || lines.length >= maxItems) {
+      return;
+    }
+
+    try {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      const filtered = entries.filter(
+        (e) => !e.name.startsWith(".") && !ignoreDirs.has(e.name)
+      );
+
+      // Sort: directories first, then files
+      const sorted = filtered.sort((a, b) => {
+        if (a.isDirectory() && !b.isDirectory()) return -1;
+        if (!a.isDirectory() && b.isDirectory()) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      for (let i = 0; i < sorted.length && lines.length < maxItems; i++) {
+        const entry = sorted[i];
+        const isLast = i === sorted.length - 1;
+        const connector = isLast ? "└── " : "├── ";
+        const childPrefix = isLast ? "    " : "│   ";
+
+        lines.push(`${prefix}${connector}${entry.name}${entry.isDirectory() ? "/" : ""}`);
+
+        if (entry.isDirectory()) {
+          await buildTree(path.join(dir, entry.name), prefix + childPrefix, depth + 1);
+        }
+      }
+    } catch {
+      // Permission denied or other error, skip this directory
+    }
+  }
+
   try {
-    // Try tree command with limited depth
-    const result = execSync("tree -L 2 -I 'node_modules|.git|__pycache__|.venv|target|dist|build' --noreport 2>/dev/null || find . -maxdepth 2 -type d | head -30", {
-      cwd,
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return result.trim().slice(0, 2000); // Limit size
+    lines.push("./");
+    await buildTree(cwd, "", 0);
+    return lines.join("\n").slice(0, 2000);
   } catch {
-    // Fallback: list top-level directories
+    // Fallback: just list top-level directories
     try {
       const entries = await fs.readdir(cwd, { withFileTypes: true });
       const dirs = entries
-        .filter((e) => e.isDirectory() && !e.name.startsWith("."))
+        .filter((e) => e.isDirectory() && !e.name.startsWith(".") && !ignoreDirs.has(e.name))
         .map((e) => e.name)
         .slice(0, 20);
       return `Directories: ${dirs.join(", ")}`;
@@ -628,14 +681,15 @@ export async function discoverCapabilitiesWithAI(
 
 /**
  * Check if git is available in the project
+ * Uses spawnSync to avoid shell injection
  */
 async function checkGitAvailable(cwd: string): Promise<boolean> {
   try {
-    execSync("git rev-parse --git-dir", {
+    const result = spawnSync("git", ["rev-parse", "--git-dir"], {
       cwd,
       stdio: ["pipe", "pipe", "pipe"],
     });
-    return true;
+    return result.status === 0;
   } catch {
     return false;
   }

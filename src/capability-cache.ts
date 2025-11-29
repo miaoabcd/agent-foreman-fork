@@ -5,7 +5,7 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 import type { ExtendedCapabilities, CapabilityCache } from "./verification-types.js";
 
@@ -176,12 +176,15 @@ export async function isStale(cwd: string): Promise<boolean> {
  */
 function getGitCommitHash(cwd: string): string | undefined {
   try {
-    const result = execSync("git rev-parse HEAD", {
+    const result = spawnSync("git", ["rev-parse", "HEAD"], {
       cwd,
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
     });
-    return result.trim();
+    if (result.status !== 0) {
+      return undefined;
+    }
+    return result.stdout.trim();
   } catch {
     return undefined;
   }
@@ -210,6 +213,8 @@ async function findExistingBuildFiles(cwd: string): Promise<string[]> {
 
 /**
  * Check if any build files have changed since a given commit
+ * Uses spawnSync with argument arrays to prevent command injection
+ *
  * @param cwd - Project root directory
  * @param commitHash - Commit hash to compare against
  * @param files - List of files to check
@@ -221,18 +226,23 @@ function hasBuildFileChanges(
   files: string[]
 ): boolean {
   try {
-    // Check if any of the tracked files have changed since the cache commit
-    const changedFiles = execSync(
-      `git diff --name-only ${commitHash} HEAD -- ${files.join(" ")}`,
-      {
-        cwd,
-        encoding: "utf-8",
-        stdio: ["pipe", "pipe", "pipe"],
-      }
-    );
+    // Use spawnSync with argument array to prevent command injection
+    // Arguments: git diff --name-only <commitHash> HEAD -- <file1> <file2> ...
+    const args = ["diff", "--name-only", commitHash, "HEAD", "--", ...files];
+
+    const result = spawnSync("git", args, {
+      cwd,
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    // If git command fails, assume stale to be safe
+    if (result.status !== 0) {
+      return true;
+    }
 
     // If any files returned, cache is stale
-    return changedFiles.trim().length > 0;
+    return result.stdout.trim().length > 0;
   } catch {
     // If git command fails, assume stale to be safe
     return true;

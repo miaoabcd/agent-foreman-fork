@@ -1,75 +1,198 @@
-想象一下，一个软件团队在做一个大项目，但有个奇怪的规定：每个工程师只能工作几十分钟，最多几小时，干完就要换一个新的工程师。所以让这个团队完成简单项目任务还行，复杂一点需要长时间运行的项目，比如你让它克隆一个 claude .ai，它就做不到。
+# Product Requirements Document
 
-这其实就是 Coding Agent 的现状：没有记忆，上下文窗口长度有限。所以要它执行长时间任务，它还做不好。
+## Overview
 
-Anthropic 的这篇博客：《Effective harnesses for long-running agents》，专门讨论了如何让 Agent 在跨越多个上下文窗口时依然能持续推进任务。
+**agent-foreman** is a long-task harness for AI coding agents that enables feature-driven development with external memory.
 
-先看 Agent 在长任务中遇到的主要问题是什么？
+> **agent-foreman** 是一个面向 AI 编程代理的长任务管理工具，通过外部记忆实现功能驱动开发。
 
-主要三种：
+## Problem Statement
 
-第一种叫一口气干太多。比如你让 Agent 克隆一个 claude .ai 这样的网站，它会试图一次性搞定整个应用。结果上下文还没用完，功能写了一半，代码乱成一锅粥。下一个会话进来，面对半成品只能干瞪眼，花很多时间猜测前面到底做了什么。
+AI coding agents face three common failure modes when working on long-running tasks:
 
-第二种叫过早宣布胜利。项目做了一部分，后来的 Agent 看看环境，觉得好像差不多了，就直接收工。功能缺一大堆也不管。
+| Failure Mode | Description |
+|--------------|-------------|
+| **Doing too much at once** | Trying to complete everything in one session, resulting in messy, incomplete code |
+| **Premature completion** | Declaring victory before all features actually work |
+| **Superficial testing** | Not thoroughly validating implementations |
 
-第三种叫测试敷衍。Agent 改完代码，跑几个单元测试或者 curl 一下接口就觉得万事大吉，根本没有像真实用户那样端到端走一遍流程。
+> AI 编程代理在处理长时间任务时面临三种常见失败模式：一次做太多、过早宣布完成、测试不充分。
 
-这三种失败模式的共同点是 Agent 不知道全局目标，也不知道该在哪里停下来、该留下什么给下一位。
+## Solution
 
-那么 Anthropic 的解决方案是什么呢？
+Provide a structured harness with:
 
-其实就是软件工程的一些现成的解决方案：引入类似人类团队的分工协作机制，将复杂任务拆解成小的可跟踪验证的任务，清晰的交接机制，并严格验证任务结果
+1. **External Memory** - Structured JSON files that persist across sessions
+2. **Feature-Driven Workflow** - One task at a time with clear acceptance criteria
+3. **Clean Handoffs** - Progress logs for session continuity
+4. **Impact Tracking** - Dependency analysis for change management
 
-一个初始化 Agent，它只在项目启动时出场一次，任务是搭好项目运行环境：有点像架构师的角色，写一个 init .sh 脚本方便后续启动开发服务器，建一个 claude-progress.txt 记录进度，做第一次 git 提交，最关键的是生成一份功能清单。
+> 提供结构化的工具框架，包括：外部记忆、功能驱动工作流、干净的会话交接、变更影响追踪。
 
-这份功能清单有多细？在克隆 claude .ai 的案例中，列了超过 200 条具体功能，比如用户能打开新对话、输入问题、按回车、看到 AI 回复。每一条初始状态都标记为失败，后续 Agent 必须逐条验证通过才能改成成功。
+---
 
-而且这里有个细节，这个清单不是用 Markdown 来写的，是一个 JSON 数组，因为 Anthropic 实验发现，相比 Markdown，模型在处理 JSON 时更不容易随意篡改或覆盖文件。
+## Core Artifacts
 
-另一个是编码 Agent。在初始化项目后，后续就是它干活了，核心行为准则只有两条：一次只做一个功能，做完要留下干净的环境。
+### 1. `ai/feature_list.json` - Feature Backlog
 
-什么叫干净的环境？想象你往主分支提交代码的标准：没有严重 bug，代码整齐有文档，下一个人接手能直接开始新功能，不用先替你收拾烂摊子。
+A JSON-based feature backlog that AI agents can reliably update.
 
-每次开工前，它先做几件事：
+**Why JSON instead of Markdown?**
 
-– 运行 pwd 看看自己在哪个目录
-– 读 Git 日志和进度文件，搞清楚上一轮干了啥
-– 看功能清单，挑一个最高优先级的未完成功能
-– 跑一遍基础测试，确保 App 还能用
+From Anthropic's research:
+> "Models are more likely to respect and accurately update JSON structures than markdown checklists."
 
-然后专心做一个功能，做完后：
+**Schema:**
 
-– 写清楚的 Git commit message
-– 更新 claude-progress.txt
-– 只改功能清单里的状态字段，绝不删改需求本身
+```json
+{
+  "features": [
+    {
+      "id": "module.feature.action",
+      "description": "Human-readable description",
+      "module": "parent-module",
+      "priority": 1,
+      "status": "failing",
+      "acceptance": ["Criterion 1", "Criterion 2"],
+      "dependsOn": ["other.feature.id"],
+      "version": 1,
+      "origin": "manual"
+    }
+  ],
+  "metadata": {
+    "projectGoal": "Project goal description",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "version": "1.0.0"
+  }
+}
+```
 
-这个设计的巧妙之处在于，它把“记忆”外化成了文件和 Git 历史。每一轮的 Agent 不需要依赖上下文窗口里的碎片信息，而是模仿靠谱的人类工程师每天上班会做的事。先同步进度，确认环境正常，再动手干活。
+### 2. `ai/progress.log` - Session Audit Log
 
-测试环节的改进值得单独说。
+Single-line entries for session handoff:
 
-原来 Agent 只会用代码层面的方式验证，比如跑单元测试或者调接口。问题是很多 bug 只有用户真正操作页面时才会暴露。
+```text
+INIT 2025-01-15T10:00:00Z goal="Build REST API" note="initialized harness"
+STEP 2025-01-15T10:30:00Z feature=auth.login status=passing summary="Implemented login"
+CHANGE 2025-01-15T11:00:00Z feature=auth.login action=refactor reason="Improved error handling"
+REPLAN 2025-01-15T12:00:00Z summary="Splitting auth into submodules"
+VERIFY 2025-01-15T13:00:00Z feature=auth.login result=pass
+```
 
-解决方案是给 Agent 配上浏览器自动化工具，比如 Puppeteer MCP。Agent 现在能像真人一样打开浏览器、点按钮、填表单、看页面渲染结果。Anthropic 放了一张动图，展示 Agent 测试克隆版 claude .ai 时自己截的图，确实是在像用户那样操作。
+**Log Types:** `INIT` | `STEP` | `CHANGE` | `REPLAN` | `VERIFY`
 
-这招大幅提升了功能验证的准确率。当然也有边界，比如浏览器原生的 alert 弹窗，Puppeteer 捕捉不到，依赖弹窗的功能就容易出 bug。
+### 3. `ai/init.sh` - Bootstrap Script
 
-这套方案还留了一些开放问题。
+Environment entry point with three standard functions:
 
-比如，到底是一个通用 Agent 全包好，还是搞专业分工？让测试 Agent 专门测，代码清理 Agent 专门收拾，也许效果更好。
+```bash
+bootstrap() { # Install dependencies }
+dev()       { # Start development server }
+check()     { # Run tests + verification }
+```
 
-再比如，这套经验是针对全栈 Web 开发优化的，能不能迁移到科研或金融建模这类长周期任务？应该可以，但需要实验验证。
+### 4. `CLAUDE.md` - AI Instructions
 
-响马 @xicilion 说：
-> ai 的尽头依旧是软件工程。
+Project-specific instructions for AI agents, including workflow rules and file schemas.
 
-AI Agent 也不是魔法，它一样需要从人类软件工程中汲取经验，它也需要将复杂的任务进行分解成简单的任务，要有一个结构化的工作环境和清晰的交接机制。
+---
 
-人类工程师为什么能跨团队、跨时区协作？因为有 Git、有文档、有 Code Review、有测试。AI Agent 要想长时间自主工作，也得把这些东西搬过来。
+## Feature Status Values
 
-Anthropic 的方案，不过是把软件工程的最佳实践变成了 Agent 能理解的提示词和工具链。不是让模型变得更聪明，而是给它提供更好的脚手架。
+| Status | Meaning | Action |
+|--------|---------|--------|
+| `failing` | Not yet implemented | Work on it |
+| `passing` | Acceptance criteria met | Done |
+| `blocked` | External dependency blocking | Skip for now |
+| `needs_review` | May be affected by recent changes | Re-verify |
+| `deprecated` | No longer needed | Ignore |
 
-Anthropic 的思路值得借鉴。无论你用的是 Claude、GPT 还是别的模型，在设计多轮长任务时，都要想清楚，怎么让下一轮的 Agent 快速进入状态，怎么避免它重复造轮子或者把代码搞成一团乱麻。即使是单轮任务，也要清楚它是没有记忆的，你需要通过外部文件来帮助它“想起来”之前做过的事。
+---
 
-以现在模型的能力，Coding Agent 已经能做很多事情了，核心还是在于你是不是能像软件工程中那样，去分解好任务，设计好工作的流程。
+## Workflows
 
+### New Project
 
+```bash
+mkdir my-project && cd my-project
+agent-foreman init "Build a REST API"
+agent-foreman step
+```
+
+### Existing Project
+
+```bash
+agent-foreman survey        # Analyze existing code
+agent-foreman init          # Create harness from survey
+agent-foreman step          # Start working
+```
+
+### Development Loop
+
+```bash
+agent-foreman status        # 1. Check progress
+agent-foreman step          # 2. Get next feature
+# ... implement feature ... # 3. Do the work
+agent-foreman complete <id> # 4. Verify + complete + commit
+```
+
+---
+
+## Feature Selection Priority
+
+1. `needs_review` status (highest - may be broken)
+2. `failing` status (new work needed)
+3. Lower `priority` number
+
+---
+
+## Change Management
+
+### Adding New Features
+
+- Add to `feature_list.json` with `status: "failing"`
+- Log `CHANGE` entry with reason
+
+### Modifying Requirements
+
+- Don't overwrite existing features
+- Mark old feature as `deprecated`
+- Create new feature with `supersedes` reference
+- Increment `version` field
+
+### Impact Analysis
+
+When changing a feature:
+
+1. Find dependent features (`dependsOn` references)
+2. Find same-module features
+3. Mark affected features as `needs_review`
+
+---
+
+## Commands
+
+| Command | Purpose |
+|---------|---------|
+| `survey` | AI-powered project analysis |
+| `init` | Initialize or upgrade harness |
+| `step` | Get next priority feature |
+| `status` | Show project progress |
+| `complete` | Verify + mark complete + commit |
+| `check` | Preview verification |
+| `impact` | Analyze dependencies |
+| `agents` | Show available AI agents |
+
+---
+
+## Success Metrics
+
+- Clean session handoffs (no context loss)
+- One feature per session discipline
+- Verified completion (no premature declarations)
+- Trackable progress (audit log)
+
+---
+
+*Based on Anthropic's research: [Building effective agents](https://www.anthropic.com/research/building-effective-agents)*

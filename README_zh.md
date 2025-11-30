@@ -290,7 +290,9 @@ agent-foreman init "你的项目目标"
 | `step` | 显示下一个要处理的功能 |
 | `status` | 显示当前项目状态 |
 | `impact <feature_id>` | 分析更改的影响 |
-| `complete <feature_id>` | 将功能标记为完成 |
+| `complete <feature_id>` | 验证并标记功能为完成 |
+| `check <feature_id>` | 预览验证结果（不执行完成） |
+| `agents` | 显示可用的 AI 代理 |
 
 ### 初始化模式
 
@@ -371,4 +373,4 @@ Lukin ([@mylukin](https://github.com/mylukin))
 
 ---
 
-灵感来自 Anthropic 的博客文章：[Effective harnesses for long-running agents](https://www.anthropic.com)
+灵感来自 Anthropic 的博客文章：[Building effective agents](https://www.anthropic.com/research/building-effective-agents)

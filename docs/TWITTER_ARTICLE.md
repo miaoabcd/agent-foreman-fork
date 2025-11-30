@@ -132,7 +132,7 @@ Stop fighting amnesia. Give your AI a memory.
 GitHub: github.com/mylukin/agent-foreman
 NPM: npmjs.com/package/agent-foreman
 
-Inspired by Anthropic's research on long-running AI agents.
+Inspired by Anthropic's research: [Building effective agents](https://www.anthropic.com/research/building-effective-agents)
 
 ---
 
@@ -264,4 +264,4 @@ agent-foreman 是它们需要的外部大脑——一个结构化框架，维护
 GitHub: github.com/mylukin/agent-foreman
 NPM: npmjs.com/package/agent-foreman
 
-灵感来自 Anthropic 关于长时间运行 AI 智能体的研究。
+灵感来自 Anthropic 研究：[Building effective agents](https://www.anthropic.com/research/building-effective-agents)

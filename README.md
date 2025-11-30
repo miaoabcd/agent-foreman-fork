@@ -293,7 +293,9 @@ one by one until all are passing.
 | `step` | Show next feature to work on |
 | `status` | Show current project status |
 | `impact <feature_id>` | Analyze impact of changes |
-| `complete <feature_id>` | Mark a feature as complete |
+| `complete <feature_id>` | Verify and mark feature as complete |
+| `check <feature_id>` | Preview verification without completing |
+| `agents` | Show available AI agents |
 
 ### Init Modes
 
@@ -374,4 +376,4 @@ Lukin ([@mylukin](https://github.com/mylukin))
 
 ---
 
-Inspired by Anthropic's blog post: [Effective harnesses for long-running agents](https://www.anthropic.com)
+Inspired by Anthropic's blog post: [Building effective agents](https://www.anthropic.com/research/building-effective-agents)

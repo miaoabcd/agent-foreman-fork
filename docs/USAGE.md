@@ -292,11 +292,42 @@ agent-foreman step -d                   # Dry run
 
 ### `complete <feature_id>`
 
-Mark a feature as complete.
+Mark a feature as complete with AI verification.
 
 ```bash
 agent-foreman complete cli.survey
 agent-foreman complete cli.survey --notes "Added error handling"
+```
+
+**Test mode options:**
+
+| Flag | Description |
+|------|-------------|
+| `--quick` / `-q` | Run only tests related to the changed feature (selective testing) |
+| `--full` | Run the complete test suite (default behavior) |
+| `--test-pattern <pattern>` | Use explicit test pattern (e.g., `tests/auth/**`) |
+| `--skip-verify` | Skip AI verification (not recommended) |
+
+> **测试模式选项：**
+>
+> | 标志 | 描述 |
+> |------|------|
+> | `--quick` / `-q` | 仅运行与更改功能相关的测试（选择性测试） |
+> | `--full` | 运行完整测试套件（默认行为） |
+> | `--test-pattern <pattern>` | 使用显式测试模式（如 `tests/auth/**`） |
+> | `--skip-verify` | 跳过 AI 验证（不推荐） |
+
+**Examples:**
+
+```bash
+# Quick mode - runs only related tests (faster for large test suites)
+agent-foreman complete auth.login --quick
+
+# Full mode - runs all tests (default)
+agent-foreman complete auth.login --full
+
+# Explicit pattern - specify exact test files to run
+agent-foreman complete auth.login --test-pattern "tests/auth/*.test.ts"
 ```
 
 **Shows suggested commit:** `git add -A && git commit -m "feat(module): description"`
@@ -310,6 +341,20 @@ Show project status and progress.
 ```bash
 agent-foreman status
 ```
+
+### `verify <feature_id>`
+
+Preview verification without completing (dry run).
+
+```bash
+agent-foreman verify cli.survey
+
+# With test mode options
+agent-foreman verify cli.survey --quick
+agent-foreman verify cli.survey --test-pattern "tests/cli/**"
+```
+
+> 预览验证结果，不执行完成操作（预演模式）
 
 ### `impact <feature_id>`
 
@@ -511,13 +556,52 @@ Before starting new work, verify the environment is healthy.
 agent-foreman step --check
 ```
 
-### 4. Review Feature List Regularly
+### 4. Use Quick Mode for Faster Iterations
+
+When working on features with large E2E test suites, use `--quick` mode to run only related tests during development.
+
+> 当处理具有大型 E2E 测试套件的功能时，使用 `--quick` 模式仅运行相关测试以加快开发速度。
+
+```bash
+# During development - run only related tests
+agent-foreman complete auth.login --quick
+
+# Before release - run full test suite
+agent-foreman complete auth.login --full
+```
+
+**How selective testing works:**
+
+1. **Explicit pattern** - If `testPattern` is defined in feature_list.json, it uses that pattern
+2. **Auto-detect** - Otherwise, it analyzes git changes to find related test files
+3. **Module-based** - Falls back to module-based test discovery
+4. **Full suite** - If no pattern can be determined, runs all tests
+
+> **选择性测试的工作原理：**
+>
+> 1. **显式模式** - 如果在 feature_list.json 中定义了 `testPattern`，则使用该模式
+> 2. **自动检测** - 否则，分析 git 更改以查找相关测试文件
+> 3. **基于模块** - 回退到基于模块的测试发现
+> 4. **完整套件** - 如果无法确定模式，则运行所有测试
+
+**Define testPattern in feature_list.json:**
+
+```json
+{
+  "id": "auth.login",
+  "description": "User authentication flow",
+  "testPattern": "tests/auth/**/*.test.ts",
+  ...
+}
+```
+
+### 5. Review Feature List Regularly
 
 ```bash
 agent-foreman status
 ```
 
-### 5. Update Survey When Structure Changes
+### 6. Update Survey When Structure Changes
 
 If you significantly change the project structure:
 

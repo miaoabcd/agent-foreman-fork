@@ -71,11 +71,21 @@ agent-foreman step <feature_id>
 # Verify and mark feature as complete (AI verification + auto-commit)
 agent-foreman complete <feature_id>
 
+# Quick mode - run only related tests (faster for E2E heavy projects)
+agent-foreman complete <feature_id> --quick
+
+# Full mode - run complete test suite (default)
+agent-foreman complete <feature_id> --full
+
+# Explicit test pattern
+agent-foreman complete <feature_id> --test-pattern "tests/auth/**"
+
 # Skip verification (not recommended)
 agent-foreman complete <feature_id> --skip-verify
 
 # Preview verification without completing
 agent-foreman verify <feature_id>
+agent-foreman verify <feature_id> --quick
 
 # Analyze impact of changes
 agent-foreman impact <feature_id>
@@ -84,6 +94,7 @@ agent-foreman impact <feature_id>
 ./ai/init.sh bootstrap
 ./ai/init.sh dev
 ./ai/init.sh check
+./ai/init.sh check --quick  # Selective testing mode
 ```
 
 ### Feature ID Convention
@@ -124,7 +135,8 @@ Write criteria as testable statements:
       "tags": ["optional-tag"],
       "version": 1,
       "origin": "manual",
-      "notes": ""
+      "notes": "",
+      "testPattern": "tests/module/**/*.test.ts"
     }
   ],
   "metadata": {
@@ -137,6 +149,8 @@ Write criteria as testable statements:
 ```
 
 **Required fields**: `id`, `description`, `module`, `priority`, `status`, `acceptance`, `version`, `origin`
+
+**Optional fields**: `testPattern` (glob pattern for selective test execution)
 
 **Status values**: `failing` | `passing` | `blocked` | `needs_review` | `deprecated`
 

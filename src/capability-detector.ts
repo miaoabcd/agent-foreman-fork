@@ -67,6 +67,45 @@ interface TestFrameworkResult {
 }
 
 /**
+ * Normalize test command to ensure it runs once and exits (not in watch mode)
+ * This prevents infinite CPU consumption from watch-mode test runners
+ */
+function normalizeTestCommand(command: string, framework: string): string {
+  // Remove leading/trailing whitespace
+  command = command.trim();
+
+  // Vitest: ensure "run" flag is present to exit after tests complete
+  if (framework === "vitest") {
+    // Check if command is just "vitest" without "run" - this would run in watch mode!
+    if (command === "vitest" || command === "npx vitest") {
+      return command + " run";
+    }
+    // Check if "run" flag is already present
+    if (!command.includes(" run") && !command.includes(":run")) {
+      // Insert "run" after "vitest"
+      return command.replace(/vitest(\s|$)/, "vitest run ");
+    }
+  }
+
+  // Jest: add --watchAll=false to prevent watch mode
+  if (framework === "jest") {
+    if (command.includes("--watch") && !command.includes("--watchAll=false")) {
+      // Replace watch flags with explicit no-watch
+      return command.replace(/--watch\S*/g, "") + " --watchAll=false";
+    }
+  }
+
+  // Mocha: remove --watch flag if present
+  if (framework === "mocha") {
+    if (command.includes("--watch") || command.includes("-w")) {
+      return command.replace(/\s+(-w|--watch)\s*/g, " ").trim();
+    }
+  }
+
+  return command;
+}
+
+/**
  * Detect test framework from package.json or config files
  */
 async function detectTestFramework(cwd: string): Promise<TestFrameworkResult> {
@@ -80,30 +119,34 @@ async function detectTestFramework(cwd: string): Promise<TestFrameworkResult> {
 
     // Check for common test frameworks
     if (devDeps.vitest || deps.vitest || scripts.test?.includes("vitest")) {
+      const baseCommand = scripts.test || "npx vitest run";
       return {
         hasTests: true,
-        testCommand: scripts.test || "npx vitest run",
+        testCommand: normalizeTestCommand(baseCommand, "vitest"),
         testFramework: "vitest",
       };
     }
 
     if (devDeps.jest || deps.jest || scripts.test?.includes("jest")) {
+      const baseCommand = scripts.test || "npx jest";
       return {
         hasTests: true,
-        testCommand: scripts.test || "npx jest",
+        testCommand: normalizeTestCommand(baseCommand, "jest"),
         testFramework: "jest",
       };
     }
 
     if (devDeps.mocha || deps.mocha || scripts.test?.includes("mocha")) {
+      const baseCommand = scripts.test || "npx mocha";
       return {
         hasTests: true,
-        testCommand: scripts.test || "npx mocha",
+        testCommand: normalizeTestCommand(baseCommand, "mocha"),
         testFramework: "mocha",
       };
     }
 
-    // Generic npm test
+    // Generic npm test - we trust npm scripts to be properly configured
+    // but warn in logs if it might be a watch command
     if (scripts.test && !scripts.test.includes("no test specified")) {
       return {
         hasTests: true,

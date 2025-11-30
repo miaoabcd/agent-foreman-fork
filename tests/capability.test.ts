@@ -1040,6 +1040,193 @@ That's my recommendation.`;
 // Format Tests
 // ============================================================================
 
+// ============================================================================
+// Test Command Normalization Tests (Watch Mode Prevention)
+// ============================================================================
+
+describe("Test Command Normalization", () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "normalize-test-"));
+  });
+
+  afterEach(async () => {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  describe("Vitest watch mode prevention", () => {
+    it("should add 'run' flag when test script is just 'vitest'", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          scripts: { test: "vitest" }, // Watch mode!
+          devDependencies: { vitest: "^1.0.0" },
+        })
+      );
+
+      const result = await detectVerificationCapabilities(tempDir);
+
+      expect(result.hasTests).toBe(true);
+      expect(result.testCommand).toBe("vitest run"); // Should add 'run'
+    });
+
+    it("should add 'run' flag when test script is 'npx vitest'", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          scripts: { test: "npx vitest" }, // Watch mode!
+          devDependencies: { vitest: "^1.0.0" },
+        })
+      );
+
+      const result = await detectVerificationCapabilities(tempDir);
+
+      expect(result.hasTests).toBe(true);
+      expect(result.testCommand).toBe("npx vitest run"); // Should add 'run'
+    });
+
+    it("should NOT modify when 'run' flag already present", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          scripts: { test: "vitest run" }, // Already correct
+          devDependencies: { vitest: "^1.0.0" },
+        })
+      );
+
+      const result = await detectVerificationCapabilities(tempDir);
+
+      expect(result.hasTests).toBe(true);
+      expect(result.testCommand).toBe("vitest run");
+    });
+
+    it("should add 'run' flag to vitest with additional options", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          scripts: { test: "vitest --coverage" }, // Watch mode with options!
+          devDependencies: { vitest: "^1.0.0" },
+        })
+      );
+
+      const result = await detectVerificationCapabilities(tempDir);
+
+      expect(result.hasTests).toBe(true);
+      expect(result.testCommand).toContain("vitest run ");
+      expect(result.testCommand).toContain("--coverage");
+    });
+
+    it("should handle vitest:run npm script reference", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          scripts: { test: "npm run vitest:run" },
+          devDependencies: { vitest: "^1.0.0" },
+        })
+      );
+
+      const result = await detectVerificationCapabilities(tempDir);
+
+      expect(result.hasTests).toBe(true);
+      // Should NOT modify because it contains ':run'
+      expect(result.testCommand).toBe("npm run vitest:run");
+    });
+  });
+
+  describe("Jest watch mode prevention", () => {
+    it("should remove --watch and add --watchAll=false", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          scripts: { test: "jest --watch" }, // Watch mode!
+          devDependencies: { jest: "^29.0.0" },
+        })
+      );
+
+      const result = await detectVerificationCapabilities(tempDir);
+
+      expect(result.hasTests).toBe(true);
+      expect(result.testCommand).not.toContain("--watch ");
+      expect(result.testCommand).toContain("--watchAll=false");
+    });
+
+    it("should NOT modify when already has --watchAll=false", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          scripts: { test: "jest --watchAll=false" },
+          devDependencies: { jest: "^29.0.0" },
+        })
+      );
+
+      const result = await detectVerificationCapabilities(tempDir);
+
+      expect(result.testCommand).toBe("jest --watchAll=false");
+    });
+
+    it("should NOT modify when no watch flag present", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          scripts: { test: "jest" },
+          devDependencies: { jest: "^29.0.0" },
+        })
+      );
+
+      const result = await detectVerificationCapabilities(tempDir);
+
+      expect(result.testCommand).toBe("jest");
+    });
+  });
+
+  describe("Mocha watch mode prevention", () => {
+    it("should remove --watch flag", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          scripts: { test: "mocha --watch" }, // Watch mode!
+          devDependencies: { mocha: "^10.0.0" },
+        })
+      );
+
+      const result = await detectVerificationCapabilities(tempDir);
+
+      expect(result.hasTests).toBe(true);
+      expect(result.testCommand).not.toContain("--watch");
+    });
+
+    it("should remove -w flag", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          scripts: { test: "mocha -w" }, // Watch mode with short flag!
+          devDependencies: { mocha: "^10.0.0" },
+        })
+      );
+
+      const result = await detectVerificationCapabilities(tempDir);
+
+      expect(result.hasTests).toBe(true);
+      expect(result.testCommand).not.toContain("-w");
+    });
+
+    it("should NOT modify when no watch flag present", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "package.json"),
+        JSON.stringify({
+          scripts: { test: "mocha" },
+          devDependencies: { mocha: "^10.0.0" },
+        })
+      );
+
+      const result = await detectVerificationCapabilities(tempDir);
+
+      expect(result.testCommand).toBe("mocha");
+    });
+  });
+});
+
 describe("Capability Formatting", () => {
   describe("formatExtendedCapabilities", () => {
     it("should include source and confidence", () => {

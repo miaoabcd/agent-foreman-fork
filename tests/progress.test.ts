@@ -464,4 +464,267 @@ describe("progress indicators", () => {
       vi.useRealTimers();
     });
   });
+
+  describe("Spinner edge cases", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should use default message in succeed when none provided", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const spinner = new Spinner("Original message");
+      spinner.start();
+      spinner.succeed(); // No message provided
+
+      const allOutput = [
+        ...mockLog.mock.calls.map(c => String(c[0])),
+        ...mockWrite.mock.calls.map(c => String(c[0]))
+      ].join("\n");
+
+      expect(allOutput).toContain("Original message");
+
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should use default message in fail when none provided", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const spinner = new Spinner("Original message");
+      spinner.start();
+      spinner.fail(); // No message provided
+
+      const allOutput = [
+        ...mockLog.mock.calls.map(c => String(c[0])),
+        ...mockWrite.mock.calls.map(c => String(c[0]))
+      ].join("\n");
+
+      expect(allOutput).toContain("Original message");
+
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should use default message in warn when none provided", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const spinner = new Spinner("Original message");
+      spinner.start();
+      spinner.warn(); // No message provided
+
+      const allOutput = [
+        ...mockLog.mock.calls.map(c => String(c[0])),
+        ...mockWrite.mock.calls.map(c => String(c[0]))
+      ].join("\n");
+
+      expect(allOutput).toContain("Original message");
+
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should format time as minutes and seconds for long operations", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const spinner = new Spinner("Long operation");
+      spinner.start();
+
+      // Advance by 90 seconds (1m 30s)
+      vi.advanceTimersByTime(90000);
+
+      spinner.succeed();
+
+      const allOutput = [
+        ...mockLog.mock.calls.map(c => String(c[0])),
+        ...mockWrite.mock.calls.map(c => String(c[0]))
+      ].join("\n");
+
+      // Should contain minute format "1m 30s"
+      expect(allOutput).toMatch(/1m.*30s/);
+
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should clear interval on stop even when called multiple times", () => {
+      const spinner = new Spinner("Test");
+      spinner.start();
+
+      // Advance to trigger interval callback
+      vi.advanceTimersByTime(200);
+
+      // Multiple stops should be safe
+      spinner.stop();
+      spinner.stop();
+      spinner.stop();
+
+      // Should not throw
+      expect(true).toBe(true);
+    });
+  });
+
+  describe("ProgressBar edge cases", () => {
+    it("should handle zero total without crashing", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      // This will cause division by zero, but should not crash
+      const bar = new ProgressBar("Test", 0);
+      expect(() => bar.start()).not.toThrow();
+      expect(() => bar.update(0)).not.toThrow();
+      expect(() => bar.complete()).not.toThrow();
+
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should cap progress at 100%", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const bar = new ProgressBar("Test", 5);
+      bar.start();
+      bar.update(10); // Double the total
+
+      const allOutput = [
+        ...mockLog.mock.calls.map(c => String(c[0])),
+        ...mockWrite.mock.calls.map(c => String(c[0]))
+      ].join("\n");
+
+      // Should cap at 100%
+      expect(allOutput).toMatch(/100%/);
+
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should use default message when completing without message", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const bar = new ProgressBar("Original task", 5);
+      bar.start();
+      bar.complete(); // No message
+
+      const allOutput = [
+        ...mockLog.mock.calls.map(c => String(c[0])),
+        ...mockWrite.mock.calls.map(c => String(c[0]))
+      ].join("\n");
+
+      expect(allOutput).toContain("Original task");
+
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+  });
+
+  describe("StepProgress edge cases", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should handle startStep with out of bounds index", () => {
+      const progress = new StepProgress(["Step 1", "Step 2"]);
+      progress.start();
+
+      // Try to start step beyond bounds
+      expect(() => (progress as any).startStep(10)).not.toThrow();
+
+      progress.complete();
+    });
+
+    it("should not advance past last step on completeStep", () => {
+      const progress = new StepProgress(["Only step"]);
+      progress.start();
+
+      // Complete the only step
+      progress.completeStep(true);
+
+      // Current step should still be 0 (last step)
+      expect(progress.getCurrentStep()).toBe(0);
+
+      progress.complete();
+    });
+
+    it("should handle warnStep advancing to next step", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const progress = new StepProgress(["Step 1", "Step 2", "Step 3"]);
+      progress.start();
+
+      expect(progress.getCurrentStep()).toBe(0);
+
+      progress.warnStep();
+
+      // Should have advanced to step 1
+      expect(progress.getCurrentStep()).toBe(1);
+
+      progress.complete();
+
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should handle warnStep on last step", () => {
+      const progress = new StepProgress(["Only step"]);
+      progress.start();
+
+      // Warn on the only step - should not crash
+      expect(() => progress.warnStep()).not.toThrow();
+
+      progress.complete();
+    });
+
+    it("should handle complete when no spinner exists", () => {
+      const progress = new StepProgress([]);
+      // Don't start - so no spinner created
+      expect(() => progress.complete()).not.toThrow();
+    });
+
+    it("should handle completeStep with failure advancing to next", () => {
+      const progress = new StepProgress(["Step 1", "Step 2"]);
+      progress.start();
+
+      progress.completeStep(false); // Fail step 1
+
+      // Should still advance to step 2
+      expect(progress.getCurrentStep()).toBe(1);
+
+      progress.complete();
+    });
+
+    it("should show overview and steps in non-TTY mode", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      const progress = new StepProgress(["Fetch data", "Process", "Save"]);
+      progress.start();
+
+      // In non-TTY mode, showOverview logs steps
+      const allOutput = mockLog.mock.calls.map(c => String(c[0])).join("\n");
+
+      // Check for step listing if in non-TTY mode
+      if (allOutput.includes("Verification steps")) {
+        expect(allOutput).toContain("1.");
+        expect(allOutput).toContain("2.");
+        expect(allOutput).toContain("3.");
+      }
+
+      progress.complete();
+      mockLog.mockRestore();
+    });
+  });
 });

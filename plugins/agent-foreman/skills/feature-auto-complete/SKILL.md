@@ -14,38 +14,58 @@ Automatically work through and complete all pending features from the feature li
 - Batch processing all remaining features
 - When you want hands-off feature completion
 
-## How It Works
+## STRICT Workflow Instructions
 
-1. Read `ai/feature_list.json` to get all features
-2. Filter features by status: `needs_review` and `failing`
-3. Sort by priority (needs_review first, then by priority number)
-4. For each feature:
-   - Display feature info and acceptance criteria
-   - Implement the feature
-   - Run `agent-foreman complete <feature_id>` to verify and mark as passing
-   - Log progress to `ai/progress.log`
-   - Move to next feature
-5. Continue until all features are passing or an error occurs
+**You MUST follow these steps exactly in order. Do NOT skip any step.**
 
-## Workflow Loop
+### Step 1: Check Status
+```bash
+agent-foreman status
+```
+Review the output to understand remaining features.
+
+### Step 2: Get Next Feature
+```bash
+agent-foreman step
+```
+This will show the next priority feature with its acceptance criteria.
+
+### Step 3: Implement Feature
+Read and understand the acceptance criteria carefully. Implement the feature to satisfy ALL acceptance criteria.
+
+### Step 4: Complete Feature
+```bash
+agent-foreman complete <feature_id>
+```
+This verifies the implementation and marks it as passing if successful.
+
+### Step 5: Loop or Exit
+- If more features remain with status `failing` or `needs_review` → **Go back to Step 1**
+- If all features are `passing` or `deprecated` → **Stop**
+- If verification fails → **Stop and report the failure**
+
+## Workflow Diagram
 
 ```text
 ┌─────────────────────────────────────────────────────┐
 │                  AUTO-COMPLETE LOOP                  │
 ├─────────────────────────────────────────────────────┤
 │                                                      │
-│  1. agent-foreman status (check remaining features) │
+│  Step 1: agent-foreman status                       │
+│          (check remaining features)                  │
 │                    ↓                                 │
-│  2. agent-foreman step (get next priority feature)  │
+│  Step 2: agent-foreman step                         │
+│          (get next priority feature)                 │
 │                    ↓                                 │
-│  3. Implement feature based on acceptance criteria  │
+│  Step 3: Implement feature                          │
+│          (satisfy ALL acceptance criteria)           │
 │                    ↓                                 │
-│  4. agent-foreman complete <feature_id>             │
-│      (verify + mark passing + auto-commit)          │
+│  Step 4: agent-foreman complete <feature_id>        │
+│          (verify + mark passing + auto-commit)       │
 │                    ↓                                 │
-│  5. Check if more features remain                   │
-│      YES → Go to step 1                             │
-│      NO  → Done! All features complete              │
+│  Step 5: Check if more features remain              │
+│          YES → Go to Step 1                         │
+│          NO  → Done! All features complete          │
 │                                                      │
 └─────────────────────────────────────────────────────┘
 ```
@@ -64,6 +84,13 @@ The auto-complete loop stops when:
 - A feature fails verification
 - User interrupts the process
 
+## Important Rules
+
+1. **Never skip steps** - Always run `status` before `step`, always run `complete` after implementation
+2. **One feature at a time** - Complete current feature before moving to next
+3. **Follow acceptance criteria** - Implement exactly what the criteria specify
+4. **Do not modify acceptance criteria** - Only implement, never change the requirements
+
 ## Progress Tracking
 
 Each completed feature is logged to `ai/progress.log`:
@@ -73,16 +100,10 @@ STEP 2025-01-15T10:30:00Z feature=auth.login status=passing summary="Auto-comple
 STEP 2025-01-15T11:00:00Z feature=auth.logout status=passing summary="Auto-completed logout flow"
 ```
 
-## Best Practices
-
-1. **Review first** - Run `agent-foreman status` before starting
-2. **Monitor progress** - Check `ai/progress.log` for status updates
-3. **Handle failures** - Review failed features manually before retrying
-
 ## Related Commands
 
 ```bash
-# Check project status first
+# Check project status
 agent-foreman status
 
 # Work on single feature

@@ -12,19 +12,39 @@ Run through and complete all pending features from the feature list automaticall
 - Running autonomous development on a project
 - Batch processing all remaining features
 
-## Auto-Complete Loop
+## STRICT Workflow Instructions
 
-Execute this workflow repeatedly until all features are complete:
+**You MUST follow these steps exactly in order. Do NOT skip any step.**
 
-1. Run `agent-foreman status` to check remaining features
-2. Run `agent-foreman step` to get the next priority feature
-3. Implement the feature based on acceptance criteria
-4. Run `agent-foreman complete <feature_id>` to verify and mark as passing
-5. If more features remain, go to step 1
+### Step 1: Check Status
+```bash
+agent-foreman status
+```
+Review the output to understand remaining features.
+
+### Step 2: Get Next Feature
+```bash
+agent-foreman step
+```
+This will show the next priority feature with its acceptance criteria.
+
+### Step 3: Implement Feature
+Read and understand the acceptance criteria carefully. Implement the feature to satisfy ALL acceptance criteria.
+
+### Step 4: Complete Feature
+```bash
+agent-foreman complete <feature_id>
+```
+This verifies the implementation and marks it as passing if successful.
+
+### Step 5: Loop or Exit
+- If more features remain with status `failing` or `needs_review` → **Go back to Step 1**
+- If all features are `passing` or `deprecated` → **Stop**
+- If verification fails → **Stop and report the failure**
 
 ## Feature Selection Priority
 
-1. `needs_review` - May be broken by recent changes
+1. `needs_review` - May be broken by recent changes (highest priority)
 2. `failing` - Not yet implemented
 3. By `priority` field - Lower number = higher priority
 
@@ -36,15 +56,9 @@ Stop the loop when:
 - A feature fails verification
 - User interrupts the process
 
-## Related Commands
+## Important Rules
 
-```bash
-# Check project status
-agent-foreman status
-
-# Work on single feature
-agent-foreman step
-
-# Verify and complete a feature
-agent-foreman complete <feature_id>
-```
+1. **Never skip steps** - Always run `status` before `step`, always run `complete` after implementation
+2. **One feature at a time** - Complete current feature before moving to next
+3. **Follow acceptance criteria** - Implement exactly what the criteria specify
+4. **Do not modify acceptance criteria** - Only implement, never change the requirements

@@ -83,12 +83,14 @@ import {
   isTransientError,
   calculateBackoff,
   RETRY_CONFIG,
+  type AutomatedCheckOptions,
 } from "../src/verifier.js";
 import type { Feature } from "../src/types.js";
 import type {
   VerificationCapabilities,
   VerificationResult,
   AutomatedCheckResult,
+  TestMode,
 } from "../src/verification-types.js";
 
 const mockCallAgent = callAnyAvailableAgent as ReturnType<typeof vi.fn>;
@@ -1183,6 +1185,312 @@ describe("Verifier", () => {
 
       expect(callCount).toBe(1);
       expect(result.verdict).toBe("pass");
+    });
+  });
+
+  describe("runAutomatedChecks - selective testing", () => {
+    it("should use selective test command in quick mode", async () => {
+      const commands: string[] = [];
+      setExecMock((cmd: string) => {
+        commands.push(cmd);
+        return { stdout: "success" };
+      });
+
+      const capabilities: VerificationCapabilities = {
+        hasTests: true,
+        testCommand: "npm test",
+        hasTypeCheck: true,
+        typeCheckCommand: "tsc --noEmit",
+        hasLint: false,
+        hasBuild: false,
+        hasGit: true,
+      };
+
+      const options: AutomatedCheckOptions = {
+        testMode: "quick",
+        selectiveTestCommand: "npx vitest run tests/auth.test.ts",
+        testDiscovery: {
+          pattern: "tests/auth.test.ts",
+          source: "auto-detected",
+          testFiles: ["tests/auth.test.ts"],
+          confidence: 0.9,
+        },
+      };
+
+      const results = await runAutomatedChecks(testDir, capabilities, options);
+
+      expect(results).toHaveLength(2); // test + typecheck
+      expect(commands).toContain("npx vitest run tests/auth.test.ts");
+      expect(commands).not.toContain("npm test");
+    });
+
+    it("should fall back to full tests when no selective command in quick mode", async () => {
+      const commands: string[] = [];
+      setExecMock((cmd: string) => {
+        commands.push(cmd);
+        return { stdout: "success" };
+      });
+
+      const capabilities: VerificationCapabilities = {
+        hasTests: true,
+        testCommand: "npm test",
+        hasTypeCheck: false,
+        hasLint: false,
+        hasBuild: false,
+        hasGit: true,
+      };
+
+      const options: AutomatedCheckOptions = {
+        testMode: "quick",
+        // No selectiveTestCommand - should fall back to full tests
+      };
+
+      await runAutomatedChecks(testDir, capabilities, options);
+
+      expect(commands).toContain("npm test");
+    });
+
+    it("should skip tests in skip mode", async () => {
+      const commands: string[] = [];
+      setExecMock((cmd: string) => {
+        commands.push(cmd);
+        return { stdout: "success" };
+      });
+
+      const capabilities: VerificationCapabilities = {
+        hasTests: true,
+        testCommand: "npm test",
+        hasTypeCheck: true,
+        typeCheckCommand: "tsc --noEmit",
+        hasLint: false,
+        hasBuild: false,
+        hasGit: true,
+      };
+
+      const options: AutomatedCheckOptions = {
+        testMode: "skip",
+      };
+
+      const results = await runAutomatedChecks(testDir, capabilities, options);
+
+      expect(results).toHaveLength(1); // Only typecheck
+      expect(results[0].type).toBe("typecheck");
+      expect(commands).not.toContain("npm test");
+    });
+
+    it("should run full tests in full mode (default)", async () => {
+      const commands: string[] = [];
+      setExecMock((cmd: string) => {
+        commands.push(cmd);
+        return { stdout: "success" };
+      });
+
+      const capabilities: VerificationCapabilities = {
+        hasTests: true,
+        testCommand: "npm test",
+        hasTypeCheck: false,
+        hasLint: false,
+        hasBuild: false,
+        hasGit: true,
+      };
+
+      const options: AutomatedCheckOptions = {
+        testMode: "full",
+      };
+
+      await runAutomatedChecks(testDir, capabilities, options);
+
+      expect(commands).toContain("npm test");
+    });
+
+    it("should handle boolean verbose parameter for backward compatibility", async () => {
+      setExecMock(() => ({ stdout: "success" }));
+
+      const capabilities: VerificationCapabilities = {
+        hasTests: true,
+        testCommand: "npm test",
+        hasTypeCheck: false,
+        hasLint: false,
+        hasBuild: false,
+        hasGit: true,
+      };
+
+      // Test with boolean parameter (backward compatible)
+      const results = await runAutomatedChecks(testDir, capabilities, true);
+
+      expect(results).toHaveLength(1);
+    });
+
+    it("should include verbose test discovery info", async () => {
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      setExecMock(() => ({ stdout: "success" }));
+
+      const capabilities: VerificationCapabilities = {
+        hasTests: true,
+        testCommand: "npm test",
+        hasTypeCheck: false,
+        hasLint: false,
+        hasBuild: false,
+        hasGit: true,
+      };
+
+      const options: AutomatedCheckOptions = {
+        verbose: true,
+        testMode: "quick",
+        selectiveTestCommand: "npx vitest run tests/auth.test.ts",
+        testDiscovery: {
+          pattern: "tests/auth.test.ts",
+          source: "auto-detected",
+          testFiles: ["tests/auth.test.ts"],
+          confidence: 0.9,
+        },
+      };
+
+      await runAutomatedChecks(testDir, capabilities, options);
+
+      // Verbose mode should log discovery info
+      expect(logSpy.mock.calls.some(call =>
+        call.some(arg => typeof arg === "string" && arg.includes("auto-detected"))
+      )).toBe(true);
+
+      logSpy.mockRestore();
+    });
+  });
+
+  describe("verifyFeature - testMode options", () => {
+    const mockFeature: Feature = {
+      id: "test.feature",
+      description: "Test feature",
+      module: "test",
+      priority: 1,
+      status: "failing",
+      acceptance: ["Criterion 1"],
+      dependsOn: [],
+      supersedes: [],
+      tags: [],
+      version: 1,
+      origin: "manual",
+      notes: "",
+    };
+
+    beforeEach(() => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
+
+      setExecMock((cmd: string) => {
+        if (cmd.includes("rev-parse HEAD")) {
+          return { stdout: "commit123\n" };
+        }
+        if (cmd.includes("--name-only")) {
+          return { stdout: "file.ts\n" };
+        }
+        return { stdout: "diff content" };
+      });
+
+      mockDetectCapabilities.mockResolvedValue({
+        hasTests: true,
+        testCommand: "npm test",
+        hasTypeCheck: false,
+        hasLint: false,
+        hasBuild: false,
+        hasGit: true,
+      });
+
+      mockBuildPrompt.mockReturnValue("prompt");
+      mockParseResponse.mockReturnValue({
+        criteriaResults: [
+          {
+            criterion: "Criterion 1",
+            index: 0,
+            satisfied: true,
+            reasoning: "OK",
+            evidence: [],
+            confidence: 0.95,
+          },
+        ],
+        verdict: "pass",
+        overallReasoning: "Feature verified",
+        suggestions: [],
+        codeQualityNotes: [],
+      });
+
+      mockCallAgent.mockResolvedValue({
+        success: true,
+        output: "AI output",
+        agentUsed: "claude",
+      });
+
+      mockSaveResult.mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("should pass testMode option to runAutomatedChecks", async () => {
+      const commands: string[] = [];
+      setExecMock((cmd: string) => {
+        commands.push(cmd);
+        if (cmd.includes("rev-parse HEAD")) {
+          return { stdout: "commit123\n" };
+        }
+        if (cmd.includes("--name-only")) {
+          return { stdout: "src/file.ts\n" };
+        }
+        return { stdout: "success" };
+      });
+
+      await verifyFeature(testDir, mockFeature, {
+        testMode: "quick",
+      });
+
+      // In quick mode, if no explicit pattern found, it falls back to full tests
+      expect(commands.some(cmd => cmd.includes("test"))).toBe(true);
+    });
+
+    it("should use explicit testPattern when provided", async () => {
+      const featureWithPattern: Feature = {
+        ...mockFeature,
+        testPattern: "tests/specific/**",
+      };
+
+      await verifyFeature(testDir, featureWithPattern, {
+        testMode: "quick",
+      });
+
+      // The test pattern should be used
+      expect(mockDetectCapabilities).toHaveBeenCalled();
+    });
+
+    it("should skip tests with testMode skip", async () => {
+      mockDetectCapabilities.mockResolvedValue({
+        hasTests: true,
+        testCommand: "npm test",
+        hasTypeCheck: true,
+        typeCheckCommand: "tsc --noEmit",
+        hasLint: false,
+        hasBuild: false,
+        hasGit: true,
+      });
+
+      const commands: string[] = [];
+      setExecMock((cmd: string) => {
+        commands.push(cmd);
+        if (cmd.includes("rev-parse HEAD")) {
+          return { stdout: "commit123\n" };
+        }
+        if (cmd.includes("--name-only")) {
+          return { stdout: "file.ts\n" };
+        }
+        return { stdout: "success" };
+      });
+
+      const result = await verifyFeature(testDir, mockFeature, {
+        testMode: "skip",
+      });
+
+      // Should only have typecheck result, not test
+      const testCheck = result.automatedChecks.find(c => c.type === "test");
+      expect(testCheck).toBeUndefined();
     });
   });
 });

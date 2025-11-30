@@ -181,6 +181,7 @@ npx agent-foreman status
 - `project-survey` - Analyze existing projects
 - `init-harness` - Initialize the harness
 - `feature-step` - Work on features
+- `feature-auto-complete` - Auto-complete all pending features
 
 ---
 

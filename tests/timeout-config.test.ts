@@ -1,13 +1,17 @@
 /**
  * Tests for timeout configuration module
  */
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   DEFAULT_TIMEOUTS,
   TIMEOUT_ENV_VARS,
   getTimeout,
   getAllTimeouts,
   formatTimeout,
+  getAgentPriority,
+  DEFAULT_AGENT_PRIORITY,
+  VALID_AGENT_NAMES,
+  AGENT_ENV_VAR,
 } from "../src/timeout-config.js";
 
 describe("Timeout Configuration", () => {
@@ -15,11 +19,14 @@ describe("Timeout Configuration", () => {
   const originalEnv: Record<string, string | undefined> = {};
 
   beforeEach(() => {
-    // Save original values
+    // Save original values for timeout env vars
     for (const key of Object.values(TIMEOUT_ENV_VARS)) {
       originalEnv[key] = process.env[key];
       delete process.env[key];
     }
+    // Save original agent env var
+    originalEnv[AGENT_ENV_VAR] = process.env[AGENT_ENV_VAR];
+    delete process.env[AGENT_ENV_VAR];
   });
 
   afterEach(() => {
@@ -30,6 +37,12 @@ describe("Timeout Configuration", () => {
       } else {
         delete process.env[key];
       }
+    }
+    // Restore agent env var
+    if (originalEnv[AGENT_ENV_VAR] !== undefined) {
+      process.env[AGENT_ENV_VAR] = originalEnv[AGENT_ENV_VAR];
+    } else {
+      delete process.env[AGENT_ENV_VAR];
     }
   });
 
@@ -233,6 +246,144 @@ describe("Timeout Configuration", () => {
     it("should handle float values by truncating", () => {
       process.env.AGENT_FOREMAN_TIMEOUT_SCAN = "123456.789";
       expect(getTimeout("AI_SCAN_PROJECT")).toBe(123456);
+    });
+  });
+
+  describe("Agent Priority Configuration", () => {
+    describe("DEFAULT_AGENT_PRIORITY", () => {
+      it("should have default priority order", () => {
+        expect(DEFAULT_AGENT_PRIORITY).toEqual(["codex", "gemini", "claude"]);
+      });
+
+      it("should be a readonly array type", () => {
+        // The array is readonly at compile time via 'as const'
+        // At runtime, arrays are still mutable but TypeScript prevents modifications
+        expect(Array.isArray(DEFAULT_AGENT_PRIORITY)).toBe(true);
+        expect(DEFAULT_AGENT_PRIORITY.length).toBe(3);
+      });
+    });
+
+    describe("VALID_AGENT_NAMES", () => {
+      it("should include all supported agents", () => {
+        expect(VALID_AGENT_NAMES).toContain("claude");
+        expect(VALID_AGENT_NAMES).toContain("gemini");
+        expect(VALID_AGENT_NAMES).toContain("codex");
+      });
+
+      it("should have exactly 3 agents", () => {
+        expect(VALID_AGENT_NAMES.length).toBe(3);
+      });
+    });
+
+    describe("getAgentPriority", () => {
+      it("should return default priority when env var not set", () => {
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["codex", "gemini", "claude"]);
+      });
+
+      it("should return default priority when env var is empty", () => {
+        process.env[AGENT_ENV_VAR] = "";
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["codex", "gemini", "claude"]);
+      });
+
+      it("should return default priority when env var is whitespace only", () => {
+        process.env[AGENT_ENV_VAR] = "   ";
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["codex", "gemini", "claude"]);
+      });
+
+      it("should parse comma-separated agent names", () => {
+        process.env[AGENT_ENV_VAR] = "claude,gemini,codex";
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["claude", "gemini", "codex"]);
+      });
+
+      it("should respect custom order", () => {
+        process.env[AGENT_ENV_VAR] = "gemini,claude";
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["gemini", "claude"]);
+      });
+
+      it("should work with single agent", () => {
+        process.env[AGENT_ENV_VAR] = "claude";
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["claude"]);
+      });
+
+      it("should trim whitespace from agent names", () => {
+        process.env[AGENT_ENV_VAR] = " claude , gemini , codex ";
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["claude", "gemini", "codex"]);
+      });
+
+      it("should convert agent names to lowercase", () => {
+        process.env[AGENT_ENV_VAR] = "CLAUDE,Gemini,CODEX";
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["claude", "gemini", "codex"]);
+      });
+
+      it("should filter out invalid agent names", () => {
+        // Mock console.warn to suppress warning output during test
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+        process.env[AGENT_ENV_VAR] = "claude,invalid,gemini,unknown";
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["claude", "gemini"]);
+
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining("Invalid agent names")
+        );
+        warnSpy.mockRestore();
+      });
+
+      it("should log warning for invalid agent names", () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+        process.env[AGENT_ENV_VAR] = "claude,badagent,gemini";
+        getAgentPriority();
+
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining("badagent")
+        );
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining("Valid names are: claude, gemini, codex")
+        );
+        warnSpy.mockRestore();
+      });
+
+      it("should return default when all agent names are invalid", () => {
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+        process.env[AGENT_ENV_VAR] = "invalid,unknown,bad";
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["codex", "gemini", "claude"]);
+
+        // Should warn about using defaults
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining("using defaults")
+        );
+        warnSpy.mockRestore();
+      });
+
+      it("should remove duplicate agent names", () => {
+        process.env[AGENT_ENV_VAR] = "claude,gemini,claude,codex,gemini";
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["claude", "gemini", "codex"]);
+      });
+
+      it("should handle empty entries between commas", () => {
+        process.env[AGENT_ENV_VAR] = "claude,,gemini,,,codex";
+        const priority = getAgentPriority();
+        expect(priority).toEqual(["claude", "gemini", "codex"]);
+      });
+
+      it("should return a new array each time (not reference)", () => {
+        const priority1 = getAgentPriority();
+        const priority2 = getAgentPriority();
+        expect(priority1).not.toBe(priority2);
+        expect(priority1).toEqual(priority2);
+      });
     });
   });
 });

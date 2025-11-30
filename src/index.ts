@@ -310,7 +310,7 @@ async function main() {
       }
     )
     .command(
-      "verify <feature_id>",
+      "check <feature_id>",
       "AI-powered verification of feature completion",
       (yargs) =>
         yargs
@@ -353,7 +353,7 @@ async function main() {
           }),
       async (argv) => {
         const testMode = argv.full ? "full" : argv.quick ? "quick" : "full";
-        await runVerify(argv.feature_id!, argv.verbose, argv.skipChecks, !argv.noAutonomous, testMode, argv.testPattern);
+        await runCheck(argv.feature_id!, argv.verbose, argv.skipChecks, !argv.noAutonomous, testMode, argv.testPattern);
       }
     )
     .command(
@@ -922,7 +922,7 @@ async function runImpact(featureId: string) {
   }
 }
 
-async function runVerify(
+async function runCheck(
   featureId: string,
   verbose: boolean,
   skipChecks: boolean,

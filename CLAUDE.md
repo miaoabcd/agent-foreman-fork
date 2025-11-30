@@ -84,8 +84,8 @@ agent-foreman complete <feature_id> --test-pattern "tests/auth/**"
 agent-foreman complete <feature_id> --skip-verify
 
 # Preview verification without completing
-agent-foreman verify <feature_id>
-agent-foreman verify <feature_id> --quick
+agent-foreman check <feature_id>
+agent-foreman check <feature_id> --quick
 
 # Analyze impact of changes
 agent-foreman impact <feature_id>

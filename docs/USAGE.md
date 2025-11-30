@@ -342,16 +342,16 @@ Show project status and progress.
 agent-foreman status
 ```
 
-### `verify <feature_id>`
+### `check <feature_id>`
 
 Preview verification without completing (dry run).
 
 ```bash
-agent-foreman verify cli.survey
+agent-foreman check cli.survey
 
 # With test mode options
-agent-foreman verify cli.survey --quick
-agent-foreman verify cli.survey --test-pattern "tests/cli/**"
+agent-foreman check cli.survey --quick
+agent-foreman check cli.survey --test-pattern "tests/cli/**"
 ```
 
 > 预览验证结果，不执行完成操作（预演模式）

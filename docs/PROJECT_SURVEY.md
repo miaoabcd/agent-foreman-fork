@@ -30,7 +30,7 @@ Agent-foreman is a TypeScript CLI harness that uses AI agents to survey projects
 ### CLI
 - **Path**: `src/index.ts`
 - **Status**: complete
-- **Description**: Command-line entrypoint offering survey, init, step, status, impact, verify, complete, detect-capabilities, agents, and slash-command installation flows.
+- **Description**: Command-line entrypoint offering survey, init, step, status, impact, check, complete, detect-capabilities, agents, and slash-command installation flows.
 
 ### AI Scanner
 - **Path**: `src/ai-scanner.ts`

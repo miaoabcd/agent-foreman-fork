@@ -86,7 +86,7 @@ agent-foreman brings these same patterns to AI:
 Human Practice → AI Equivalent
 Scrum board → feature_list.json
 Sprint notes → progress.md
-CI/CD pipeline → init.sh check
+CI/CD pipeline → agent-foreman complete
 Code review → Acceptance criteria
 
 ━━━━━━━━━━━━━━━━━━━━
@@ -100,10 +100,9 @@ Install the plugin and try this:
 1. Check status with agent-foreman status
 2. Get next task with agent-foreman step
 3. Implement the feature completely
-4. Run tests with ./ai/init.sh check
-5. Mark complete with agent-foreman complete <id>
-6. Commit the changes
-7. Loop back to step 2 until all tasks pass
+4. Verify and mark complete with agent-foreman complete <id> (auto-runs tests)
+5. Commit the changes
+6. Loop back to step 2 until all tasks pass
 
 Do not stop until all features are passing."
 
@@ -219,7 +218,7 @@ agent-foreman 把这些模式带给了 AI：
 人类实践 → AI 等效
 看板 → feature_list.json
 会议纪要 → progress.md
-CI/CD → init.sh check
+CI/CD → agent-foreman complete
 Code Review → 验收标准
 
 ━━━━━━━━━━━━━━━━━━━━
@@ -233,10 +232,9 @@ Code Review → 验收标准
 1. 用 agent-foreman status 检查状态
 2. 用 agent-foreman step 获取下一个任务
 3. 完整实现功能
-4. 用 ./ai/init.sh check 运行测试
-5. 用 agent-foreman complete <id> 标记完成
-6. 提交更改
-7. 循环直到所有任务通过
+4. 用 agent-foreman complete <id> 验证并标记完成（自动运行测试）
+5. 提交更改
+6. 循环直到所有任务通过
 
 不要停止直到所有功能都通过。"
 

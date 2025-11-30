@@ -282,7 +282,7 @@ Rules：
 
 5. **验证**
 
-   * 跑 `ai/init.sh check`
+   * 跑 `agent-foreman complete <feature_id>` (自动运行测试 + AI 验证)
    * 如有 e2e，顺手跑关键场景
    * 按 acceptance 一条条自查
 

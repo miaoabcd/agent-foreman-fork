@@ -197,7 +197,6 @@ export async function aiScanProject(
   console.log(chalk.gray("  [2/2] Agent exploring project..."));
 
   const result = await callAnyAvailableAgent(prompt, {
-    preferredOrder: ["codex", "gemini", "claude"],
     verbose,
     cwd: basePath, // Run agent in project directory so it can explore
     timeoutMs: getTimeout("AI_SCAN_PROJECT"),
@@ -284,7 +283,6 @@ Extract all information directly from the survey document. Generate feature IDs 
   console.log(chalk.gray("  Generating features from survey..."));
 
   const result = await callAnyAvailableAgent(prompt, {
-    preferredOrder: ["codex", "gemini", "claude"],
     verbose: true,
     timeoutMs: getTimeout("AI_GENERATE_FROM_SURVEY"),
   });
@@ -377,7 +375,6 @@ Guidelines:
   console.log(chalk.gray("  Generating features from goal description..."));
 
   const result = await callAnyAvailableAgent(prompt, {
-    preferredOrder: ["codex", "gemini", "claude"],
     verbose: true,
     timeoutMs: getTimeout("AI_GENERATE_FROM_GOAL"),
   });

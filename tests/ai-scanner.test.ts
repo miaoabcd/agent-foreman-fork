@@ -645,7 +645,7 @@ describe("AI Scanner", () => {
       expect(callAnyAvailableAgent).toHaveBeenCalledWith(
         expect.stringContaining("Project Goal"),
         expect.objectContaining({
-          preferredOrder: ["codex", "gemini", "claude"],
+          verbose: true,
         })
       );
     });
@@ -719,7 +719,6 @@ describe("AI Scanner", () => {
         expect.any(String),
         expect.objectContaining({
           cwd: "/my/python/project",
-          preferredOrder: ["codex", "gemini", "claude"],
         })
       );
     });

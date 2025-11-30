@@ -82,6 +82,23 @@ export const TIMEOUT_ENV_VARS = {
 export type TimeoutKey = keyof typeof DEFAULT_TIMEOUTS;
 
 /**
+ * Environment variable name for agent configuration
+ */
+export const AGENT_ENV_VAR = "AGENT_FOREMAN_AGENTS";
+
+/**
+ * Default agent priority order
+ * First agent has highest priority, agents are tried in order until one succeeds
+ */
+export const DEFAULT_AGENT_PRIORITY = ["codex", "gemini", "claude"] as const;
+
+/**
+ * Valid agent names that can be configured
+ */
+export const VALID_AGENT_NAMES = ["claude", "gemini", "codex"] as const;
+export type ValidAgentName = (typeof VALID_AGENT_NAMES)[number];
+
+/**
  * Load .env file if it exists (simple implementation without external dependencies)
  */
 function loadEnvFile(): void {
@@ -213,4 +230,73 @@ export function formatTimeout(ms: number): string {
   } else {
     return `${minutes}m ${remainingSeconds}s`;
   }
+}
+
+/**
+ * Get configured agent priority order
+ *
+ * Reads from AGENT_FOREMAN_AGENTS environment variable (comma-separated).
+ * The order in the list determines priority (first = highest).
+ * Only agents in the list are enabled/used.
+ *
+ * @returns Array of agent names in priority order
+ *
+ * @example
+ * // With AGENT_FOREMAN_AGENTS=claude,gemini
+ * getAgentPriority() // returns ["claude", "gemini"]
+ *
+ * // With no env var set
+ * getAgentPriority() // returns ["codex", "gemini", "claude"]
+ */
+export function getAgentPriority(): string[] {
+  // Load .env file once
+  if (!envLoaded) {
+    loadEnvFile();
+    envLoaded = true;
+  }
+
+  const envValue = process.env[AGENT_ENV_VAR];
+
+  if (!envValue || envValue.trim() === "") {
+    return [...DEFAULT_AGENT_PRIORITY];
+  }
+
+  // Parse comma-separated list
+  const configuredAgents = envValue
+    .split(",")
+    .map((name) => name.trim().toLowerCase())
+    .filter((name) => name !== "");
+
+  // Validate and filter agent names
+  const validAgents: string[] = [];
+  const invalidAgents: string[] = [];
+
+  for (const name of configuredAgents) {
+    if ((VALID_AGENT_NAMES as readonly string[]).includes(name)) {
+      // Avoid duplicates
+      if (!validAgents.includes(name)) {
+        validAgents.push(name);
+      }
+    } else {
+      invalidAgents.push(name);
+    }
+  }
+
+  // Log warning for invalid agent names
+  if (invalidAgents.length > 0) {
+    console.warn(
+      `[agent-foreman] Warning: Invalid agent names in ${AGENT_ENV_VAR}: ${invalidAgents.join(", ")}. ` +
+        `Valid names are: ${VALID_AGENT_NAMES.join(", ")}`
+    );
+  }
+
+  // Fall back to default if no valid agents configured
+  if (validAgents.length === 0) {
+    console.warn(
+      `[agent-foreman] Warning: No valid agents in ${AGENT_ENV_VAR}, using defaults: ${DEFAULT_AGENT_PRIORITY.join(", ")}`
+    );
+    return [...DEFAULT_AGENT_PRIORITY];
+  }
+
+  return validAgents;
 }

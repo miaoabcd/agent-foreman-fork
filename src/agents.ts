@@ -5,7 +5,7 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import chalk from "chalk";
 import { isTTY } from "./progress.js";
-import { getTimeout } from "./timeout-config.js";
+import { getTimeout, getAgentPriority } from "./timeout-config.js";
 
 /**
  * Agent configuration
@@ -77,9 +77,11 @@ export function commandExists(cmd: string): boolean {
 
 /**
  * Get the first available AI agent
+ * Uses AGENT_FOREMAN_AGENTS env var for priority order if set
  */
-export function getAvailableAgent(preferredOrder: string[] = ["codex", "gemini", "claude"]): AgentConfig | null {
-  for (const name of preferredOrder) {
+export function getAvailableAgent(preferredOrder?: string[]): AgentConfig | null {
+  const order = preferredOrder ?? getAgentPriority();
+  for (const name of order) {
     const agent = DEFAULT_AGENTS.find((a) => a.name === name);
     if (agent && commandExists(agent.command[0])) {
       return agent;
@@ -267,6 +269,7 @@ export async function callAgentWithRetry(
 
 /**
  * Try multiple agents in order until one succeeds
+ * Uses AGENT_FOREMAN_AGENTS env var for priority order if set
  * Default priority: Codex > Gemini > Claude
  * No timeout by default - let the AI agent complete
  */
@@ -279,9 +282,10 @@ export async function callAnyAvailableAgent(
     cwd?: string;
   } = {}
 ): Promise<{ success: boolean; output: string; agentUsed?: string; error?: string }> {
-  const { preferredOrder = ["codex", "gemini", "claude"], timeoutMs, verbose = false, cwd } = options;
+  const { preferredOrder, timeoutMs, verbose = false, cwd } = options;
+  const agentOrder = preferredOrder ?? getAgentPriority();
 
-  for (const name of preferredOrder) {
+  for (const name of agentOrder) {
     const agent = DEFAULT_AGENTS.find((a) => a.name === name);
     if (!agent) continue;
 

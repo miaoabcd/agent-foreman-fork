@@ -376,4 +376,4 @@ Lukin ([@mylukin](https://github.com/mylukin))
 
 ---
 
-Inspired by Anthropic's blog post: [Building effective agents](https://www.anthropic.com/research/building-effective-agents)
+Inspired by Anthropic's blog post: [Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)

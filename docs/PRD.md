@@ -195,4 +195,4 @@ When changing a feature:
 
 ---
 
-*Based on Anthropic's research: [Building effective agents](https://www.anthropic.com/research/building-effective-agents)*
+*Based on Anthropic's research: [Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)*

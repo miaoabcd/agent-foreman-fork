@@ -373,4 +373,4 @@ Lukin ([@mylukin](https://github.com/mylukin))
 
 ---
 
-灵感来自 Anthropic 的博客文章：[Building effective agents](https://www.anthropic.com/research/building-effective-agents)
+灵感来自 Anthropic 的博客文章：[Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents)

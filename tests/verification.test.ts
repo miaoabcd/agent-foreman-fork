@@ -757,3 +757,501 @@ ${"content line\n".repeat(2000)}`;
     });
   });
 });
+
+// ============================================================================
+// New Per-Feature Storage Tests
+// ============================================================================
+
+import {
+  loadVerificationIndex,
+  createEmptyIndex,
+  getVerificationHistory,
+  getFeatureSummary,
+  INDEX_VERSION,
+  needsMigration,
+  migrateResultsJson,
+  autoMigrateIfNeeded,
+} from "../src/verification-store.js";
+
+import { generateVerificationReport, generateVerificationSummary } from "../src/verification-report.js";
+
+describe("Per-Feature Verification Storage", () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "verification-new-test-"));
+  });
+
+  afterEach(async () => {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  describe("createEmptyIndex", () => {
+    it("should create a valid empty index", () => {
+      const index = createEmptyIndex();
+
+      expect(index.features).toEqual({});
+      expect(index.version).toBe(INDEX_VERSION);
+      expect(index.updatedAt).toBeDefined();
+    });
+  });
+
+  describe("loadVerificationIndex", () => {
+    it("should return null for non-existent index", async () => {
+      const index = await loadVerificationIndex(tempDir);
+      expect(index).toBeNull();
+    });
+
+    it("should load existing index", async () => {
+      const indexDir = path.join(tempDir, "ai", "verification");
+      await fs.mkdir(indexDir, { recursive: true });
+
+      const indexData = {
+        features: {
+          "test.feature": {
+            featureId: "test.feature",
+            latestRun: 1,
+            latestTimestamp: new Date().toISOString(),
+            latestVerdict: "pass",
+            totalRuns: 1,
+            passCount: 1,
+            failCount: 0,
+          },
+        },
+        updatedAt: new Date().toISOString(),
+        version: INDEX_VERSION,
+      };
+      await fs.writeFile(
+        path.join(indexDir, "index.json"),
+        JSON.stringify(indexData)
+      );
+
+      const index = await loadVerificationIndex(tempDir);
+
+      expect(index).not.toBeNull();
+      expect(index?.features["test.feature"]).toBeDefined();
+      expect(index?.features["test.feature"].latestVerdict).toBe("pass");
+    });
+  });
+
+  describe("Per-Feature Subdirectory Creation", () => {
+    it("should create feature subdirectory on save", async () => {
+      const result = createTestVerificationResult();
+      await saveVerificationResult(tempDir, result);
+
+      const featureDir = path.join(tempDir, "ai", "verification", "test.feature");
+      const stat = await fs.stat(featureDir);
+      expect(stat.isDirectory()).toBe(true);
+    });
+
+    it("should create multiple feature subdirectories", async () => {
+      const result1 = createTestVerificationResult({ featureId: "feature.one" });
+      const result2 = createTestVerificationResult({ featureId: "feature.two" });
+
+      await saveVerificationResult(tempDir, result1);
+      await saveVerificationResult(tempDir, result2);
+
+      const dir1 = path.join(tempDir, "ai", "verification", "feature.one");
+      const dir2 = path.join(tempDir, "ai", "verification", "feature.two");
+
+      expect((await fs.stat(dir1)).isDirectory()).toBe(true);
+      expect((await fs.stat(dir2)).isDirectory()).toBe(true);
+    });
+  });
+
+  describe("Sequential Run Numbering", () => {
+    it("should create 001.json for first run", async () => {
+      const result = createTestVerificationResult();
+      await saveVerificationResult(tempDir, result);
+
+      const jsonPath = path.join(tempDir, "ai", "verification", "test.feature", "001.json");
+      const stat = await fs.stat(jsonPath);
+      expect(stat.isFile()).toBe(true);
+    });
+
+    it("should increment run number for subsequent saves", async () => {
+      const result1 = createTestVerificationResult({ verdict: "fail" });
+      const result2 = createTestVerificationResult({ verdict: "pass" });
+
+      await saveVerificationResult(tempDir, result1);
+      await saveVerificationResult(tempDir, result2);
+
+      const json1 = path.join(tempDir, "ai", "verification", "test.feature", "001.json");
+      const json2 = path.join(tempDir, "ai", "verification", "test.feature", "002.json");
+
+      expect((await fs.stat(json1)).isFile()).toBe(true);
+      expect((await fs.stat(json2)).isFile()).toBe(true);
+
+      // Verify content
+      const content1 = JSON.parse(await fs.readFile(json1, "utf-8"));
+      const content2 = JSON.parse(await fs.readFile(json2, "utf-8"));
+
+      expect(content1.runNumber).toBe(1);
+      expect(content2.runNumber).toBe(2);
+    });
+
+    it("should create matching MD files", async () => {
+      const result = createTestVerificationResult();
+      await saveVerificationResult(tempDir, result);
+
+      const mdPath = path.join(tempDir, "ai", "verification", "test.feature", "001.md");
+      const stat = await fs.stat(mdPath);
+      expect(stat.isFile()).toBe(true);
+
+      const content = await fs.readFile(mdPath, "utf-8");
+      expect(content).toContain("# Verification Report: test.feature");
+      expect(content).toContain("**Run**: #001");
+    });
+  });
+
+  describe("Index Updates", () => {
+    it("should create index.json on first save", async () => {
+      const result = createTestVerificationResult();
+      await saveVerificationResult(tempDir, result);
+
+      const indexPath = path.join(tempDir, "ai", "verification", "index.json");
+      const stat = await fs.stat(indexPath);
+      expect(stat.isFile()).toBe(true);
+    });
+
+    it("should update feature summary in index", async () => {
+      const result = createTestVerificationResult({ verdict: "pass" });
+      await saveVerificationResult(tempDir, result);
+
+      const index = await loadVerificationIndex(tempDir);
+
+      expect(index?.features["test.feature"]).toBeDefined();
+      expect(index?.features["test.feature"].latestRun).toBe(1);
+      expect(index?.features["test.feature"].latestVerdict).toBe("pass");
+      expect(index?.features["test.feature"].totalRuns).toBe(1);
+      expect(index?.features["test.feature"].passCount).toBe(1);
+      expect(index?.features["test.feature"].failCount).toBe(0);
+    });
+
+    it("should update pass/fail counts on subsequent runs", async () => {
+      const result1 = createTestVerificationResult({ verdict: "fail" });
+      const result2 = createTestVerificationResult({ verdict: "pass" });
+
+      await saveVerificationResult(tempDir, result1);
+      await saveVerificationResult(tempDir, result2);
+
+      const index = await loadVerificationIndex(tempDir);
+
+      expect(index?.features["test.feature"].totalRuns).toBe(2);
+      expect(index?.features["test.feature"].passCount).toBe(1);
+      expect(index?.features["test.feature"].failCount).toBe(1);
+      expect(index?.features["test.feature"].latestVerdict).toBe("pass");
+    });
+  });
+
+  describe("getVerificationHistory", () => {
+    it("should return empty array for non-existent feature", async () => {
+      const history = await getVerificationHistory(tempDir, "non.existent");
+      expect(history).toEqual([]);
+    });
+
+    it("should return all runs for a feature", async () => {
+      const result1 = createTestVerificationResult({ verdict: "fail" });
+      const result2 = createTestVerificationResult({ verdict: "pass" });
+      const result3 = createTestVerificationResult({ verdict: "pass" });
+
+      await saveVerificationResult(tempDir, result1);
+      await saveVerificationResult(tempDir, result2);
+      await saveVerificationResult(tempDir, result3);
+
+      const history = await getVerificationHistory(tempDir, "test.feature");
+
+      expect(history).toHaveLength(3);
+      expect(history[0].runNumber).toBe(1);
+      expect(history[1].runNumber).toBe(2);
+      expect(history[2].runNumber).toBe(3);
+    });
+  });
+
+  describe("getFeatureSummary", () => {
+    it("should return null for non-existent feature", async () => {
+      const summary = await getFeatureSummary(tempDir, "non.existent");
+      expect(summary).toBeNull();
+    });
+
+    it("should return summary for existing feature", async () => {
+      const result = createTestVerificationResult();
+      await saveVerificationResult(tempDir, result);
+
+      const summary = await getFeatureSummary(tempDir, "test.feature");
+
+      expect(summary).not.toBeNull();
+      expect(summary?.featureId).toBe("test.feature");
+      expect(summary?.latestVerdict).toBe("pass");
+    });
+  });
+});
+
+// ============================================================================
+// Markdown Report Generator Tests
+// ============================================================================
+
+describe("Verification Report Generator", () => {
+  describe("generateVerificationReport", () => {
+    it("should generate valid markdown report", () => {
+      const result = createTestVerificationResult();
+      const report = generateVerificationReport(result);
+
+      expect(report).toContain("# Verification Report: test.feature");
+      expect(report).toContain("**Verdict**: ✅ PASS");
+      expect(report).toContain("**Verified By**: claude");
+    });
+
+    it("should include run number when provided", () => {
+      const result = createTestVerificationResult();
+      const report = generateVerificationReport(result, 5);
+
+      expect(report).toContain("**Run**: #005");
+    });
+
+    it("should include changed files section", () => {
+      const result = createTestVerificationResult({
+        changedFiles: ["src/a.ts", "src/b.ts"],
+      });
+      const report = generateVerificationReport(result);
+
+      expect(report).toContain("## Changed Files");
+      expect(report).toContain("`src/a.ts`");
+      expect(report).toContain("`src/b.ts`");
+    });
+
+    it("should include automated checks section", () => {
+      const result = createTestVerificationResult({
+        automatedChecks: [
+          { type: "test", success: true, duration: 1000 },
+          { type: "typecheck", success: true, duration: 500 },
+          { type: "build", success: false, duration: 300, output: "Build failed" },
+        ],
+      });
+      const report = generateVerificationReport(result);
+
+      expect(report).toContain("## Automated Checks");
+      expect(report).toContain("Tests");
+      expect(report).toContain("Type Check");
+      expect(report).toContain("Build");
+      expect(report).toContain("✅ Pass");
+      expect(report).toContain("❌ Fail");
+    });
+
+    it("should include criteria with reasoning", () => {
+      const result = createTestVerificationResult({
+        criteriaResults: [
+          {
+            criterion: "Test criterion",
+            index: 0,
+            satisfied: true,
+            reasoning: "This is the reasoning",
+            evidence: ["src/file.ts:10-20"],
+            confidence: 0.85,
+          },
+        ],
+      });
+      const report = generateVerificationReport(result);
+
+      expect(report).toContain("## Acceptance Criteria");
+      expect(report).toContain("Test criterion");
+      expect(report).toContain("This is the reasoning");
+      expect(report).toContain("85%");
+      expect(report).toContain("`src/file.ts:10-20`");
+    });
+
+    it("should include suggestions when present", () => {
+      const result = createTestVerificationResult({
+        suggestions: ["Suggestion 1", "Suggestion 2"],
+      });
+      const report = generateVerificationReport(result);
+
+      expect(report).toContain("## Suggestions");
+      expect(report).toContain("Suggestion 1");
+      expect(report).toContain("Suggestion 2");
+    });
+
+    it("should handle missing optional fields gracefully", () => {
+      const result: VerificationResult = {
+        featureId: "minimal.feature",
+        timestamp: new Date().toISOString(),
+        changedFiles: [],
+        diffSummary: "",
+        automatedChecks: [],
+        criteriaResults: [],
+        verdict: "pass",
+        verifiedBy: "test",
+        overallReasoning: "",
+      };
+
+      // Should not throw
+      const report = generateVerificationReport(result);
+
+      expect(report).toContain("# Verification Report: minimal.feature");
+      expect(report).not.toContain("## Suggestions");
+      expect(report).not.toContain("## Code Quality Notes");
+    });
+  });
+
+  describe("generateVerificationSummary", () => {
+    it("should generate summary line", () => {
+      const result = createTestVerificationResult({
+        criteriaResults: [
+          { criterion: "A", index: 0, satisfied: true, reasoning: "", confidence: 1 },
+          { criterion: "B", index: 1, satisfied: true, reasoning: "", confidence: 1 },
+          { criterion: "C", index: 2, satisfied: false, reasoning: "", confidence: 1 },
+        ],
+      });
+      const summary = generateVerificationSummary(result);
+
+      expect(summary).toBe("2/3 criteria satisfied");
+    });
+  });
+});
+
+// ============================================================================
+// Migration Tests
+// ============================================================================
+
+describe("Verification Store Migration", () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "verification-migration-test-"));
+  });
+
+  afterEach(async () => {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  describe("needsMigration", () => {
+    it("should return false when no store exists", async () => {
+      const needs = await needsMigration(tempDir);
+      expect(needs).toBe(false);
+    });
+
+    it("should return true when results.json exists but index.json doesn't", async () => {
+      const storeDir = path.join(tempDir, "ai", "verification");
+      await fs.mkdir(storeDir, { recursive: true });
+
+      const storeData = {
+        results: { "test.feature": createTestVerificationResult() },
+        updatedAt: new Date().toISOString(),
+        version: STORE_VERSION,
+      };
+      await fs.writeFile(
+        path.join(storeDir, "results.json"),
+        JSON.stringify(storeData)
+      );
+
+      const needs = await needsMigration(tempDir);
+      expect(needs).toBe(true);
+    });
+
+    it("should return false when both files exist", async () => {
+      const storeDir = path.join(tempDir, "ai", "verification");
+      await fs.mkdir(storeDir, { recursive: true });
+
+      await fs.writeFile(path.join(storeDir, "results.json"), "{}");
+      await fs.writeFile(path.join(storeDir, "index.json"), "{}");
+
+      const needs = await needsMigration(tempDir);
+      expect(needs).toBe(false);
+    });
+  });
+
+  describe("migrateResultsJson", () => {
+    it("should return -1 when migration not needed", async () => {
+      const count = await migrateResultsJson(tempDir);
+      expect(count).toBe(-1);
+    });
+
+    it("should migrate results to per-feature structure", async () => {
+      const storeDir = path.join(tempDir, "ai", "verification");
+      await fs.mkdir(storeDir, { recursive: true });
+
+      const storeData = {
+        results: {
+          "feature.one": createTestVerificationResult({ featureId: "feature.one", verdict: "pass" }),
+          "feature.two": createTestVerificationResult({ featureId: "feature.two", verdict: "fail" }),
+        },
+        updatedAt: new Date().toISOString(),
+        version: STORE_VERSION,
+      };
+      await fs.writeFile(
+        path.join(storeDir, "results.json"),
+        JSON.stringify(storeData)
+      );
+
+      const count = await migrateResultsJson(tempDir);
+
+      expect(count).toBe(2);
+
+      // Check subdirectories created
+      const dir1 = path.join(storeDir, "feature.one");
+      const dir2 = path.join(storeDir, "feature.two");
+      expect((await fs.stat(dir1)).isDirectory()).toBe(true);
+      expect((await fs.stat(dir2)).isDirectory()).toBe(true);
+
+      // Check JSON files created
+      expect((await fs.stat(path.join(dir1, "001.json"))).isFile()).toBe(true);
+      expect((await fs.stat(path.join(dir2, "001.json"))).isFile()).toBe(true);
+
+      // Check MD files created
+      expect((await fs.stat(path.join(dir1, "001.md"))).isFile()).toBe(true);
+      expect((await fs.stat(path.join(dir2, "001.md"))).isFile()).toBe(true);
+
+      // Check index.json created
+      const index = await loadVerificationIndex(tempDir);
+      expect(index?.features["feature.one"]).toBeDefined();
+      expect(index?.features["feature.two"]).toBeDefined();
+    });
+
+    it("should create backup of results.json", async () => {
+      const storeDir = path.join(tempDir, "ai", "verification");
+      await fs.mkdir(storeDir, { recursive: true });
+
+      const storeData = {
+        results: { "test.feature": createTestVerificationResult() },
+        updatedAt: new Date().toISOString(),
+        version: STORE_VERSION,
+      };
+      await fs.writeFile(
+        path.join(storeDir, "results.json"),
+        JSON.stringify(storeData)
+      );
+
+      await migrateResultsJson(tempDir);
+
+      const backupPath = path.join(storeDir, "results.json.bak");
+      expect((await fs.stat(backupPath)).isFile()).toBe(true);
+    });
+  });
+
+  describe("Auto-migration on first access", () => {
+    it("should auto-migrate when loading index with legacy store", async () => {
+      const storeDir = path.join(tempDir, "ai", "verification");
+      await fs.mkdir(storeDir, { recursive: true });
+
+      const storeData = {
+        results: { "auto.migrate": createTestVerificationResult({ featureId: "auto.migrate" }) },
+        updatedAt: new Date().toISOString(),
+        version: STORE_VERSION,
+      };
+      await fs.writeFile(
+        path.join(storeDir, "results.json"),
+        JSON.stringify(storeData)
+      );
+
+      // Load index should trigger migration
+      const index = await loadVerificationIndex(tempDir);
+
+      expect(index).not.toBeNull();
+      expect(index?.features["auto.migrate"]).toBeDefined();
+
+      // Verify files were created
+      const featureDir = path.join(storeDir, "auto.migrate");
+      expect((await fs.stat(featureDir)).isDirectory()).toBe(true);
+    });
+  });
+});

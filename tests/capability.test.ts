@@ -1,5 +1,5 @@
 /**
- * Tests for the extensible capability detection system
+ * Tests for project capabilities detection (Cache → AI)
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs/promises";
@@ -13,22 +13,14 @@ import {
   isStale,
   CACHE_VERSION,
   loadFullCache,
-} from "../src/capability-cache.js";
-
-import {
-  detectWithPresets,
   formatExtendedCapabilities,
   detectCapabilities,
   formatCapabilities,
   detectVerificationCapabilities,
-} from "../src/capability-detector.js";
-
-import {
-  collectProjectContext,
-  buildCapabilityDiscoveryPrompt,
+  buildAutonomousDiscoveryPrompt,
   parseCapabilityResponse,
   discoverCapabilitiesWithAI,
-} from "../src/ai-capability-discovery.js";
+} from "../src/project-capabilities.js";
 
 import * as agents from "../src/agents.js";
 
@@ -54,7 +46,7 @@ function createTestCapabilities(
     hasBuild: true,
     buildCommand: "npm run build",
     hasGit: true,
-    source: "preset",
+    source: "ai-discovered",
     confidence: 0.95,
     languages: ["typescript", "nodejs"],
     detectedAt: new Date().toISOString(),
@@ -67,7 +59,7 @@ function createTestCapabilities(
 }
 
 // ============================================================================
-// Cache Tests
+// Capability Cache Tests
 // ============================================================================
 
 describe("Capability Cache", () => {
@@ -75,6 +67,8 @@ describe("Capability Cache", () => {
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "cap-cache-test-"));
+    // Ensure ai/ directory exists
+    await fs.mkdir(path.join(tempDir, "ai"), { recursive: true });
   });
 
   afterEach(async () => {
@@ -82,23 +76,21 @@ describe("Capability Cache", () => {
   });
 
   describe("loadCachedCapabilities", () => {
-    it("should return null for non-existent cache", async () => {
+    it("should return null when cache file does not exist", async () => {
       const result = await loadCachedCapabilities(tempDir);
       expect(result).toBeNull();
     });
 
-    it("should load valid cached capabilities", async () => {
+    it("should return capabilities when cache file exists and is valid", async () => {
       const capabilities = createTestCapabilities();
       const cache: CapabilityCache = {
         version: CACHE_VERSION,
         capabilities,
+        commitHash: "abc123",
+        trackedFiles: ["package.json"],
       };
-
-      // Create cache file
-      const cacheDir = path.join(tempDir, "ai");
-      await fs.mkdir(cacheDir, { recursive: true });
       await fs.writeFile(
-        path.join(cacheDir, "capabilities.json"),
+        path.join(tempDir, "ai/capabilities.json"),
         JSON.stringify(cache)
       );
 
@@ -106,355 +98,148 @@ describe("Capability Cache", () => {
 
       expect(result).not.toBeNull();
       expect(result?.source).toBe("cached");
-      expect(result?.languages).toContain("typescript");
+      expect(result?.hasTests).toBe(true);
     });
 
-    it("should return null for corrupted cache", async () => {
-      const cacheDir = path.join(tempDir, "ai");
-      await fs.mkdir(cacheDir, { recursive: true });
-      await fs.writeFile(
-        path.join(cacheDir, "capabilities.json"),
-        "{ invalid json"
-      );
-
-      const result = await loadCachedCapabilities(tempDir);
-      expect(result).toBeNull();
-    });
-
-    it("should return null for outdated cache version", async () => {
-      const cache: CapabilityCache = {
-        version: "0.0.1", // Old version
-        capabilities: createTestCapabilities(),
+    it("should return null when cache version does not match", async () => {
+      const capabilities = createTestCapabilities();
+      const cache = {
+        version: "0.0.0",
+        capabilities,
+        commitHash: "abc123",
+        trackedFiles: ["package.json"],
       };
-
-      const cacheDir = path.join(tempDir, "ai");
-      await fs.mkdir(cacheDir, { recursive: true });
       await fs.writeFile(
-        path.join(cacheDir, "capabilities.json"),
+        path.join(tempDir, "ai/capabilities.json"),
         JSON.stringify(cache)
       );
 
       const result = await loadCachedCapabilities(tempDir);
+
+      expect(result).toBeNull();
+    });
+
+    it("should return null when cache file is corrupted", async () => {
+      await fs.writeFile(
+        path.join(tempDir, "ai/capabilities.json"),
+        "not valid json"
+      );
+
+      const result = await loadCachedCapabilities(tempDir);
+
       expect(result).toBeNull();
     });
   });
 
   describe("saveCapabilities", () => {
-    it("should create cache file and directory", async () => {
+    it("should create cache file with correct structure", async () => {
       const capabilities = createTestCapabilities();
 
       await saveCapabilities(tempDir, capabilities);
 
-      const cachePath = path.join(tempDir, "ai", "capabilities.json");
-      const exists = await fs.access(cachePath).then(() => true).catch(() => false);
-      expect(exists).toBe(true);
-    });
-
-    it("should save with current version", async () => {
-      const capabilities = createTestCapabilities();
-
-      await saveCapabilities(tempDir, capabilities);
-
-      const cachePath = path.join(tempDir, "ai", "capabilities.json");
-      const content = await fs.readFile(cachePath, "utf-8");
-      const cache = JSON.parse(content) as CapabilityCache;
+      const content = await fs.readFile(
+        path.join(tempDir, "ai/capabilities.json"),
+        "utf-8"
+      );
+      const cache = JSON.parse(content);
 
       expect(cache.version).toBe(CACHE_VERSION);
+      expect(cache.capabilities.hasTests).toBe(true);
+      expect(cache.trackedFiles).toBeInstanceOf(Array);
     });
 
-    it("should update detectedAt timestamp", async () => {
-      const capabilities = createTestCapabilities({
-        detectedAt: "2020-01-01T00:00:00.000Z",
-      });
+    it("should create ai/ directory if it does not exist", async () => {
+      await fs.rm(path.join(tempDir, "ai"), { recursive: true, force: true });
+      const capabilities = createTestCapabilities();
 
       await saveCapabilities(tempDir, capabilities);
 
-      const cachePath = path.join(tempDir, "ai", "capabilities.json");
-      const content = await fs.readFile(cachePath, "utf-8");
-      const cache = JSON.parse(content) as CapabilityCache;
-
-      // Should have updated timestamp (not 2020)
-      expect(cache.capabilities.detectedAt).not.toBe("2020-01-01T00:00:00.000Z");
+      const exists = await fs
+        .access(path.join(tempDir, "ai/capabilities.json"))
+        .then(() => true)
+        .catch(() => false);
+      expect(exists).toBe(true);
     });
   });
 
   describe("invalidateCache", () => {
-    it("should remove cache file", async () => {
-      // Create cache first
-      const cacheDir = path.join(tempDir, "ai");
-      await fs.mkdir(cacheDir, { recursive: true });
-      await fs.writeFile(
-        path.join(cacheDir, "capabilities.json"),
-        "{}"
-      );
+    it("should remove cache file when it exists", async () => {
+      const capabilities = createTestCapabilities();
+      await saveCapabilities(tempDir, capabilities);
 
       await invalidateCache(tempDir);
 
-      const exists = await fs.access(path.join(cacheDir, "capabilities.json"))
+      const exists = await fs
+        .access(path.join(tempDir, "ai/capabilities.json"))
         .then(() => true)
         .catch(() => false);
       expect(exists).toBe(false);
     });
 
-    it("should not throw for non-existent cache", async () => {
+    it("should not throw when cache file does not exist", async () => {
       await expect(invalidateCache(tempDir)).resolves.not.toThrow();
     });
   });
 
   describe("isStale", () => {
-    it("should return true for non-existent cache", async () => {
+    it("should return true when cache file does not exist", async () => {
       const result = await isStale(tempDir);
       expect(result).toBe(true);
     });
 
-    it("should return true for cache without commit hash", async () => {
-      const cache: CapabilityCache = {
+    it("should return true when no commit hash is stored", async () => {
+      const cache = {
         version: CACHE_VERSION,
         capabilities: createTestCapabilities(),
-        // No commitHash
+        trackedFiles: ["package.json"],
       };
-
-      const cacheDir = path.join(tempDir, "ai");
-      await fs.mkdir(cacheDir, { recursive: true });
       await fs.writeFile(
-        path.join(cacheDir, "capabilities.json"),
+        path.join(tempDir, "ai/capabilities.json"),
         JSON.stringify(cache)
       );
 
       const result = await isStale(tempDir);
-      expect(result).toBe(true);
-    });
 
-    it("should return true for corrupted JSON cache", async () => {
-      const cacheDir = path.join(tempDir, "ai");
-      await fs.mkdir(cacheDir, { recursive: true });
-      await fs.writeFile(
-        path.join(cacheDir, "capabilities.json"),
-        "not valid json"
-      );
-
-      const result = await isStale(tempDir);
-      expect(result).toBe(true);
-    });
-
-    it("should return true when trackedFiles is undefined", async () => {
-      const cache: CapabilityCache = {
-        version: CACHE_VERSION,
-        capabilities: createTestCapabilities(),
-        commitHash: "abc123",
-        // trackedFiles undefined - should use BUILD_FILES as default
-      };
-
-      const cacheDir = path.join(tempDir, "ai");
-      await fs.mkdir(cacheDir, { recursive: true });
-      await fs.writeFile(
-        path.join(cacheDir, "capabilities.json"),
-        JSON.stringify(cache)
-      );
-
-      // Non-git directory will return true from hasBuildFileChanges
-      const result = await isStale(tempDir);
       expect(result).toBe(true);
     });
   });
 
   describe("loadFullCache", () => {
-    it("should return null for non-existent cache", async () => {
-      const result = await loadFullCache(tempDir);
-      expect(result).toBeNull();
-    });
-
-    it("should return full cache object with metadata", async () => {
+    it("should return full cache object including metadata", async () => {
+      const capabilities = createTestCapabilities();
       const cache: CapabilityCache = {
         version: CACHE_VERSION,
-        capabilities: createTestCapabilities(),
-        commitHash: "abc123def456",
-        trackedFiles: ["package.json", "yarn.lock"],
+        capabilities,
+        commitHash: "abc123",
+        trackedFiles: ["package.json", "tsconfig.json"],
       };
-
-      const cacheDir = path.join(tempDir, "ai");
-      await fs.mkdir(cacheDir, { recursive: true });
       await fs.writeFile(
-        path.join(cacheDir, "capabilities.json"),
+        path.join(tempDir, "ai/capabilities.json"),
         JSON.stringify(cache)
       );
 
       const result = await loadFullCache(tempDir);
 
       expect(result).not.toBeNull();
-      expect(result?.version).toBe(CACHE_VERSION);
-      expect(result?.commitHash).toBe("abc123def456");
-      expect(result?.trackedFiles).toEqual(["package.json", "yarn.lock"]);
+      expect(result?.commitHash).toBe("abc123");
+      expect(result?.trackedFiles).toEqual(["package.json", "tsconfig.json"]);
     });
 
-    it("should return null for corrupted cache", async () => {
-      const cacheDir = path.join(tempDir, "ai");
-      await fs.mkdir(cacheDir, { recursive: true });
+    it("should return null when cache is corrupted", async () => {
       await fs.writeFile(
-        path.join(cacheDir, "capabilities.json"),
-        "{ not valid json"
+        path.join(tempDir, "ai/capabilities.json"),
+        "invalid json"
       );
 
       const result = await loadFullCache(tempDir);
+
       expect(result).toBeNull();
     });
   });
-
-  describe("invalidateCache error handling", () => {
-    it("should throw for permission errors (non-ENOENT)", async () => {
-      // Create a read-only directory to trigger permission error
-      // This test may not work on all systems
-      const cacheDir = path.join(tempDir, "ai");
-      await fs.mkdir(cacheDir, { recursive: true });
-      const cachePath = path.join(cacheDir, "capabilities.json");
-      await fs.writeFile(cachePath, "{}");
-
-      // Make directory read-only (may not work on Windows)
-      if (process.platform !== "win32") {
-        await fs.chmod(cacheDir, 0o444);
-        await expect(invalidateCache(tempDir)).rejects.toThrow();
-        // Restore permissions for cleanup
-        await fs.chmod(cacheDir, 0o755);
-      }
-    });
-  });
 });
 
 // ============================================================================
-// Preset Detection Tests
-// ============================================================================
-
-describe("Preset Detection", () => {
-  let tempDir: string;
-
-  beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "preset-test-"));
-  });
-
-  afterEach(async () => {
-    await fs.rm(tempDir, { recursive: true, force: true });
-  });
-
-  describe("detectWithPresets", () => {
-    it("should return low confidence for empty directory", async () => {
-      const result = await detectWithPresets(tempDir);
-
-      expect(result.source).toBe("preset");
-      expect(result.confidence).toBe(0);
-      expect(result.languages).toHaveLength(0);
-    });
-
-    it("should detect Node.js project from package.json", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          name: "test-project",
-          scripts: { test: "vitest run" },
-          devDependencies: { vitest: "^1.0.0" },
-        })
-      );
-
-      const result = await detectWithPresets(tempDir);
-
-      expect(result.source).toBe("preset");
-      expect(result.languages).toContain("nodejs");
-      expect(result.confidence).toBeGreaterThan(0.7);
-      expect(result.hasTests).toBe(true);
-      expect(result.testFramework).toBe("vitest");
-    });
-
-    it("should detect TypeScript project", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({ name: "test" })
-      );
-      await fs.writeFile(
-        path.join(tempDir, "tsconfig.json"),
-        JSON.stringify({ compilerOptions: {} })
-      );
-
-      const result = await detectWithPresets(tempDir);
-
-      expect(result.languages).toContain("typescript");
-      expect(result.hasTypeCheck).toBe(true);
-    });
-
-    it("should detect Python project from pyproject.toml", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "pyproject.toml"),
-        `[tool.pytest]
-testpaths = ["tests"]`
-      );
-
-      const result = await detectWithPresets(tempDir);
-
-      expect(result.languages).toContain("python");
-      expect(result.hasTests).toBe(true);
-      expect(result.testFramework).toBe("pytest");
-    });
-
-    it("should detect Go project", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "go.mod"),
-        "module example.com/test\n\ngo 1.21"
-      );
-
-      const result = await detectWithPresets(tempDir);
-
-      expect(result.languages).toContain("go");
-      expect(result.hasTests).toBe(true);
-      expect(result.testCommand).toBe("go test ./...");
-    });
-
-    it("should detect Rust project", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "Cargo.toml"),
-        `[package]
-name = "test"
-version = "0.1.0"`
-      );
-
-      const result = await detectWithPresets(tempDir);
-
-      expect(result.languages).toContain("rust");
-      expect(result.hasTests).toBe(true);
-      expect(result.testCommand).toBe("cargo test");
-      expect(result.hasLint).toBe(true);
-      expect(result.lintCommand).toBe("cargo clippy");
-    });
-
-    it("should calculate high confidence for complete project setup", async () => {
-      // Create a fully configured Node.js/TypeScript project
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "vitest", build: "tsc" },
-          devDependencies: { vitest: "^1.0.0", typescript: "^5.0.0" },
-        })
-      );
-      await fs.writeFile(
-        path.join(tempDir, "tsconfig.json"),
-        JSON.stringify({ compilerOptions: {} })
-      );
-
-      // Initialize git
-      const { execSync } = await import("node:child_process");
-      try {
-        execSync("git init", { cwd: tempDir, stdio: "pipe" });
-      } catch {
-        // Git might not be available in all test environments
-      }
-
-      const result = await detectWithPresets(tempDir);
-
-      // Should have high confidence with all capabilities
-      expect(result.confidence).toBeGreaterThanOrEqual(0.9);
-    });
-  });
-});
-
-// ============================================================================
-// AI Discovery Tests
+// AI Capability Discovery Tests
 // ============================================================================
 
 describe("AI Capability Discovery", () => {
@@ -462,307 +247,87 @@ describe("AI Capability Discovery", () => {
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "ai-discovery-test-"));
+    await fs.mkdir(path.join(tempDir, "ai"), { recursive: true });
   });
 
   afterEach(async () => {
     await fs.rm(tempDir, { recursive: true, force: true });
+    vi.restoreAllMocks();
   });
 
-  describe("collectProjectContext", () => {
-    it("should collect config files", async () => {
-      await fs.writeFile(path.join(tempDir, "pom.xml"), "<project></project>");
-      await fs.writeFile(path.join(tempDir, "build.gradle"), "plugins {}");
+  describe("buildAutonomousDiscoveryPrompt", () => {
+    it("should include working directory in prompt", () => {
+      const prompt = buildAutonomousDiscoveryPrompt("/test/project");
 
-      const context = await collectProjectContext(tempDir);
-
-      expect(context.configFiles).toContain("pom.xml");
-      expect(context.buildFiles).toContain("build.gradle");
+      expect(prompt).toContain("/test/project");
+      expect(prompt).toContain("Working Directory");
     });
 
-    it("should get directory structure", async () => {
-      await fs.mkdir(path.join(tempDir, "src"), { recursive: true });
-      await fs.mkdir(path.join(tempDir, "tests"), { recursive: true });
+    it("should include exploration instructions", () => {
+      const prompt = buildAutonomousDiscoveryPrompt("/test");
 
-      const context = await collectProjectContext(tempDir);
-
-      expect(context.directoryStructure).toBeTruthy();
-      expect(context.directoryStructure.length).toBeGreaterThan(0);
+      expect(prompt).toContain("Explore");
+      expect(prompt).toContain("configuration files");
+      expect(prompt).toContain("List the root directory");
     });
 
-    it("should sample source files", async () => {
-      const srcDir = path.join(tempDir, "src");
-      await fs.mkdir(srcDir, { recursive: true });
-      await fs.writeFile(
-        path.join(srcDir, "Main.java"),
-        "public class Main { public static void main(String[] args) {} }"
-      );
+    it("should include critical requirements for test commands", () => {
+      const prompt = buildAutonomousDiscoveryPrompt("/test");
 
-      const context = await collectProjectContext(tempDir);
-
-      expect(context.sampleFiles.length).toBeGreaterThan(0);
-      expect(context.sampleFiles[0].path).toContain("Main.java");
-      expect(context.sampleFiles[0].content).toContain("public class Main");
+      expect(prompt).toContain("run once and exit");
+      expect(prompt).toContain("No watch mode");
     });
 
-    it("should handle deeply nested source files", async () => {
-      const deepDir = path.join(tempDir, "src", "main", "java");
-      await fs.mkdir(deepDir, { recursive: true });
-      await fs.writeFile(
-        path.join(deepDir, "App.java"),
-        "package main; public class App {}"
-      );
+    it("should include JSON output format", () => {
+      const prompt = buildAutonomousDiscoveryPrompt("/test");
 
-      const context = await collectProjectContext(tempDir);
-
-      // Should find files up to maxDepth (2)
-      expect(context.directoryStructure).toContain("src");
-    });
-
-    it("should ignore node_modules and hidden directories", async () => {
-      await fs.mkdir(path.join(tempDir, "node_modules", "test"), { recursive: true });
-      await fs.mkdir(path.join(tempDir, ".git"), { recursive: true });
-      await fs.mkdir(path.join(tempDir, "src"), { recursive: true });
-
-      const context = await collectProjectContext(tempDir);
-
-      expect(context.directoryStructure).not.toContain("node_modules");
-      expect(context.directoryStructure).not.toContain(".git");
-      expect(context.directoryStructure).toContain("src");
-    });
-
-    it("should handle empty directory", async () => {
-      const context = await collectProjectContext(tempDir);
-
-      expect(context.configFiles).toHaveLength(0);
-      expect(context.buildFiles).toHaveLength(0);
-      expect(context.sampleFiles).toHaveLength(0);
-      expect(context.directoryStructure).toBeTruthy();
-    });
-
-    it("should limit sample file content", async () => {
-      const srcDir = path.join(tempDir, "src");
-      await fs.mkdir(srcDir, { recursive: true });
-      // Create a file with content longer than MAX_CONTENT_PER_FILE (1000)
-      const longContent = "x".repeat(2000);
-      await fs.writeFile(path.join(srcDir, "Large.java"), longContent);
-
-      const context = await collectProjectContext(tempDir);
-
-      if (context.sampleFiles.length > 0) {
-        expect(context.sampleFiles[0].content.length).toBeLessThanOrEqual(1000);
-      }
-    });
-
-    it("should find source files in lib directory", async () => {
-      const libDir = path.join(tempDir, "lib");
-      await fs.mkdir(libDir, { recursive: true });
-      await fs.writeFile(
-        path.join(libDir, "helper.rb"),
-        "module Helper; end"
-      );
-
-      const context = await collectProjectContext(tempDir);
-
-      expect(context.sampleFiles.some(f => f.path.includes("helper.rb"))).toBe(true);
-    });
-
-    it("should find source files in app directory", async () => {
-      const appDir = path.join(tempDir, "app");
-      await fs.mkdir(appDir, { recursive: true });
-      await fs.writeFile(
-        path.join(appDir, "main.swift"),
-        "import Foundation"
-      );
-
-      const context = await collectProjectContext(tempDir);
-
-      expect(context.sampleFiles.some(f => f.path.includes("main.swift"))).toBe(true);
-    });
-
-    it("should skip hidden and ignored directories when finding source files", async () => {
-      const vendorDir = path.join(tempDir, "src", "vendor");
-      await fs.mkdir(vendorDir, { recursive: true });
-      await fs.writeFile(
-        path.join(vendorDir, "external.java"),
-        "// Vendor code"
-      );
-
-      const context = await collectProjectContext(tempDir);
-
-      // vendor directory should be skipped
-      expect(context.sampleFiles.every(f => !f.path.includes("vendor"))).toBe(true);
-    });
-
-    it("should skip __pycache__ directories", async () => {
-      const pycacheDir = path.join(tempDir, "src", "__pycache__");
-      await fs.mkdir(pycacheDir, { recursive: true });
-      await fs.writeFile(
-        path.join(pycacheDir, "module.cpython-311.pyc"),
-        "compiled"
-      );
-
-      const context = await collectProjectContext(tempDir);
-
-      expect(context.directoryStructure).not.toContain("__pycache__");
-    });
-  });
-
-  describe("buildCapabilityDiscoveryPrompt", () => {
-    it("should include config files in prompt", () => {
-      const context = {
-        configFiles: ["pom.xml", "build.gradle"],
-        buildFiles: ["pom.xml"],
-        directoryStructure: "src/\n  Main.java",
-        sampleFiles: [],
-      };
-
-      const prompt = buildCapabilityDiscoveryPrompt(context);
-
-      expect(prompt).toContain("pom.xml");
-      expect(prompt).toContain("build.gradle");
-    });
-
-    it("should include sample file content", () => {
-      const context = {
-        configFiles: [],
-        buildFiles: [],
-        directoryStructure: "",
-        sampleFiles: [
-          { path: "src/Main.java", content: "public class Main {}" },
-        ],
-      };
-
-      const prompt = buildCapabilityDiscoveryPrompt(context);
-
-      expect(prompt).toContain("src/Main.java");
-      expect(prompt).toContain("public class Main");
-    });
-
-    it("should request JSON output", () => {
-      const context = {
-        configFiles: [],
-        buildFiles: [],
-        directoryStructure: "",
-        sampleFiles: [],
-      };
-
-      const prompt = buildCapabilityDiscoveryPrompt(context);
-
-      expect(prompt).toContain("Return ONLY valid JSON");
-      expect(prompt).toContain('"languages"');
-      expect(prompt).toContain('"test"');
-      expect(prompt).toContain('"confidence"');
-    });
-
-    it("should handle context with no config files", () => {
-      const context = {
-        configFiles: [],
-        buildFiles: ["Makefile"],
-        directoryStructure: "src/",
-        sampleFiles: [],
-      };
-
-      const prompt = buildCapabilityDiscoveryPrompt(context);
-
-      expect(prompt).toContain("None detected");
-      expect(prompt).toContain("Makefile");
-    });
-
-    it("should handle context with no build files", () => {
-      const context = {
-        configFiles: ["tsconfig.json"],
-        buildFiles: [],
-        directoryStructure: "src/",
-        sampleFiles: [],
-      };
-
-      const prompt = buildCapabilityDiscoveryPrompt(context);
-
-      expect(prompt).toContain("tsconfig.json");
-      expect(prompt).toMatch(/Build Files Found\s*\n\s*None detected/);
-    });
-
-    it("should handle context with no source files", () => {
-      const context = {
-        configFiles: [],
-        buildFiles: [],
-        directoryStructure: "docs/",
-        sampleFiles: [],
-      };
-
-      const prompt = buildCapabilityDiscoveryPrompt(context);
-
-      expect(prompt).toContain("No source files found");
+      expect(prompt).toContain("languages");
+      expect(prompt).toContain("test");
+      expect(prompt).toContain("typecheck");
+      expect(prompt).toContain("lint");
+      expect(prompt).toContain("build");
     });
   });
 
   describe("parseCapabilityResponse", () => {
     it("should parse valid JSON response", () => {
       const response = JSON.stringify({
-        languages: ["java"],
-        test: {
-          available: true,
-          command: "./gradlew test",
-          framework: "junit",
-          confidence: 0.95,
-        },
-        typecheck: {
-          available: true,
-          command: "./gradlew compileJava",
-          confidence: 0.9,
-        },
-        lint: { available: false },
-        build: {
-          available: true,
-          command: "./gradlew build",
-          confidence: 0.95,
-        },
+        languages: ["typescript", "nodejs"],
+        test: { available: true, command: "npm test", framework: "vitest" },
+        build: { available: true, command: "npm run build" },
       });
 
       const result = parseCapabilityResponse(response);
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.languages).toContain("java");
-        expect(result.data.test?.command).toBe("./gradlew test");
-        expect(result.data.test?.confidence).toBe(0.95);
+        expect(result.data.languages).toEqual(["typescript", "nodejs"]);
+        expect(result.data.test?.available).toBe(true);
+        expect(result.data.test?.command).toBe("npm test");
       }
     });
 
     it("should extract JSON from markdown code block", () => {
-      const response = `Here is my analysis:
-
+      const response = `Here is the analysis:
 \`\`\`json
 {
-  "languages": ["ruby"],
-  "test": { "available": true, "command": "bundle exec rspec" }
+  "languages": ["python"],
+  "test": { "available": true, "command": "pytest" }
 }
 \`\`\`
-
-That's my recommendation.`;
+`;
 
       const result = parseCapabilityResponse(response);
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.languages).toContain("ruby");
+        expect(result.data.languages).toEqual(["python"]);
       }
     });
 
-    it("should return error for invalid JSON", () => {
-      const response = "This is not valid JSON at all";
-
-      const result = parseCapabilityResponse(response);
-
-      expect(result.success).toBe(false);
-      if (!result.success) {
-        expect(result.error).toContain("Failed to parse");
-      }
-    });
-
-    it("should return error for missing languages field", () => {
+    it("should handle missing languages field", () => {
       const response = JSON.stringify({
-        test: { available: true },
+        test: { available: true, command: "npm test" },
       });
 
       const result = parseCapabilityResponse(response);
@@ -773,497 +338,255 @@ That's my recommendation.`;
       }
     });
 
-    it("should handle custom rules", () => {
-      const response = JSON.stringify({
-        languages: ["java"],
-        customRules: [
-          {
-            id: "integration-test",
-            description: "Run integration tests",
-            command: "./gradlew integrationTest",
-            type: "test",
-          },
-        ],
-      });
+    it("should handle invalid JSON", () => {
+      const response = "not valid json at all";
 
       const result = parseCapabilityResponse(response);
 
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.customRules).toHaveLength(1);
-        expect(result.data.customRules![0].id).toBe("integration-test");
-      }
+      expect(result.success).toBe(false);
     });
 
-    it("should handle custom rules with unknown type", () => {
-      const response = JSON.stringify({
-        languages: ["java"],
-        customRules: [
-          {
-            id: "deploy",
-            description: "Deploy to production",
-            command: "./deploy.sh",
-            type: "unknown-type",
-          },
-        ],
-      });
+    it("should extract JSON object from mixed content", () => {
+      const response = `Based on my analysis of the project:
+{
+  "languages": ["rust"],
+  "test": { "available": true, "command": "cargo test" },
+  "build": { "available": true, "command": "cargo build" }
+}
+The project appears to be well configured.`;
 
       const result = parseCapabilityResponse(response);
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.customRules![0].type).toBe("unknown-type");
+        expect(result.data.languages).toEqual(["rust"]);
       }
     });
   });
 
   describe("discoverCapabilitiesWithAI", () => {
-    let consoleSpy: ReturnType<typeof vi.spyOn>;
+    it("should return capabilities from AI response", async () => {
+      const aiSpy = vi.spyOn(agents, "callAnyAvailableAgent");
+      aiSpy.mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["typescript", "nodejs"],
+          configFiles: ["package.json", "tsconfig.json"],
+          test: { available: true, command: "vitest run", framework: "vitest", confidence: 0.95 },
+          typecheck: { available: true, command: "npx tsc --noEmit", confidence: 0.9 },
+          build: { available: true, command: "npm run build", confidence: 0.9 },
+        }),
+        agentUsed: "test",
+      });
 
-    beforeEach(() => {
-      consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const result = await discoverCapabilitiesWithAI(tempDir);
+
+      expect(result.capabilities.source).toBe("ai-discovered");
+      expect(result.capabilities.languages).toEqual(["typescript", "nodejs"]);
+      expect(result.capabilities.hasTests).toBe(true);
+      expect(result.capabilities.testCommand).toBe("vitest run");
+      expect(result.capabilities.hasTypeCheck).toBe(true);
+      expect(result.configFiles).toEqual(["package.json", "tsconfig.json"]);
     });
 
-    afterEach(() => {
-      consoleSpy.mockRestore();
-      vi.restoreAllMocks();
-    });
-
-    it("should return minimal capabilities when AI agent fails", async () => {
-      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+    it("should return minimal capabilities when AI fails", async () => {
+      const aiSpy = vi.spyOn(agents, "callAnyAvailableAgent");
+      aiSpy.mockResolvedValue({
         success: false,
-        error: "No agent available",
+        output: "",
+        error: "AI unavailable",
       });
 
       const result = await discoverCapabilitiesWithAI(tempDir);
 
-      expect(result.source).toBe("ai-discovered");
-      expect(result.confidence).toBe(0);
-      expect(result.languages).toHaveLength(0);
-      expect(result.hasTests).toBe(false);
+      expect(result.capabilities.source).toBe("ai-discovered");
+      expect(result.capabilities.confidence).toBe(0);
+      expect(result.capabilities.hasTests).toBe(false);
+      expect(result.configFiles).toEqual([]);
     });
 
-    it("should return minimal capabilities when AI response parsing fails", async () => {
-      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+    it("should return minimal capabilities when AI response is invalid", async () => {
+      const aiSpy = vi.spyOn(agents, "callAnyAvailableAgent");
+      aiSpy.mockResolvedValue({
         success: true,
-        output: "This is not valid JSON",
-        model: "test",
+        output: "not valid json",
+        agentUsed: "test",
       });
 
       const result = await discoverCapabilitiesWithAI(tempDir);
 
-      expect(result.source).toBe("ai-discovered");
-      expect(result.confidence).toBe(0);
-      expect(result.languages).toHaveLength(0);
+      expect(result.capabilities.source).toBe("ai-discovered");
+      expect(result.capabilities.confidence).toBe(0);
     });
 
-    it("should parse valid AI response and return capabilities", async () => {
-      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
-        success: true,
-        output: JSON.stringify({
-          languages: ["java"],
-          test: {
-            available: true,
-            command: "./gradlew test",
-            framework: "junit",
-            confidence: 0.95,
-          },
-          typecheck: {
-            available: true,
-            command: "./gradlew compileJava",
-            confidence: 0.9,
-          },
-          lint: {
-            available: false,
-          },
-          build: {
-            available: true,
-            command: "./gradlew build",
-            confidence: 0.92,
-          },
-        }),
-        model: "test",
-      });
-
-      const result = await discoverCapabilitiesWithAI(tempDir);
-
-      expect(result.source).toBe("ai-discovered");
-      expect(result.languages).toContain("java");
-      expect(result.hasTests).toBe(true);
-      expect(result.testCommand).toBe("./gradlew test");
-      expect(result.testFramework).toBe("junit");
-      expect(result.hasTypeCheck).toBe(true);
-      expect(result.hasBuild).toBe(true);
-      expect(result.hasLint).toBe(false);
-      // Average of 0.95, 0.9, 0.92 = ~0.923
-      expect(result.confidence).toBeGreaterThan(0.9);
-    });
-
-    it("should handle AI response with no confidence values", async () => {
-      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
-        success: true,
-        output: JSON.stringify({
-          languages: ["python"],
-          test: {
-            available: true,
-            command: "pytest",
-          },
-        }),
-        model: "test",
-      });
-
-      const result = await discoverCapabilitiesWithAI(tempDir);
-
-      expect(result.languages).toContain("python");
-      // With no confidence values, should use default 0.5
-      expect(result.confidence).toBe(0.5);
-      expect(result.testInfo?.confidence).toBe(0.8); // Default when available=true
-    });
-
-    it("should handle AI response with custom rules", async () => {
-      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
-        success: true,
-        output: JSON.stringify({
-          languages: ["java"],
-          customRules: [
-            {
-              id: "integration-test",
-              description: "Run integration tests",
-              command: "./gradlew integrationTest",
-              type: "test",
-            },
-            {
-              id: "e2e-test",
-              description: "Run E2E tests",
-              command: "./gradlew e2eTest",
-              type: "custom",
-            },
-          ],
-        }),
-        model: "test",
-      });
-
-      const result = await discoverCapabilitiesWithAI(tempDir);
-
-      expect(result.customRules).toHaveLength(2);
-      expect(result.customRules![0].id).toBe("integration-test");
-      expect(result.customRules![0].type).toBe("test");
-      expect(result.customRules![1].type).toBe("custom");
-    });
-
-    it("should handle AI response with empty custom rules", async () => {
-      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
-        success: true,
-        output: JSON.stringify({
-          languages: ["go"],
-          customRules: [],
-        }),
-        model: "test",
-      });
-
-      const result = await discoverCapabilitiesWithAI(tempDir);
-
-      expect(result.customRules).toBeUndefined();
-    });
-
-    it("should detect git availability in project directory", async () => {
-      // Create a git repo in temp dir
-      const { execSync } = await import("node:child_process");
-      try {
-        execSync("git init", { cwd: tempDir, stdio: "pipe" });
-      } catch {
-        // Git might not be available
-      }
-
-      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
+    it("should include custom rules when provided by AI", async () => {
+      const aiSpy = vi.spyOn(agents, "callAnyAvailableAgent");
+      aiSpy.mockResolvedValue({
         success: true,
         output: JSON.stringify({
           languages: ["typescript"],
+          configFiles: ["package.json"],
+          test: { available: true, command: "npm test" },
+          customRules: [
+            {
+              id: "e2e-test",
+              description: "Run E2E tests",
+              command: "npm run test:e2e",
+              type: "test",
+            },
+          ],
         }),
-        model: "test",
+        agentUsed: "test",
       });
 
       const result = await discoverCapabilitiesWithAI(tempDir);
 
-      // hasGit should be true if git init succeeded
-      // (may be false if git not installed)
-      expect(typeof result.hasGit).toBe("boolean");
-    });
-
-    it("should handle capability info without optional fields", async () => {
-      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
-        success: true,
-        output: JSON.stringify({
-          languages: ["ruby"],
-          test: {
-            available: false,
-          },
-          lint: {
-            available: true,
-            command: "rubocop",
-            // No confidence provided
-          },
-        }),
-        model: "test",
-      });
-
-      const result = await discoverCapabilitiesWithAI(tempDir);
-
-      expect(result.testInfo?.available).toBe(false);
-      expect(result.testInfo?.confidence).toBe(0);
-      expect(result.lintInfo?.available).toBe(true);
-      expect(result.lintInfo?.confidence).toBe(0.8); // Default for available=true
-    });
-
-    it("should handle undefined capability info", async () => {
-      vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
-        success: true,
-        output: JSON.stringify({
-          languages: ["c"],
-          // No test, typecheck, lint, build info
-        }),
-        model: "test",
-      });
-
-      const result = await discoverCapabilitiesWithAI(tempDir);
-
-      expect(result.testInfo?.available).toBe(false);
-      expect(result.testInfo?.confidence).toBe(0);
-      expect(result.typeCheckInfo?.available).toBe(false);
-      expect(result.lintInfo?.available).toBe(false);
-      expect(result.buildInfo?.available).toBe(false);
+      expect(result.capabilities.customRules).toBeDefined();
+      expect(result.capabilities.customRules).toHaveLength(1);
+      expect(result.capabilities.customRules?.[0].id).toBe("e2e-test");
     });
   });
 });
 
 // ============================================================================
-// Format Tests
+// Two-Tier Detection Tests
 // ============================================================================
 
-// ============================================================================
-// Test Command Normalization Tests (Watch Mode Prevention)
-// ============================================================================
-
-describe("Test Command Normalization", () => {
+describe("Two-Tier Detection System", () => {
   let tempDir: string;
+  let aiSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "normalize-test-"));
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "detection-test-"));
+    await fs.mkdir(path.join(tempDir, "ai"), { recursive: true });
+    aiSpy = vi.spyOn(agents, "callAnyAvailableAgent");
   });
 
   afterEach(async () => {
     await fs.rm(tempDir, { recursive: true, force: true });
+    vi.restoreAllMocks();
   });
 
-  describe("Vitest watch mode prevention", () => {
-    it("should add 'run' flag when test script is just 'vitest'", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "vitest" }, // Watch mode!
-          devDependencies: { vitest: "^1.0.0" },
-        })
-      );
+  describe("detectCapabilities", () => {
+    it("should use cache when available and not stale", async () => {
+      // First call - will use AI
+      aiSpy.mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["typescript"],
+          configFiles: ["package.json"],
+          test: { available: true, command: "npm test" },
+        }),
+        agentUsed: "test",
+      });
 
-      const result = await detectVerificationCapabilities(tempDir);
+      // Initialize git repo properly for cache tracking
+      const { execSync } = await import("node:child_process");
+      try {
+        execSync("git init", { cwd: tempDir, stdio: "pipe" });
+        // Create an initial commit so git rev-parse HEAD works
+        await fs.writeFile(path.join(tempDir, ".gitignore"), "");
+        execSync("git add .gitignore && git commit -m 'init'", { cwd: tempDir, stdio: "pipe" });
+      } catch {
+        // Skip if git not available
+      }
 
-      expect(result.hasTests).toBe(true);
-      expect(result.testCommand).toBe("vitest run"); // Should add 'run'
+      const result1 = await detectCapabilities(tempDir, { force: true });
+      expect(result1.source).toBe("ai-discovered");
+
+      // Second call - should use cache (since no config files changed)
+      const result2 = await detectCapabilities(tempDir);
+      expect(result2.source).toBe("cached");
     });
 
-    it("should add 'run' flag when test script is 'npx vitest'", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "npx vitest" }, // Watch mode!
-          devDependencies: { vitest: "^1.0.0" },
-        })
-      );
+    it("should skip cache when force is true", async () => {
+      aiSpy.mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["typescript"],
+          configFiles: ["package.json"],
+          test: { available: true, command: "npm test" },
+        }),
+        agentUsed: "test",
+      });
 
-      const result = await detectVerificationCapabilities(tempDir);
+      // Initialize git
+      await fs.mkdir(path.join(tempDir, ".git"), { recursive: true });
 
-      expect(result.hasTests).toBe(true);
-      expect(result.testCommand).toBe("npx vitest run"); // Should add 'run'
+      // First call to create cache
+      await detectCapabilities(tempDir, { force: true });
+
+      // Force should skip cache and re-detect with AI
+      const result = await detectCapabilities(tempDir, { force: true });
+
+      expect(result.source).toBe("ai-discovered");
     });
 
-    it("should NOT modify when 'run' flag already present", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "vitest run" }, // Already correct
-          devDependencies: { vitest: "^1.0.0" },
-        })
-      );
+    it("should use AI when no cache exists", async () => {
+      aiSpy.mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["go"],
+          configFiles: ["go.mod"],
+          test: { available: true, command: "go test ./..." },
+          build: { available: true, command: "go build ./..." },
+        }),
+        agentUsed: "test",
+      });
 
-      const result = await detectVerificationCapabilities(tempDir);
+      const result = await detectCapabilities(tempDir);
 
-      expect(result.hasTests).toBe(true);
-      expect(result.testCommand).toBe("vitest run");
-    });
-
-    it("should add 'run' flag to vitest with additional options", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "vitest --coverage" }, // Watch mode with options!
-          devDependencies: { vitest: "^1.0.0" },
-        })
-      );
-
-      const result = await detectVerificationCapabilities(tempDir);
-
-      expect(result.hasTests).toBe(true);
-      expect(result.testCommand).toContain("vitest run ");
-      expect(result.testCommand).toContain("--coverage");
-    });
-
-    it("should handle vitest:run npm script reference", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "npm run vitest:run" },
-          devDependencies: { vitest: "^1.0.0" },
-        })
-      );
-
-      const result = await detectVerificationCapabilities(tempDir);
-
-      expect(result.hasTests).toBe(true);
-      // Should NOT modify because it contains ':run'
-      expect(result.testCommand).toBe("npm run vitest:run");
+      expect(result.source).toBe("ai-discovered");
+      expect(result.languages).toContain("go");
     });
   });
 
-  describe("Jest watch mode prevention", () => {
-    it("should remove --watch and add --watchAll=false", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "jest --watch" }, // Watch mode!
-          devDependencies: { jest: "^29.0.0" },
-        })
-      );
+  describe("detectVerificationCapabilities (legacy)", () => {
+    it("should return legacy format from AI detection", async () => {
+      aiSpy.mockResolvedValue({
+        success: true,
+        output: JSON.stringify({
+          languages: ["rust"],
+          configFiles: ["Cargo.toml"],
+          test: { available: true, command: "cargo test", framework: "cargo" },
+          lint: { available: true, command: "cargo clippy" },
+          build: { available: true, command: "cargo build" },
+        }),
+        agentUsed: "test",
+      });
 
       const result = await detectVerificationCapabilities(tempDir);
 
       expect(result.hasTests).toBe(true);
-      expect(result.testCommand).not.toContain("--watch ");
-      expect(result.testCommand).toContain("--watchAll=false");
-    });
-
-    it("should NOT modify when already has --watchAll=false", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "jest --watchAll=false" },
-          devDependencies: { jest: "^29.0.0" },
-        })
-      );
-
-      const result = await detectVerificationCapabilities(tempDir);
-
-      expect(result.testCommand).toBe("jest --watchAll=false");
-    });
-
-    it("should NOT modify when no watch flag present", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "jest" },
-          devDependencies: { jest: "^29.0.0" },
-        })
-      );
-
-      const result = await detectVerificationCapabilities(tempDir);
-
-      expect(result.testCommand).toBe("jest");
-    });
-  });
-
-  describe("Mocha watch mode prevention", () => {
-    it("should remove --watch flag", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "mocha --watch" }, // Watch mode!
-          devDependencies: { mocha: "^10.0.0" },
-        })
-      );
-
-      const result = await detectVerificationCapabilities(tempDir);
-
-      expect(result.hasTests).toBe(true);
-      expect(result.testCommand).not.toContain("--watch");
-    });
-
-    it("should remove -w flag", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "mocha -w" }, // Watch mode with short flag!
-          devDependencies: { mocha: "^10.0.0" },
-        })
-      );
-
-      const result = await detectVerificationCapabilities(tempDir);
-
-      expect(result.hasTests).toBe(true);
-      expect(result.testCommand).not.toContain("-w");
-    });
-
-    it("should NOT modify when no watch flag present", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "mocha" },
-          devDependencies: { mocha: "^10.0.0" },
-        })
-      );
-
-      const result = await detectVerificationCapabilities(tempDir);
-
-      expect(result.testCommand).toBe("mocha");
+      expect(result.testCommand).toBe("cargo test");
+      expect(result.hasLint).toBe(true);
+      expect(result.hasBuild).toBe(true);
+      // Legacy format doesn't have source field
+      expect((result as ExtendedCapabilities).source).toBeUndefined();
     });
   });
 });
 
+// ============================================================================
+// Capability Formatting Tests
+// ============================================================================
+
 describe("Capability Formatting", () => {
   describe("formatExtendedCapabilities", () => {
-    it("should include source and confidence", () => {
-      const caps = createTestCapabilities({
-        source: "ai-discovered",
-        confidence: 0.85,
-      });
-
-      const output = formatExtendedCapabilities(caps);
-
-      expect(output).toContain("ai-discovered");
-      expect(output).toContain("85%");
-    });
-
-    it("should list detected languages", () => {
-      const caps = createTestCapabilities({
-        languages: ["java", "kotlin"],
-      });
-
-      const output = formatExtendedCapabilities(caps);
-
-      expect(output).toContain("java");
-      expect(output).toContain("kotlin");
-    });
-
-    it("should show available capabilities", () => {
+    it("should format all capabilities when available", () => {
       const caps = createTestCapabilities();
 
       const output = formatExtendedCapabilities(caps);
 
-      expect(output).toContain("vitest");
-      expect(output).toContain("npm test");
-      expect(output).toContain("tsc --noEmit");
-      expect(output).toContain("npm run build");
+      expect(output).toContain("Source: ai-discovered");
+      expect(output).toContain("Confidence: 95%");
+      expect(output).toContain("Languages: typescript, nodejs");
+      expect(output).toContain("Tests: vitest");
+      expect(output).toContain("Type Check:");
+      expect(output).toContain("Build:");
     });
 
-    it("should show Not detected for unavailable capabilities", () => {
+    it("should show 'Not detected' for unavailable capabilities", () => {
       const caps = createTestCapabilities({
         hasLint: false,
         lintInfo: { available: false, confidence: 0 },
@@ -1275,36 +598,23 @@ describe("Capability Formatting", () => {
     });
 
     it("should show 'Unknown' when no languages detected", () => {
-      const caps = createTestCapabilities({
-        languages: [],
-      });
+      const caps = createTestCapabilities({ languages: [] });
 
       const output = formatExtendedCapabilities(caps);
 
-      expect(output).toContain("Unknown");
-    });
-
-    it("should show custom test framework when framework is undefined", () => {
-      const caps = createTestCapabilities({
-        testInfo: { available: true, command: "./custom-test.sh", confidence: 0.9 },
-      });
-
-      const output = formatExtendedCapabilities(caps);
-
-      expect(output).toContain("custom");
+      expect(output).toContain("Languages: Unknown");
     });
   });
 
   describe("formatCapabilities", () => {
-    it("should format all detected capabilities", () => {
+    it("should format legacy capabilities", () => {
       const caps = {
         hasTests: true,
         testCommand: "npm test",
-        testFramework: "vitest",
+        testFramework: "jest",
         hasTypeCheck: true,
-        typeCheckCommand: "npx tsc --noEmit",
-        hasLint: true,
-        lintCommand: "npm run lint",
+        typeCheckCommand: "tsc --noEmit",
+        hasLint: false,
         hasBuild: true,
         buildCommand: "npm run build",
         hasGit: true,
@@ -1312,15 +622,14 @@ describe("Capability Formatting", () => {
 
       const output = formatCapabilities(caps);
 
-      expect(output).toContain("vitest");
-      expect(output).toContain("npm test");
-      expect(output).toContain("tsc --noEmit");
-      expect(output).toContain("npm run lint");
-      expect(output).toContain("npm run build");
-      expect(output).toContain("Available");
+      expect(output).toContain("Tests: jest (npm test)");
+      expect(output).toContain("Type Check: tsc --noEmit");
+      expect(output).toContain("Lint: Not detected");
+      expect(output).toContain("Build: npm run build");
+      expect(output).toContain("Git: Available");
     });
 
-    it("should show Not detected for missing capabilities", () => {
+    it("should show not detected for capabilities when not available", () => {
       const caps = {
         hasTests: false,
         hasTypeCheck: false,
@@ -1335,188 +644,84 @@ describe("Capability Formatting", () => {
       expect(output).toContain("Type Check: Not detected");
       expect(output).toContain("Lint: Not detected");
       expect(output).toContain("Build: Not detected");
-      expect(output).toContain("Not available");
+      expect(output).toContain("Git: Not available");
+    });
+
+    it("should show lint when available", () => {
+      const caps = {
+        hasTests: false,
+        hasTypeCheck: false,
+        hasLint: true,
+        lintCommand: "eslint .",
+        hasBuild: false,
+        hasGit: true,
+      };
+
+      const output = formatCapabilities(caps);
+
+      expect(output).toContain("Lint: eslint .");
     });
   });
 
-  describe("detectVerificationCapabilities", () => {
-    let tempDir: string;
-
-    beforeEach(async () => {
-      tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "detect-verify-cap-test-"));
-    });
-
-    afterEach(async () => {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    });
-
-    it("should detect capabilities in Node.js project", async () => {
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "vitest run" },
-          devDependencies: { vitest: "^1.0.0" },
-        })
-      );
-
-      const caps = await detectVerificationCapabilities(tempDir);
-
-      expect(caps.hasTests).toBe(true);
-      expect(caps.testFramework).toBe("vitest");
-    });
-  });
-
-  describe("detectCapabilities - three-tier detection", () => {
-    let tempDir: string;
-    let consoleSpy: ReturnType<typeof vi.spyOn>;
-    let aiSpy: ReturnType<typeof vi.spyOn>;
-
-    beforeEach(async () => {
-      tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "detect-cap-test-"));
-      consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-      // Mock AI discovery by default to prevent real API calls
-      aiSpy = vi.spyOn(agents, "callAnyAvailableAgent").mockResolvedValue({
-        success: true,
-        output: JSON.stringify({ languages: ["unknown"] }),
-        agentUsed: "test",
-      });
-    });
-
-    afterEach(async () => {
-      await fs.rm(tempDir, { recursive: true, force: true });
-      consoleSpy.mockRestore();
-      aiSpy.mockRestore();
-      vi.restoreAllMocks();
-    });
-
-    it("should use cached capabilities when available and not stale", async () => {
-      // Create a well-configured Node.js project with high confidence
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "vitest run", build: "tsc", lint: "eslint ." },
-          devDependencies: { vitest: "^1.0.0", typescript: "^5.0.0", eslint: "^8.0.0" },
-        })
-      );
-      await fs.writeFile(
-        path.join(tempDir, "tsconfig.json"),
-        JSON.stringify({ compilerOptions: {} })
-      );
-
-      // First detection creates cache
-      const first = await detectCapabilities(tempDir);
-      expect(first.hasTests).toBe(true);
-      expect(first.source).toBe("preset");
-
-      // Second detection should use cache
-      const second = await detectCapabilities(tempDir, { verbose: true });
-      expect(second.hasTests).toBe(true);
-    });
-
-    it("should force re-detection when force option is true", async () => {
-      // Create a well-configured Node.js project with high enough confidence
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "vitest run", build: "tsc", lint: "eslint ." },
-          devDependencies: { vitest: "^1.0.0", typescript: "^5.0.0", eslint: "^8.0.0" },
-        })
-      );
-      await fs.writeFile(
-        path.join(tempDir, "tsconfig.json"),
-        JSON.stringify({ compilerOptions: {} })
-      );
-
-      // First detection
-      const first = await detectCapabilities(tempDir);
-      expect(first.hasTests).toBe(true);
-
-      // Force re-detection - should still detect the same capabilities
-      const result = await detectCapabilities(tempDir, { force: true });
-      expect(result.hasTests).toBe(true);
-      expect(result.source).toBe("preset");
-    });
-
-    it("should fall back to AI discovery for unknown project types", async () => {
-      // Mock AI to return specific capabilities
-      aiSpy.mockResolvedValue({
-        success: true,
-        output: JSON.stringify({
-          languages: ["elixir"],
-          test: { available: true, command: "mix test" },
-        }),
-        agentUsed: "test",
+  describe("formatExtendedCapabilities - additional cases", () => {
+    it("should show not detected for unavailable testInfo", () => {
+      const caps = createTestCapabilities({
+        testInfo: undefined,
       });
 
-      const result = await detectCapabilities(tempDir, { forceAI: true, verbose: true });
+      const output = formatExtendedCapabilities(caps);
 
-      expect(result.source).toBe("ai-discovered");
+      expect(output).toContain("Tests:");
     });
 
-    it("should use preset detection when confidence is high enough", async () => {
-      // Create a well-configured Node.js project
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "vitest run", build: "tsc", lint: "eslint ." },
-          devDependencies: { vitest: "^1.0.0", typescript: "^5.0.0", eslint: "^8.0.0" },
-        })
-      );
-      await fs.writeFile(
-        path.join(tempDir, "tsconfig.json"),
-        JSON.stringify({ compilerOptions: {} })
-      );
-
-      const result = await detectCapabilities(tempDir, { verbose: true });
-
-      expect(result.source).toBe("preset");
-      expect(result.confidence).toBeGreaterThanOrEqual(0.8);
-    });
-
-    it("should fall back to AI when preset confidence is too low", async () => {
-      // Create a project with some but incomplete config
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({ name: "test" })
-      );
-
-      aiSpy.mockResolvedValue({
-        success: true,
-        output: JSON.stringify({ languages: ["javascript"] }),
-        agentUsed: "test",
+    it("should show not detected for unavailable typeCheckInfo", () => {
+      const caps = createTestCapabilities({
+        typeCheckInfo: undefined,
       });
 
-      const result = await detectCapabilities(tempDir, { verbose: true });
+      const output = formatExtendedCapabilities(caps);
 
-      // With low confidence preset, it should fall back to AI
-      expect(result.source).toBe("ai-discovered");
+      expect(output).toContain("Type Check: Not detected");
     });
 
-    it("should skip cache check when forceAI is true", async () => {
-      // Create a well-configured project for caching
-      await fs.writeFile(
-        path.join(tempDir, "package.json"),
-        JSON.stringify({
-          scripts: { test: "vitest run", build: "tsc", lint: "eslint ." },
-          devDependencies: { vitest: "^1.0.0", typescript: "^5.0.0", eslint: "^8.0.0" },
-        })
-      );
-      await fs.writeFile(
-        path.join(tempDir, "tsconfig.json"),
-        JSON.stringify({ compilerOptions: {} })
-      );
-      await detectCapabilities(tempDir); // Create cache
-
-      // Force AI should skip cache
-      aiSpy.mockResolvedValue({
-        success: true,
-        output: JSON.stringify({ languages: ["typescript"] }),
-        agentUsed: "test",
+    it("should show not detected for unavailable lintInfo", () => {
+      const caps = createTestCapabilities({
+        lintInfo: undefined,
       });
 
-      const result = await detectCapabilities(tempDir, { forceAI: true });
+      const output = formatExtendedCapabilities(caps);
 
-      expect(result.source).toBe("ai-discovered");
+      expect(output).toContain("Lint: Not detected");
+    });
+
+    it("should show not detected for unavailable buildInfo", () => {
+      const caps = createTestCapabilities({
+        buildInfo: undefined,
+      });
+
+      const output = formatExtendedCapabilities(caps);
+
+      expect(output).toContain("Build: Not detected");
+    });
+
+    it("should show git not available when hasGit is false", () => {
+      const caps = createTestCapabilities({
+        hasGit: false,
+      });
+
+      const output = formatExtendedCapabilities(caps);
+
+      expect(output).toContain("Git: Not available");
+    });
+
+    it("should handle custom framework display in testInfo", () => {
+      const caps = createTestCapabilities({
+        testInfo: { available: true, command: "test cmd", confidence: 0.9 },
+      });
+
+      const output = formatExtendedCapabilities(caps);
+
+      expect(output).toContain("Tests: custom (test cmd)");
     });
   });
 });

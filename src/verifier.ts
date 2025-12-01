@@ -28,7 +28,7 @@ import {
 import {
   detectVerificationCapabilities,
   detectCapabilities,
-} from "./capability-detector.js";
+} from "./project-capabilities.js";
 import { saveVerificationResult } from "./verification-store.js";
 import {
   buildVerificationPrompt,

@@ -635,6 +635,27 @@ describe("Upgrade Utils", () => {
       // Should not throw - errors are silently caught
       await expect(interactiveUpgradeCheck()).resolves.toBeUndefined();
     });
+
+    it("should display upgrade notification when upgrade available in non-TTY", async () => {
+      const { spawnSync } = await import("node:child_process");
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      (spawnSync as ReturnType<typeof vi.fn>).mockReturnValue({
+        status: 0,
+        stdout: "999.0.0\n",
+        stderr: "",
+      });
+
+      // In test (non-TTY), user prompt returns false, so upgrade will be skipped
+      await interactiveUpgradeCheck();
+
+      // Should have logged the upgrade available message
+      const allOutput = consoleSpy.mock.calls.map(c => String(c[0])).join("\n");
+      expect(allOutput).toContain("New version available");
+      expect(allOutput).toContain("999.0.0");
+
+      consoleSpy.mockRestore();
+    });
   });
 
   // ============================================================================

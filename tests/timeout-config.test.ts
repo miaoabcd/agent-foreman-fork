@@ -214,6 +214,24 @@ describe("Timeout Configuration", () => {
       expect(getTimeout("AI_DEFAULT")).toBe(999999);
     });
 
+    it("should handle global default with invalid value", () => {
+      process.env.AGENT_FOREMAN_TIMEOUT_DEFAULT = "invalid";
+      // With invalid global default, should fall back to default value
+      expect(getTimeout("AI_SCAN_PROJECT")).toBe(DEFAULT_TIMEOUTS.AI_SCAN_PROJECT);
+    });
+
+    it("should handle global default with zero value", () => {
+      process.env.AGENT_FOREMAN_TIMEOUT_DEFAULT = "0";
+      // With zero global default, should fall back to default value
+      expect(getTimeout("AI_SCAN_PROJECT")).toBe(DEFAULT_TIMEOUTS.AI_SCAN_PROJECT);
+    });
+
+    it("should handle global default with negative value", () => {
+      process.env.AGENT_FOREMAN_TIMEOUT_DEFAULT = "-100";
+      // With negative global default, should fall back to default value
+      expect(getTimeout("AI_SCAN_PROJECT")).toBe(DEFAULT_TIMEOUTS.AI_SCAN_PROJECT);
+    });
+
     it("should handle all timeout keys correctly", () => {
       // Test each key uses correct env var
       const keys: Array<keyof typeof DEFAULT_TIMEOUTS> = [

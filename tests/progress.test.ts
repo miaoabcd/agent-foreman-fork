@@ -726,5 +726,150 @@ describe("progress indicators", () => {
       progress.complete();
       mockLog.mockRestore();
     });
+
+    it("should not advance past total steps when completeStep is called at last step", () => {
+      const progress = new StepProgress(["Step 1", "Step 2"]);
+      progress.start();
+      expect(progress.getCurrentStep()).toBe(0);
+
+      progress.completeStep(true);
+      expect(progress.getCurrentStep()).toBe(1);
+
+      // Complete the last step - should not advance
+      progress.completeStep(true);
+      expect(progress.getCurrentStep()).toBe(1);
+
+      progress.complete();
+    });
+
+    it("should handle completeStep when stepSpinner is null", () => {
+      const progress = new StepProgress(["Step 1"]);
+      // Don't call start() - so stepSpinner stays null
+
+      // Should not throw
+      expect(() => progress.completeStep(true)).not.toThrow();
+    });
+
+    it("should call spinner succeed on completeStep with success=true", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const progress = new StepProgress(["Step 1", "Step 2"]);
+      progress.start();
+
+      // Complete with success
+      progress.completeStep(true);
+
+      // Verify output was produced (symbols vary by TTY mode)
+      const allOutput = [
+        ...mockLog.mock.calls.map(c => String(c[0])),
+        ...mockWrite.mock.calls.map(c => String(c[0]))
+      ].join("\n");
+
+      // In TTY mode: ✓, in non-TTY mode: regular output
+      expect(allOutput.length).toBeGreaterThan(0);
+
+      progress.complete();
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should call spinner fail on completeStep with success=false", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const progress = new StepProgress(["Step 1", "Step 2"]);
+      progress.start();
+
+      // Complete with failure
+      progress.completeStep(false);
+
+      // Verify output was produced (symbols vary by TTY mode)
+      const allOutput = [
+        ...mockLog.mock.calls.map(c => String(c[0])),
+        ...mockWrite.mock.calls.map(c => String(c[0]))
+      ].join("\n");
+
+      // In TTY mode: ✗, in non-TTY mode: regular output
+      expect(allOutput.length).toBeGreaterThan(0);
+
+      progress.complete();
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should call spinner warn on warnStep", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const progress = new StepProgress(["Step 1", "Step 2"]);
+      progress.start();
+
+      // Warn step
+      progress.warnStep();
+
+      // Verify output was produced (symbols vary by TTY mode)
+      const allOutput = [
+        ...mockLog.mock.calls.map(c => String(c[0])),
+        ...mockWrite.mock.calls.map(c => String(c[0]))
+      ].join("\n");
+
+      // In TTY mode: ⚠, in non-TTY mode: regular output
+      expect(allOutput.length).toBeGreaterThan(0);
+
+      progress.complete();
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should call spinner stop on complete when spinner exists", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const progress = new StepProgress(["Step 1"]);
+      progress.start();
+
+      // Complete should stop the spinner
+      expect(() => progress.complete()).not.toThrow();
+
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should handle warnStep when stepSpinner is null", () => {
+      const progress = new StepProgress(["Step 1"]);
+      // Don't call start() - so stepSpinner stays null
+
+      // Should not throw
+      expect(() => progress.warnStep()).not.toThrow();
+    });
+
+    it("should not start step when startStep is called with out of bounds index", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const progress = new StepProgress(["Step 1"]);
+
+      // Call startStep with index beyond steps length
+      (progress as any).startStep(5);
+
+      // Should not have created any output for the invalid step
+      expect(progress.getCurrentStep()).toBe(0);
+
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should handle default success value in completeStep", () => {
+      const progress = new StepProgress(["Step 1", "Step 2"]);
+      progress.start();
+
+      // Call completeStep without parameter (defaults to true)
+      progress.completeStep();
+      expect(progress.getCurrentStep()).toBe(1);
+
+      progress.complete();
+    });
   });
+
 });

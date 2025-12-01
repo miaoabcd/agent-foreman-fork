@@ -53,8 +53,8 @@ vi.mock("../src/verification-store.js", () => ({
   saveVerificationResult: vi.fn(),
 }));
 
-// Mock capability-detector
-vi.mock("../src/capability-detector.js", () => ({
+// Mock project-capabilities
+vi.mock("../src/project-capabilities.js", () => ({
   detectVerificationCapabilities: vi.fn(),
   detectCapabilities: vi.fn(),
 }));
@@ -67,7 +67,7 @@ vi.mock("../src/verification-prompts.js", () => ({
 
 import { callAnyAvailableAgent } from "../src/agents.js";
 import { saveVerificationResult } from "../src/verification-store.js";
-import { detectCapabilities } from "../src/capability-detector.js";
+import { detectCapabilities } from "../src/project-capabilities.js";
 import {
   buildVerificationPrompt,
   parseVerificationResponse,

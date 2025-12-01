@@ -1,13 +1,17 @@
 /**
  * Test discovery and selective test execution
  * Finds related tests based on changed files and feature patterns
+ *
+ * Hybrid approach:
+ * 1. Use AI-discovered selective test templates from capabilities cache
+ * 2. Fall back to hardcoded patterns for known frameworks
  */
 
 import * as path from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import type { Feature } from "./types.js";
-import type { VerificationCapabilities } from "./verification-types.js";
+import type { VerificationCapabilities, TestCapabilityInfo } from "./verification-types.js";
 import { fileExists } from "./file-utils.js";
 
 const execAsync = promisify(exec);
@@ -279,10 +283,22 @@ export async function discoverTestsForFeature(
 // ============================================================================
 
 /**
- * Build a selective test command based on framework and pattern
+ * Extended capabilities interface that includes TestCapabilityInfo
+ */
+interface ExtendedTestCapabilities extends VerificationCapabilities {
+  testInfo?: TestCapabilityInfo;
+}
+
+/**
+ * Build a selective test command using AI-discovered templates or fallback patterns
+ *
+ * Priority:
+ * 1. Use selectiveFileTemplate from AI-discovered capabilities (if test files found)
+ * 2. Use selectiveNameTemplate from AI-discovered capabilities (if pattern provided)
+ * 3. Fall back to hardcoded framework patterns
  */
 export function buildSelectiveTestCommand(
-  capabilities: VerificationCapabilities,
+  capabilities: VerificationCapabilities | ExtendedTestCapabilities,
   pattern: string | null,
   discovery: TestDiscoveryResult
 ): string | null {
@@ -298,51 +314,80 @@ export function buildSelectiveTestCommand(
   const baseCommand = capabilities.testCommand;
   const framework = capabilities.testFramework;
 
-  // Build framework-specific selective test command
+  // Check for AI-discovered selective test templates
+  const testInfo = (capabilities as ExtendedTestCapabilities).testInfo;
+
+  if (testInfo) {
+    // Priority 1: Use selectiveFileTemplate if we have specific test files
+    if (discovery.testFiles.length > 0 && testInfo.selectiveFileTemplate) {
+      const filesStr = discovery.testFiles.join(" ");
+      return testInfo.selectiveFileTemplate.replace("{files}", filesStr);
+    }
+
+    // Priority 2: Use selectiveNameTemplate for pattern-based filtering
+    if (testInfo.selectiveNameTemplate) {
+      return testInfo.selectiveNameTemplate.replace("{pattern}", pattern);
+    }
+  }
+
+  // Priority 3: Fall back to hardcoded framework patterns
+  return buildHardcodedSelectiveCommand(framework, baseCommand, pattern, discovery);
+}
+
+/**
+ * Fallback: Build selective test command using hardcoded framework patterns
+ * Used when AI-discovered templates are not available
+ */
+function buildHardcodedSelectiveCommand(
+  framework: string | undefined,
+  baseCommand: string,
+  pattern: string,
+  discovery: TestDiscoveryResult
+): string {
   switch (framework) {
     case "vitest":
-      // vitest supports file paths directly or --testNamePattern
       if (discovery.testFiles.length > 0) {
-        // Pass specific test files
         return `npx vitest run ${discovery.testFiles.join(" ")}`;
       }
-      // Use pattern
       return `npx vitest run --testNamePattern "${pattern}"`;
 
     case "jest":
-      // jest supports --testPathPattern for file matching
       if (discovery.testFiles.length > 0) {
         return `npx jest ${discovery.testFiles.join(" ")}`;
       }
       return `npx jest --testPathPattern "${pattern}"`;
 
     case "mocha":
-      // mocha uses --grep for test name matching
       if (discovery.testFiles.length > 0) {
         return `npx mocha ${discovery.testFiles.join(" ")}`;
       }
       return `npx mocha --grep "${pattern}"`;
 
     case "pytest":
-      // pytest supports -k for test name matching or direct paths
       if (discovery.testFiles.length > 0) {
         return `pytest ${discovery.testFiles.join(" ")}`;
       }
       return `pytest -k "${pattern}"`;
 
     case "go":
-      // go test supports -run for test name matching
       return `go test -run "${pattern}" ./...`;
 
     case "cargo":
-      // cargo test supports test name filter
       return `cargo test "${pattern}"`;
 
     default:
-      // For unknown frameworks, try npm test with pattern if supported
-      if (baseCommand === "npm test") {
-        // Many npm test scripts pass additional args to the underlying framework
-        return `npm test -- "${pattern}"`;
+      // For unknown frameworks, try appending pattern to npm-based commands
+      if (baseCommand.startsWith("npm ")) {
+        return `${baseCommand} -- "${pattern}"`;
+      }
+      if (baseCommand.startsWith("pnpm ")) {
+        return `${baseCommand} -- "${pattern}"`;
+      }
+      if (baseCommand.startsWith("yarn ")) {
+        return `${baseCommand} "${pattern}"`;
+      }
+      if (baseCommand.startsWith("bun ")) {
+        return `${baseCommand} "${pattern}"`;
       }
       // Fall back to full test command
       return baseCommand;

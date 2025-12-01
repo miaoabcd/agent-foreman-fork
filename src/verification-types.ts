@@ -340,6 +340,32 @@ export interface CapabilityCommand {
 }
 
 /**
+ * Test-specific capability information
+ * Extends CapabilityCommand with selective test execution patterns
+ */
+export interface TestCapabilityInfo extends CapabilityCommand {
+  /**
+   * Template for running specific test files
+   * Use {files} placeholder for file paths
+   * Example: "pnpm test {files}" or "pytest {files}"
+   */
+  selectiveFileTemplate?: string;
+
+  /**
+   * Template for running tests by name/pattern
+   * Use {pattern} placeholder for the pattern
+   * Example: "pnpm test --testNamePattern {pattern}"
+   */
+  selectiveNameTemplate?: string;
+
+  /**
+   * Package manager used (npm, pnpm, yarn, bun, etc.)
+   * Helps determine the correct command prefix
+   */
+  packageManager?: string;
+}
+
+/**
  * Custom verification rule discovered by AI
  * Extends standard capabilities with project-specific commands
  */
@@ -369,8 +395,8 @@ export interface ExtendedCapabilities extends VerificationCapabilities {
   languages: string[];
   /** When capabilities were detected (ISO 8601) */
   detectedAt: string;
-  /** Optional: structured command info with per-capability confidence */
-  testInfo?: CapabilityCommand;
+  /** Optional: structured test info with selective execution templates */
+  testInfo?: TestCapabilityInfo;
   /** Optional: type check command info */
   typeCheckInfo?: CapabilityCommand;
   /** Optional: lint command info */

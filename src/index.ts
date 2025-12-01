@@ -44,7 +44,7 @@ import {
 import {
   detectCapabilities,
   formatExtendedCapabilities,
-} from "./capability-detector.js";
+} from "./project-capabilities.js";
 import type { FeatureVerificationSummary } from "./verification-types.js";
 import type { InitMode, Feature } from "./types.js";
 import { isGitRepo, hasUncommittedChanges, gitAdd, gitCommit, gitInit } from "./git-utils.js";
@@ -373,11 +373,6 @@ async function main() {
             default: false,
             describe: "Force re-detection even if cache exists",
           })
-          .option("ai", {
-            type: "boolean",
-            default: false,
-            describe: "Force AI-based detection (skip presets)",
-          })
           .option("verbose", {
             alias: "v",
             type: "boolean",
@@ -385,7 +380,7 @@ async function main() {
             describe: "Show detailed detection output",
           }),
       async (argv) => {
-        await runDetectCapabilities(argv.force, argv.ai, argv.verbose);
+        await runDetectCapabilities(argv.force, argv.verbose);
       }
     )
     .demandCommand(1, "You need at least one command")
@@ -1236,7 +1231,6 @@ Feature: ${featureId}
  */
 async function runDetectCapabilities(
   force: boolean,
-  forceAI: boolean,
   verbose: boolean
 ) {
   const cwd = process.cwd();
@@ -1246,16 +1240,12 @@ async function runDetectCapabilities(
   if (force) {
     console.log(chalk.gray("   (forcing re-detection, ignoring cache)"));
   }
-  if (forceAI) {
-    console.log(chalk.gray("   (forcing AI-based detection)"));
-  }
 
   const spinner = createSpinner("Detecting capabilities");
 
   try {
     const capabilities = await detectCapabilities(cwd, {
       force,
-      forceAI,
       verbose,
     });
 

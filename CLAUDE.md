@@ -76,11 +76,20 @@ agent-foreman complete <feature_id>
 # Full mode - run all tests (slower, for final verification)
 agent-foreman complete <feature_id> --full
 
+# Skip E2E tests (faster iterations)
+agent-foreman complete <feature_id> --skip-e2e
+
+# Skip auto-commit (manual commit)
+agent-foreman complete <feature_id> --no-commit
+
 # Skip verification (not recommended)
 agent-foreman complete <feature_id> --skip-verify
 
 # Analyze impact of changes
 agent-foreman impact <feature_id>
+
+# Detect project verification capabilities
+agent-foreman detect-capabilities
 
 # Bootstrap/development/testing
 ./ai/init.sh bootstrap

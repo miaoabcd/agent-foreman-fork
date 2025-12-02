@@ -47,7 +47,7 @@ ${goal}
 3. **Update status promptly** - Mark features passing when criteria met
 4. **Leave clean state** - No broken code between sessions
 5. **Use single-line log format** - One line per entry, not verbose Markdown
-6. **Never kill running processes** - Let \`agent-foreman\` commands complete naturally, even if they appear slow or timed out. Just wait for completion.
+6. **Never kill running processes** - Let \`agent-foreman\` commands complete naturally, even if they appear slow or timed out. They may be doing important work (verification, git commits, survey regeneration). Just wait for completion.
 
 ### Progress Log Format
 
@@ -82,11 +82,20 @@ agent-foreman complete <feature_id>
 # Full mode - run all tests (slower, for final verification)
 agent-foreman complete <feature_id> --full
 
+# Skip E2E tests (faster iterations)
+agent-foreman complete <feature_id> --skip-e2e
+
+# Skip auto-commit (manual commit)
+agent-foreman complete <feature_id> --no-commit
+
 # Skip verification (not recommended)
 agent-foreman complete <feature_id> --skip-verify
 
 # Analyze impact of changes
 agent-foreman impact <feature_id>
+
+# Detect project verification capabilities
+agent-foreman detect-capabilities
 
 # Bootstrap/development/testing
 ./ai/init.sh bootstrap

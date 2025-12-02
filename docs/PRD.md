@@ -73,11 +73,11 @@ From Anthropic's research:
 Single-line entries for session handoff:
 
 ```text
-2025-01-15T10:00:00Z INIT goal="Build REST API" note="initialized harness"
+2025-01-15T10:00:00Z INIT goal="Build REST API" note="initialized harness" summary="Created long-task harness"
 2025-01-15T10:30:00Z STEP feature=auth.login status=passing summary="Implemented login"
-2025-01-15T11:00:00Z CHANGE feature=auth.login action=refactor reason="Improved error handling"
-2025-01-15T12:00:00Z REPLAN summary="Splitting auth into submodules"
-2025-01-15T13:00:00Z VERIFY feature=auth.login result=pass
+2025-01-15T11:00:00Z CHANGE feature=auth.login action=refactor reason="Improved error handling" summary="refactor on auth.login"
+2025-01-15T12:00:00Z REPLAN summary="Splitting auth into submodules" note="Original scope too large"
+2025-01-15T13:00:00Z VERIFY feature=auth.login action=pass summary="Verified auth.login: pass"
 ```
 
 **Log Types:** `INIT` | `STEP` | `CHANGE` | `REPLAN` | `VERIFY`
@@ -134,7 +134,7 @@ agent-foreman step          # Start working
 agent-foreman status        # 1. Check progress
 agent-foreman step          # 2. Get next feature
 # ... implement feature ... # 3. Do the work
-agent-foreman complete <id> # 4. Verify + complete + commit
+agent-foreman complete <id> # 4. Verify + complete + auto-commit
 ```
 
 ---
@@ -179,7 +179,8 @@ When changing a feature:
 | `init` | Initialize or upgrade harness |
 | `step` | Get next priority feature |
 | `status` | Show project progress |
-| `complete` | Verify + mark complete + commit |
+| `complete` | Verify + mark complete + auto-commit |
+| `detect-capabilities` | Detect project verification capabilities |
 | `check` | Preview verification |
 | `impact` | Analyze dependencies |
 | `agents` | Show available AI agents |

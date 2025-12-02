@@ -71,8 +71,9 @@ Main entry point implementing all CLI commands via yargs.
 | `verifier.ts` | Core verification orchestration |
 | `verification-prompts.ts` | AI prompt construction |
 | `verification-store.ts` | Result persistence |
-| `capability-detector.ts` | Three-tier capability detection |
+| `project-capabilities.ts` | Three-tier capability detection |
 | `capability-cache.ts` | Caching with staleness checks |
+| `test-discovery.ts` | Test file discovery and selective execution |
 
 ### Infrastructure
 

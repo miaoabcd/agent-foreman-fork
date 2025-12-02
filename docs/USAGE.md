@@ -104,27 +104,28 @@ agent-foreman complete <feature_id>
 agent-foreman complete api.users.create
 ```
 
-**Output includes suggested commit:**
+**Output (auto-commits by default):**
 
 ```
 ✓ Marked 'api.users.create' as passing
-
-📝 Suggested commit:
-   git add -A && git commit -m "feat(api): Create user endpoint"
+✓ Changes committed: feat(api): Create user endpoint
 
   Next up: api.users.list
 ```
 
-> 输出包含建议的提交命令
+> 输出（默认自动提交）
 
-### Step 5: Commit and Continue
+**Note:** Use `--no-commit` flag to skip auto-commit if you want to commit manually.
 
-Follow the suggested commit command, then continue:
+> **注意：** 使用 `--no-commit` 标志跳过自动提交，如果你想手动提交。
 
-> 执行建议的提交命令，然后继续：
+### Step 5: Continue to Next Task
+
+The `complete` command auto-commits, so just continue:
+
+> `complete` 命令会自动提交，直接继续即可：
 
 ```bash
-git add -A && git commit -m "feat(api): Create user endpoint"
 agent-foreman step      # See next task
 ```
 
@@ -303,36 +304,40 @@ agent-foreman complete cli.survey --notes "Added error handling"
 
 | Flag | Description |
 |------|-------------|
-| `--quick` / `-q` | Run only tests related to the changed feature (selective testing) |
-| `--full` | Run the complete test suite (default behavior) |
+| `--quick` / `-q` | Run only tests related to the changed feature (default mode) |
+| `--full` | Run the complete test suite (for final verification) |
 | `--test-pattern <pattern>` | Use explicit test pattern (e.g., `tests/auth/**`) |
+| `--skip-e2e` | Skip E2E tests (useful for faster iterations) |
 | `--skip-verify` | Skip AI verification (not recommended) |
+| `--no-commit` | Skip auto-commit after completion |
 
 > **测试模式选项：**
 >
 > | 标志 | 描述 |
 > |------|------|
-> | `--quick` / `-q` | 仅运行与更改功能相关的测试（选择性测试） |
-> | `--full` | 运行完整测试套件（默认行为） |
+> | `--quick` / `-q` | 仅运行与更改功能相关的测试（默认模式） |
+> | `--full` | 运行完整测试套件（用于最终验证） |
 > | `--test-pattern <pattern>` | 使用显式测试模式（如 `tests/auth/**`） |
+> | `--skip-e2e` | 跳过 E2E 测试（加快迭代速度） |
 > | `--skip-verify` | 跳过 AI 验证（不推荐） |
+> | `--no-commit` | 跳过完成后的自动提交 |
 
 **Examples:**
 
 ```bash
-# Quick mode - runs only related tests (faster for large test suites)
-agent-foreman complete auth.login --quick
+# Quick mode - runs only related tests (default, faster for large test suites)
+agent-foreman complete auth.login
 
-# Full mode - runs all tests (default)
+# Full mode - runs all tests (for final verification)
 agent-foreman complete auth.login --full
 
 # Explicit pattern - specify exact test files to run
 agent-foreman complete auth.login --test-pattern "tests/auth/*.test.ts"
 ```
 
-**Shows suggested commit:** `git add -A && git commit -m "feat(module): description"`
+**Auto-commits changes** with conventional commit message. Use `--no-commit` to disable.
 
-> **显示建议的提交命令：** `git add -A && git commit -m "feat(模块): 描述"`
+> **自动提交更改**，使用规范的提交消息。使用 `--no-commit` 禁用。
 
 ### `status`
 
@@ -422,12 +427,7 @@ agent-foreman agents
 │             ↓                                                │
 │    ┌──────────────────┐                                     │
 │    │ agent-foreman    │                                     │
-│    │   complete <id>  │  ← Update status + suggest commit   │
-│    └────────┬─────────┘                                     │
-│             │                                                │
-│             ↓                                                │
-│    ┌──────────────────┐                                     │
-│    │   git commit     │  ← Follow suggested command         │
+│    │   complete <id>  │  ← Verify + update status + commit  │
 │    └────────┬─────────┘                                     │
 │             │                                                │
 │             └──────────→ Loop back to step                  │
@@ -525,23 +525,20 @@ agent-foreman survey   # ~45s AI scan of existing code
 agent-foreman init     # Fast, reuses survey results
 ```
 
-### 2. Follow Suggested Commits
+### 2. Automatic Commits
 
-After completing each feature, follow the suggested commit command:
+The `complete` command auto-commits after successful verification:
 
-> 完成每个功能后，执行建议的提交命令：
+> `complete` 命令在验证成功后自动提交：
 
 ```bash
 agent-foreman complete api.users.create
-# Output: 📝 Suggested commit:
-#    git add -A && git commit -m "feat(api): Create user endpoint"
-
-git add -A && git commit -m "feat(api): Create user endpoint"
+# Output: ✓ Changes committed: feat(api): Create user endpoint
 ```
 
-This keeps clean git history for the next agent session.
+This keeps clean git history for the next agent session. Use `--no-commit` if you need manual control.
 
-> 这样可以保持干净的 git 历史，方便下一个 agent 会话。
+> 这样可以保持干净的 git 历史，方便下一个 agent 会话。如需手动控制，使用 `--no-commit`。
 
 ### 3. Use --check for Verification
 

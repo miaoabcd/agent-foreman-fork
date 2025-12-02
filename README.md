@@ -132,9 +132,8 @@ Use foreman to check the project status, then continuously work through
 all tasks one by one until everything is complete. For each task:
 1. Run `agent-foreman step` to get the next task
 2. Implement the feature according to acceptance criteria
-3. Run tests to verify
-4. Run `agent-foreman complete <feature_id>` to mark done
-5. Repeat until all tasks are passing
+3. Run `agent-foreman complete <feature_id>` to verify + mark done + auto-commit
+4. Repeat until all tasks are passing
 ```
 
 #### Quick Status Check
@@ -225,9 +224,8 @@ harness to continuously complete all remaining tasks:
 1. Check status with `agent-foreman status`
 2. Get next task with `agent-foreman step`
 3. Implement the feature completely
-4. Verify and mark complete with `agent-foreman complete <id>` (auto-runs tests)
-5. Commit the changes
-6. Loop back to step 2 until all tasks pass
+4. Run `agent-foreman complete <id>` (auto-verifies + auto-commits)
+5. Loop back to step 2 until all tasks pass
 
 Do not stop until all features are passing. Ask me only if you
 encounter a blocker that requires my input.
@@ -293,9 +291,21 @@ one by one until all are passing.
 | `step` | Show next feature to work on |
 | `status` | Show current project status |
 | `impact <feature_id>` | Analyze impact of changes |
-| `complete <feature_id>` | Verify and mark feature as complete |
+| `complete <feature_id>` | Verify, mark complete, and auto-commit |
 | `check <feature_id>` | Preview verification without completing |
 | `agents` | Show available AI agents |
+| `detect-capabilities` | Detect project verification capabilities |
+
+### Complete Command Options
+
+| Flag | Description |
+|------|-------------|
+| `--quick` | Run only related tests (default mode) |
+| `--full` | Run complete test suite |
+| `--skip-e2e` | Skip E2E tests |
+| `--skip-verify` | Skip AI verification |
+| `--no-commit` | Skip auto-commit |
+| `--test-pattern <pattern>` | Use explicit test pattern |
 
 ### Init Modes
 

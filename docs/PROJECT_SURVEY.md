@@ -2,7 +2,10 @@
 
 ## Summary
 
-TypeScript CLI that equips AI agents with a long-task harness: surveying projects, initializing feature backlogs, guiding next steps, and verifying work with automated checks plus AI analysis. Includes capability detection, selective testing, git automation, and markdown reporting while integrating with Claude Code via plugin docs. Modular utilities cover progress logging, schema validation, impact analysis, and init script generation to keep multi-session development aligned.
+agent-foreman is a TypeScript CLI harness that orchestrates AI-assisted project surveys, feature backlogs, and verification workflows for long tasks.
+> agent-foreman 是一个 TypeScript CLI 脚手架，用于协调整个 AI 辅助的项目调研、功能清单与长任务验证流程。
+It scans or generates features, manages progress/logs, detects capabilities, and drives automated checks plus AI reasoning to mark features complete.
+> 它可以扫描或生成功能，管理进度与日志，检测项目能力，并驱动自动检查与 AI 推理来标记功能完成。
 
 > Analyzed by: codex
 
@@ -10,11 +13,16 @@ TypeScript CLI that equips AI agents with a long-task harness: surveying project
 
 | Aspect | Value |
 |--------|-------|
-| Language | TypeScript |
-| Framework | none |
-| Build Tool | tsc |
-| Test Framework | Vitest |
-| Package Manager | npm |
+| Language | TypeScript
+> 使用 TypeScript |
+| Framework | none
+> 无框架 |
+| Build Tool | tsc
+> tsc 构建工具 |
+| Test Framework | Vitest
+> Vitest 测试框架 |
+| Package Manager | npm (package-lock.json)
+> npm（package-lock.json） |
 
 ## Directory Structure
 
@@ -26,130 +34,130 @@ TypeScript CLI that equips AI agents with a long-task harness: surveying project
 
 ## Modules
 
-### CLI
+### CLI entrypoint
 - **Path**: `src/index.ts`
 - **Status**: complete
-- **Description**: Yargs-driven CLI entrypoint implementing survey/init/step/status/impact/complete/check/agents/capability commands and goal detection
+- **Description**: Yargs-driven CLI providing survey, init, step, status, impact, complete, check, agents, and detect-capabilities commands
 
-### AI Scanner
+### AI scanner
 - **Path**: `src/ai-scanner.ts`
 - **Status**: complete
-- **Description**: Autonomous AI project survey generation, feature extraction, and survey markdown rendering
+- **Description**: Builds autonomous prompts, parses AI responses, and renders survey markdown for project scans
 
-### Init Helpers
-- **Path**: `src/init-helpers.ts`
-- **Status**: complete
-- **Description**: Project detection, feature merging/creation, and harness file generation including init.sh and CLAUDE.md
-
-### Project Scanner
-- **Path**: `src/project-scanner.ts`
-- **Status**: complete
-- **Description**: Directory structure scanning for entry/src/test/config files and empty-project detection
-
-### File Utilities
-- **Path**: `src/file-utils.ts`
-- **Status**: complete
-- **Description**: Safe path handling, existence checks, and directory/file readers
-
-### Timeout Config
-- **Path**: `src/timeout-config.ts`
-- **Status**: complete
-- **Description**: Timeout defaults/env overrides and agent priority loading
-
-### Verification Report
-- **Path**: `src/verification-report.ts`
-- **Status**: complete
-- **Description**: Markdown reporting and summaries for verification runs
-
-### Types
-- **Path**: `src/types.ts`
-- **Status**: complete
-- **Description**: Core domain type definitions for features, surveys, and CLI options
-
-### Feature List
-- **Path**: `src/feature-list.ts`
-- **Status**: complete
-- **Description**: Feature list CRUD, selection, status/verification updates, and stats
-
-### Prompts
-- **Path**: `src/prompts.ts`
-- **Status**: complete
-- **Description**: Markdown prompt generators for harness docs, guidance, and summaries
-
-### Agents
+### Agent manager
 - **Path**: `src/agents.ts`
 - **Status**: complete
-- **Description**: AI agent command detection, invocation, retry, and status display
+- **Description**: Spawns Claude/Gemini/Codex subprocesses, retries, and reports availability
 
-### Upgrade
-- **Path**: `src/upgrade.ts`
+### Debug logger
+- **Path**: `src/debug.ts`
 - **Status**: complete
-- **Description**: Upgrade checks against npm and Claude plugin with interactive prompts
+- **Description**: Namespaced debug logging controlled via DEBUG env with helpers per subsystem
 
-### Git Utils
+### Feature list ops
+- **Path**: `src/feature-list.ts`
+- **Status**: complete
+- **Description**: Load/save/validate feature_list.json, select next work item, merge discoveries, and compute stats
+
+### File utilities
+- **Path**: `src/file-utils.ts`
+- **Status**: complete
+- **Description**: Safe path checks, guarded file reads, existence checks, and directory detection
+
+### Git utilities
 - **Path**: `src/git-utils.ts`
 - **Status**: complete
-- **Description**: Git repo checks, change detection, staging, commits, and init helpers
+- **Description**: Git repo detection, change inspection, staging, committing, branch lookup, and init helper
 
-### Init Script Generator
-- **Path**: `src/init-script.ts`
-- **Status**: complete
-- **Description**: Generate ai/init.sh scripts from capabilities or minimal templates
-
-### Verification Types
-- **Path**: `src/verification-types.ts`
-- **Status**: complete
-- **Description**: Verification capability and result data models
-
-### Verifier
-- **Path**: `src/verifier.ts`
-- **Status**: complete
-- **Description**: Automated checks plus AI verification (diff-based and autonomous) with retries and persistence
-
-### Impact Analyzer
+### Impact analyzer
 - **Path**: `src/impact-analyzer.ts`
 - **Status**: complete
-- **Description**: Dependency graph analysis and recommendations for affected features
+- **Description**: Computes dependency impact chains and recommendations across features
 
-### Schema Validator
-- **Path**: `src/schema.ts`
+### Init helpers
+- **Path**: `src/init-helpers.ts`
 - **Status**: complete
-- **Description**: JSON schema validation for feature_list.json and helpers
+- **Description**: Detects project state, merges/creates feature lists, and generates harness artifacts with AI merging
 
-### Progress Indicators
+### Init script generator
+- **Path**: `src/init-script.ts`
+- **Status**: complete
+- **Description**: Produces ai/init.sh from capabilities with typecheck, lint, build, and E2E support
+
+### Progress log
+- **Path**: `src/progress-log.ts`
+- **Status**: complete
+- **Description**: Formats, parses, appends, and queries ai/progress.log entries
+
+### Progress indicators
 - **Path**: `src/progress.ts`
 - **Status**: complete
 - **Description**: TTY-aware spinner, progress bar, and step progress utilities
 
-### Progress Log
-- **Path**: `src/progress-log.ts`
-- **Status**: complete
-- **Description**: Progress log formatting, parsing, entry creation, and retrieval
-
-### Project Capabilities
+### Capabilities detector
 - **Path**: `src/project-capabilities.ts`
 - **Status**: complete
-- **Description**: Capability cache handling and AI-driven detection of test/lint/build/typecheck commands
+- **Description**: Caches and AI-discovers test/typecheck/lint/build/E2E commands with formatting helpers
 
-### Test Discovery
+### Project scanner
+- **Path**: `src/project-scanner.ts`
+- **Status**: complete
+- **Description**: Finds entry points, source/test dirs, and config files plus emptiness check
+
+### Prompt templates
+- **Path**: `src/prompts.ts`
+- **Status**: complete
+- **Description**: Generates harness docs, commit messages, feature/impact guidance, and session summaries
+
+### Schema validator
+- **Path**: `src/schema.ts`
+- **Status**: complete
+- **Description**: AJV schema and validators for feature_list.json with helpers
+
+### Test discovery
 - **Path**: `src/test-discovery.ts`
 - **Status**: complete
-- **Description**: Selective test discovery from changes or patterns and command generation
+- **Description**: Maps source changes to tests, builds selective test/E2E commands, and extracts modules
 
-### Verification Prompts
+### Timeout/config
+- **Path**: `src/timeout-config.ts`
+- **Status**: complete
+- **Description**: Central timeout defaults, env overrides, agent priority parsing, and formatting
+
+### Type definitions
+- **Path**: `src/types.ts`
+- **Status**: complete
+- **Description**: Shared domain types for features, progress logs, surveys, and commands
+
+### Upgrade helper
+- **Path**: `src/upgrade.ts`
+- **Status**: complete
+- **Description**: Checks npm for updates, prompts, upgrades package and optional plugin
+
+### Verification prompts
 - **Path**: `src/verification-prompts.ts`
 - **Status**: complete
-- **Description**: Diff truncation, verification prompt building, and AI response parsing
+- **Description**: Builds/truncates diffs, crafts verification prompts, and parses AI responses
 
-### Verification Store
+### Verification reports
+- **Path**: `src/verification-report.ts`
+- **Status**: complete
+- **Description**: Renders markdown reports and summaries from verification results
+
+### Verification store
 - **Path**: `src/verification-store.ts`
 - **Status**: complete
-- **Description**: Per-feature verification persistence, migration, history, and stats
+- **Description**: Persists verification runs per feature, maintains index, and migrates legacy results
 
-### Plugin Definitions
-- **Path**: `plugins/agent-foreman`
+### Verification types
+- **Path**: `src/verification-types.ts`
 - **Status**: complete
-- **Description**: Claude Code agent, commands, and skills documentation for survey/init/step/auto-complete flows
+- **Description**: Types for verification capabilities, results, metadata, and AI responses
+
+### Verifier
+- **Path**: `src/verifier.ts`
+- **Status**: complete
+- **Description**: Runs automated checks, AI diff analysis or autonomous verification, and saves outcomes
 
 ## Feature Completion Status
 
@@ -236,6 +244,12 @@ TypeScript CLI that equips AI agents with a long-task harness: surveying project
 | init.capabilities_bridge | Add bridge function to convert ExtendedCapabilities to init.sh script | init | ✅ passing |
 | init.detect_during_init | Run capabilities detection during init command and use results for init.sh | init | ✅ passing |
 | test.init_capabilities_coverage | Add unit tests for unified capabilities detection during init | test | ✅ passing |
+| e2e.schema_extension | Add e2eTags field to Feature type and JSON schema | types | ✅ passing |
+| e2e.capability_detection | Detect Playwright E2E test capabilities during capability detection | verification | ✅ passing |
+| e2e.command_builder | Build selective E2E test commands from e2eTags | test-discovery | ✅ passing |
+| e2e.verifier_integration | Integrate E2E test execution into verification flow | verification | ✅ passing |
+| e2e.init_script_update | Update init.sh generator to support selective E2E testing when E2E capabilities detected | init | ✅ passing |
+| e2e.tests | Add unit tests for E2E selective testing features | test | ✅ passing |
 
 ## Completion Assessment
 
@@ -243,29 +257,36 @@ TypeScript CLI that equips AI agents with a long-task harness: surveying project
 
 **Notes:**
 - All features are passing
-- Completed 81/81 features
+- Completed 87/87 features
 - Last updated: 2025-12-02
 
 ## Recommendations
 
-- Add a local mock or dry-run agent option to exercise survey/verification flows when external AI CLIs are unavailable
-- Validate generated ai/init.sh commands against project dependencies and surface clearer errors when required tools are missing
-- Document common selective test patterns and timeout/env tuning in USAGE to simplify quick-mode adoption for new projects
+- 1) Add offline fallbacks when no AI agents are installed to allow manual survey/verification modes.
+> 1) 当未安装 AI 代理时增加离线回退，使手动调查/验证模式可用。
+- 2) Provide a flag to skip or silence upgrade checks for non-interactive environments.
+> 2) 为非交互环境提供跳过或静默升级检查的开关。
+- 3) Expand integration tests covering full CLI flows for detect-capabilities and autonomous verification paths.
+> 3) 扩展集成测试以覆盖 detect-capabilities 及自主验证路径的完整 CLI 流程。
 
 ## Commands
 
 ```bash
 # Install dependencies
 npm install
+> npm install
 
 # Start development server
 npm run dev
+> npm run dev
 
 # Build for production
 npm run build
+> npm run build
 
 # Run tests
 npm test
+> npm test
 ```
 
 ---

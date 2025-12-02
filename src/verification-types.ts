@@ -45,7 +45,7 @@ export interface VerificationCapabilities {
 /**
  * Types of automated checks that can be run
  */
-export type AutomatedCheckType = "test" | "typecheck" | "lint" | "build";
+export type AutomatedCheckType = "test" | "typecheck" | "lint" | "build" | "e2e";
 
 /**
  * Result of an automated check (test, lint, type check, or build)
@@ -263,6 +263,11 @@ export interface FeatureVerificationSummary {
 export type TestMode = "full" | "quick" | "skip";
 
 /**
+ * E2E test execution mode
+ */
+export type E2ETestMode = "full" | "smoke" | "tags" | "skip";
+
+/**
  * Options for the verify CLI command
  */
 export interface VerifyOptions {
@@ -281,6 +286,18 @@ export interface VerifyOptions {
   testMode?: TestMode;
   /** Explicit test pattern to use (overrides auto-detection) */
   testPattern?: string;
+  /** Skip E2E tests entirely */
+  skipE2E?: boolean;
+  /** E2E test tags to run (from feature.e2eTags) */
+  e2eTags?: string[];
+  /**
+   * E2E test execution mode (if not specified, derived from testMode)
+   * - "full": Run all E2E tests (explicit --full flag)
+   * - "smoke": Run only @smoke E2E tests (default when testMode is "full")
+   * - "tags": Run E2E tests matching feature.e2eTags (quick mode with tags)
+   * - "skip": Skip E2E tests entirely
+   */
+  e2eMode?: E2ETestMode;
 }
 
 // ============================================================================

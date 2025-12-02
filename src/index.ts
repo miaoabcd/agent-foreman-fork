@@ -291,10 +291,27 @@ async function main() {
           .option("test-pattern", {
             type: "string",
             describe: "Explicit test pattern to use (e.g., \"tests/auth/**\")",
+          })
+          .option("skip-e2e", {
+            type: "boolean",
+            default: false,
+            describe: "Skip E2E tests entirely (run unit tests only)",
           }),
       async (argv) => {
         // Determine test mode: --full > --quick > default (full for final verification)
         const testMode = argv.full ? "full" : argv.quick ? "quick" : "full";
+        // Determine E2E mode:
+        // - --skip-e2e: skip
+        // - --full (explicit): full E2E
+        // - --quick: tags (or smoke if no feature tags)
+        // - default (no --full): smoke E2E only
+        const e2eMode = argv.skipE2e
+          ? "skip"
+          : argv.full
+            ? "full"
+            : argv.quick
+              ? undefined // Will be determined by tags in verifier
+              : "smoke"; // Default: run only @smoke E2E
         await runComplete(
           argv.feature_id!,
           argv.notes,
@@ -303,7 +320,9 @@ async function main() {
           argv.verbose,
           !argv.noAutonomous,
           testMode,
-          argv.testPattern
+          argv.testPattern,
+          argv.skipE2e,
+          e2eMode
         );
       }
     )
@@ -348,10 +367,23 @@ async function main() {
           .option("test-pattern", {
             type: "string",
             describe: "Explicit test pattern to use (e.g., \"tests/auth/**\")",
+          })
+          .option("skip-e2e", {
+            type: "boolean",
+            default: false,
+            describe: "Skip E2E tests entirely (run unit tests only)",
           }),
       async (argv) => {
         const testMode = argv.full ? "full" : argv.quick ? "quick" : "full";
-        await runCheck(argv.feature_id!, argv.verbose, argv.skipChecks, !argv.noAutonomous, testMode, argv.testPattern);
+        // Determine E2E mode same as complete command
+        const e2eMode = argv.skipE2e
+          ? "skip"
+          : argv.full
+            ? "full"
+            : argv.quick
+              ? undefined // Determined by tags in verifier
+              : "smoke"; // Default: @smoke only
+        await runCheck(argv.feature_id!, argv.verbose, argv.skipChecks, !argv.noAutonomous, testMode, argv.testPattern, argv.skipE2e, e2eMode);
       }
     )
     .command(
@@ -921,7 +953,9 @@ async function runCheck(
   skipChecks: boolean,
   autonomous: boolean = false,
   testMode: "full" | "quick" | "skip" = "full",
-  testPattern?: string
+  testPattern?: string,
+  skipE2E: boolean = false,
+  e2eMode?: "full" | "smoke" | "tags" | "skip"
 ) {
   const cwd = process.cwd();
 
@@ -958,7 +992,15 @@ async function runCheck(
   });
 
   // Run verification (choose mode)
-  const verifyOptions = { verbose, skipChecks, testMode, testPattern };
+  const verifyOptions = {
+    verbose,
+    skipChecks,
+    testMode,
+    testPattern,
+    skipE2E,
+    e2eTags: feature.e2eTags,
+    e2eMode,
+  };
   const result = autonomous
     ? await verifyFeatureAutonomous(cwd, feature, verifyOptions)
     : await verifyFeature(cwd, feature, verifyOptions);
@@ -1027,7 +1069,9 @@ async function runComplete(
   verbose: boolean = false,
   autonomous: boolean = false,
   testMode: "full" | "quick" | "skip" = "full",
-  testPattern?: string
+  testPattern?: string,
+  skipE2E: boolean = false,
+  e2eMode?: "full" | "smoke" | "tags" | "skip"
 ) {
   const cwd = process.cwd();
 
@@ -1067,7 +1111,15 @@ async function runComplete(
     });
 
     // Run verification (choose mode)
-    const verifyOptions = { verbose, skipChecks: false, testMode, testPattern };
+    const verifyOptions = {
+      verbose,
+      skipChecks: false,
+      testMode,
+      testPattern,
+      skipE2E,
+      e2eTags: feature.e2eTags,
+      e2eMode,
+    };
     const result = autonomous
       ? await verifyFeatureAutonomous(cwd, feature, verifyOptions)
       : await verifyFeature(cwd, feature, verifyOptions);

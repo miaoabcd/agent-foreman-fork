@@ -20,10 +20,16 @@ import type {
   CriterionResult,
   VerificationVerdict,
   TestMode,
+  E2ECapabilityInfo,
+  E2ETestMode,
 } from "./verification-types.js";
 import {
   getSelectiveTestCommand,
   type TestDiscoveryResult,
+  buildE2ECommand,
+  getE2ETagsForFeature,
+  determineE2EMode,
+  type E2EMode,
 } from "./test-discovery.js";
 import {
   detectVerificationCapabilities,
@@ -174,6 +180,20 @@ export interface AutomatedCheckOptions {
   selectiveTestCommand?: string | null;
   /** Test discovery result for logging */
   testDiscovery?: TestDiscoveryResult;
+  /** Skip E2E tests entirely */
+  skipE2E?: boolean;
+  /** E2E capability info for running E2E tests */
+  e2eInfo?: E2ECapabilityInfo;
+  /** E2E tags for feature-based filtering */
+  e2eTags?: string[];
+  /**
+   * E2E test execution mode (if not specified, derived from testMode and e2eTags)
+   * - "full": Run all E2E tests
+   * - "smoke": Run only @smoke E2E tests (default)
+   * - "tags": Run E2E tests matching e2eTags
+   * - "skip": Skip E2E tests entirely
+   */
+  e2eMode?: E2ETestMode;
 }
 
 /**
@@ -190,7 +210,16 @@ export async function runAutomatedChecks(
       ? { verbose: optionsOrVerbose }
       : optionsOrVerbose;
 
-  const { verbose = false, testMode = "full", selectiveTestCommand, testDiscovery } = options;
+  const {
+    verbose = false,
+    testMode = "full",
+    selectiveTestCommand,
+    testDiscovery,
+    skipE2E = false,
+    e2eInfo,
+    e2eTags = [],
+    e2eMode: explicitE2EMode,
+  } = options;
   const results: AutomatedCheckResult[] = [];
 
   // Collect checks to run
@@ -225,6 +254,31 @@ export async function runAutomatedChecks(
   }
   if (capabilities.hasBuild && capabilities.buildCommand) {
     checks.push({ type: "build", command: capabilities.buildCommand, name: "build" });
+  }
+
+  // Handle E2E test execution (runs after unit tests)
+  if (!skipE2E && e2eInfo?.available && e2eInfo.command) {
+    // Use explicit E2E mode if provided, otherwise derive from testMode and tags
+    const e2eMode: E2EMode = explicitE2EMode ?? determineE2EMode(testMode, e2eTags.length > 0);
+    const e2eCommand = buildE2ECommand(e2eInfo, e2eTags, e2eMode);
+
+    if (e2eCommand) {
+      const e2eName = e2eMode === "full"
+        ? "E2E tests (full)"
+        : e2eMode === "smoke"
+          ? "E2E tests (@smoke)"
+          : `E2E tests (${e2eTags.join(", ")})`;
+      checks.push({ type: "e2e", command: e2eCommand, name: e2eName });
+
+      if (verbose) {
+        console.log(chalk.gray(`   E2E mode: ${e2eMode}`));
+        if (e2eTags.length > 0) {
+          console.log(chalk.gray(`   E2E tags: ${e2eTags.join(", ")}`));
+        }
+      }
+    }
+  } else if (skipE2E && verbose) {
+    console.log(chalk.gray(`   E2E tests: skipped (--skip-e2e)`));
   }
 
   if (checks.length === 0) {
@@ -478,7 +532,15 @@ export async function verifyFeature(
   feature: Feature,
   options: VerifyOptions = {}
 ): Promise<VerificationResult> {
-  const { verbose = false, skipChecks = false, testMode = "full", testPattern } = options;
+  const {
+    verbose = false,
+    skipChecks = false,
+    testMode = "full",
+    testPattern,
+    skipE2E = false,
+    e2eTags = getE2ETagsForFeature(feature),
+    e2eMode,
+  } = options;
 
   console.log(chalk.bold("\n   Verifying feature: " + feature.id));
 
@@ -486,6 +548,18 @@ export async function verifyFeature(
   if (testMode !== "full") {
     const modeLabel = testMode === "quick" ? chalk.cyan("quick (selective tests)") : chalk.yellow("skip tests");
     console.log(chalk.gray(`   Test mode: ${modeLabel}`));
+  }
+
+  // Show E2E mode if relevant
+  if (skipE2E) {
+    console.log(chalk.gray(`   E2E tests: skipped`));
+  } else if (e2eMode) {
+    const e2eLabel = e2eMode === "full"
+      ? "full (all E2E tests)"
+      : e2eMode === "smoke"
+        ? "@smoke only"
+        : `tags: ${e2eTags.join(", ")}`;
+    console.log(chalk.gray(`   E2E mode: ${e2eLabel}`));
   }
 
   // Define verification steps for progress tracking
@@ -547,6 +621,10 @@ export async function verifyFeature(
       testMode,
       selectiveTestCommand,
       testDiscovery,
+      skipE2E,
+      e2eInfo: capabilities.e2eInfo,
+      e2eTags,
+      e2eMode,
     });
     const allPassed = automatedResults.every((r) => r.success);
     stepProgress.completeStep(allPassed);

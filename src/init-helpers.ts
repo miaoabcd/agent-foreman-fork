@@ -10,7 +10,9 @@ import type { Feature, FeatureList, InitMode } from "./types.js";
 import { loadFeatureList, createEmptyFeatureList, saveFeatureList, mergeFeatures, discoveredToFeature } from "./feature-list.js";
 import { scanDirectoryStructure, isProjectEmpty } from "./project-scanner.js";
 import { aiScanProject, generateFeaturesFromGoal, generateFeaturesFromSurvey, aiResultToSurvey, generateAISurveyMarkdown } from "./ai-scanner.js";
-import { generateInitScript, generateMinimalInitScript } from "./init-script.js";
+import { generateInitScript, generateMinimalInitScript, generateInitScriptFromCapabilities } from "./init-script.js";
+import { detectCapabilities } from "./project-capabilities.js";
+import type { ExtendedCapabilities } from "./verification-types.js";
 import { generateClaudeMd, generateHarnessSection } from "./prompts.js";
 import { callAnyAvailableAgent, printAgentStatus } from "./agents.js";
 import { appendProgressLog, createInitEntry } from "./progress-log.js";
@@ -173,6 +175,9 @@ export async function mergeOrCreateFeatures(
 
 /**
  * Step 6-8: Generate harness files (init.sh, CLAUDE.md, progress.log)
+ *
+ * IMPORTANT: This function now runs capabilities detection FIRST to ensure
+ * init.sh uses the same commands that verification will use (single source of truth).
  */
 export async function generateHarnessFiles(
   cwd: string,
@@ -181,8 +186,14 @@ export async function generateHarnessFiles(
   goal: string,
   mode: InitMode
 ): Promise<void> {
-  // Generate init.sh (with AI merge support in merge mode)
-  await generateOrMergeInitScript(cwd, survey, mode);
+  // Step 6a: Detect project capabilities (creates ai/capabilities.json)
+  // This ensures init.sh uses the SAME commands as verification
+  console.log(chalk.gray("  Detecting project capabilities..."));
+  const capabilities = await detectCapabilities(cwd, { force: true, verbose: false });
+  console.log(chalk.green("✓ Capabilities detected and cached"));
+
+  // Generate init.sh using capabilities (with AI merge support in merge mode)
+  await generateOrMergeInitScript(cwd, capabilities, survey, mode);
 
   // Generate or update CLAUDE.md
   await updateClaudeMd(cwd, goal);
@@ -206,19 +217,30 @@ export async function generateHarnessFiles(
 /**
  * Helper: Generate or merge init.sh script
  * In merge mode, uses AI to intelligently merge user customizations with new template
+ *
+ * @param cwd - Current working directory
+ * @param capabilities - Detected capabilities (used for test/lint/build/typecheck commands)
+ * @param survey - Survey results (used as fallback for install/dev commands)
+ * @param mode - Init mode (new, merge, scan)
  */
 async function generateOrMergeInitScript(
   cwd: string,
+  capabilities: ExtendedCapabilities,
   survey: ReturnType<typeof aiResultToSurvey>,
   mode: InitMode
 ): Promise<void> {
   const initScriptPath = path.join(cwd, "ai/init.sh");
 
-  // Generate new init.sh template
-  const newInitScript =
-    survey.commands.install || survey.commands.dev || survey.commands.test
-      ? generateInitScript(survey.commands)
-      : generateMinimalInitScript();
+  // Generate new init.sh template using capabilities (primary) with survey fallback for install/dev
+  const hasCapabilities = capabilities.testCommand || capabilities.lintCommand || capabilities.buildCommand;
+  const hasSurveyCommands = survey.commands.install || survey.commands.dev || survey.commands.test;
+
+  const newInitScript = hasCapabilities || hasSurveyCommands
+    ? generateInitScriptFromCapabilities(capabilities, {
+        install: survey.commands.install,
+        dev: survey.commands.dev,
+      })
+    : generateMinimalInitScript();
 
   await fs.mkdir(path.join(cwd, "ai"), { recursive: true });
 

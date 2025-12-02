@@ -2,8 +2,9 @@
  * Tests for src/init-script.ts - Bootstrap script generation
  */
 import { describe, it, expect } from "vitest";
-import { generateInitScript, generateMinimalInitScript } from "../src/init-script.js";
+import { generateInitScript, generateMinimalInitScript, generateInitScriptFromCapabilities, generateInitScriptWithTypeCheck } from "../src/init-script.js";
 import type { ProjectCommands } from "../src/types.js";
+import type { ExtendedCapabilities } from "../src/verification-types.js";
 
 describe("Init Script", () => {
   describe("generateInitScript", () => {
@@ -295,6 +296,191 @@ describe("Init Script", () => {
         expect(fullScript).toContain(func);
         expect(minimalScript).toContain(func);
       }
+    });
+  });
+
+  describe("generateInitScriptFromCapabilities", () => {
+    const baseCapabilities: ExtendedCapabilities = {
+      hasTests: true,
+      testCommand: "pnpm test",
+      testFramework: "vitest",
+      hasTypeCheck: true,
+      typeCheckCommand: "pnpm tsc --noEmit",
+      hasLint: true,
+      lintCommand: "pnpm lint",
+      hasBuild: true,
+      buildCommand: "pnpm build",
+      hasGit: true,
+      source: "ai" as const,
+      confidence: 0.95,
+      languages: ["typescript"],
+      detectedAt: new Date().toISOString(),
+    };
+
+    it("should generate script using capabilities commands", () => {
+      const script = generateInitScriptFromCapabilities(baseCapabilities);
+
+      expect(script).toContain("#!/usr/bin/env bash");
+      expect(script).toContain("pnpm test");
+      expect(script).toContain("pnpm lint");
+      expect(script).toContain("pnpm build");
+      expect(script).toContain("pnpm tsc --noEmit");
+    });
+
+    it("should use fallback install command when not provided", () => {
+      const script = generateInitScriptFromCapabilities(baseCapabilities);
+
+      // Default install command for npm (no package manager in testInfo)
+      expect(script).toContain("npm install");
+    });
+
+    it("should use fallback commands when provided", () => {
+      const script = generateInitScriptFromCapabilities(baseCapabilities, {
+        install: "yarn install",
+        dev: "yarn dev",
+      });
+
+      expect(script).toContain("yarn install");
+      expect(script).toContain("yarn dev");
+    });
+
+    it("should derive install command from packageManager in testInfo", () => {
+      const capsWithPnpm: ExtendedCapabilities = {
+        ...baseCapabilities,
+        testInfo: {
+          command: "pnpm test",
+          packageManager: "pnpm",
+        },
+      };
+
+      const script = generateInitScriptFromCapabilities(capsWithPnpm);
+      expect(script).toContain("pnpm install");
+      expect(script).toContain("pnpm dev");
+    });
+
+    it("should handle different package managers", () => {
+      const testCases = [
+        { packageManager: "npm", install: "npm install", dev: "npm run dev" },
+        { packageManager: "pnpm", install: "pnpm install", dev: "pnpm dev" },
+        { packageManager: "yarn", install: "yarn install", dev: "yarn dev" },
+        { packageManager: "bun", install: "bun install", dev: "bun dev" },
+        { packageManager: "pip", install: "pip install -r requirements.txt", dev: "npm run dev" },
+        { packageManager: "cargo", install: "cargo build", dev: "cargo run" },
+        { packageManager: "go", install: "go mod download", dev: "go run ." },
+      ];
+
+      for (const { packageManager, install, dev } of testCases) {
+        const caps: ExtendedCapabilities = {
+          ...baseCapabilities,
+          testInfo: {
+            command: "test",
+            packageManager,
+          },
+        };
+
+        const script = generateInitScriptFromCapabilities(caps);
+        expect(script).toContain(install);
+        expect(script).toContain(dev);
+      }
+    });
+
+    it("should handle missing capabilities gracefully", () => {
+      const minimalCaps: ExtendedCapabilities = {
+        hasTests: false,
+        hasTypeCheck: false,
+        hasLint: false,
+        hasBuild: false,
+        hasGit: true,
+        source: "ai" as const,
+        confidence: 0.5,
+        languages: [],
+        detectedAt: new Date().toISOString(),
+      };
+
+      const script = generateInitScriptFromCapabilities(minimalCaps);
+
+      expect(script).toContain("#!/usr/bin/env bash");
+      expect(script).toContain("No test command configured");
+      expect(script).toContain("No build command configured");
+    });
+
+    it("should include explicit typecheck command when provided", () => {
+      const caps: ExtendedCapabilities = {
+        ...baseCapabilities,
+        typeCheckCommand: "mypy --strict src/",
+      };
+
+      const script = generateInitScriptFromCapabilities(caps);
+      expect(script).toContain("mypy --strict src/");
+      // Should NOT contain fallback tsconfig detection for typecheck
+      expect(script).not.toContain('if [ -f "tsconfig.json" ]');
+    });
+
+    it("should fallback to tsconfig detection when no typecheck command", () => {
+      const caps: ExtendedCapabilities = {
+        ...baseCapabilities,
+        typeCheckCommand: undefined,
+      };
+
+      const script = generateInitScriptFromCapabilities(caps);
+      expect(script).toContain('if [ -f "tsconfig.json" ]');
+      expect(script).toContain("npx tsc --noEmit");
+    });
+  });
+
+  describe("generateInitScriptWithTypeCheck", () => {
+    const commands: ProjectCommands = {
+      install: "npm install",
+      dev: "npm run dev",
+      test: "npm test",
+      build: "npm run build",
+      lint: "npm run lint",
+    };
+
+    it("should include explicit typecheck command when provided", () => {
+      const script = generateInitScriptWithTypeCheck(commands, "tsc --noEmit --strict");
+
+      expect(script).toContain("tsc --noEmit --strict");
+      // Should NOT contain fallback tsconfig detection
+      expect(script).not.toContain('if [ -f "tsconfig.json" ]');
+    });
+
+    it("should include tsconfig fallback when no typecheck command", () => {
+      const script = generateInitScriptWithTypeCheck(commands);
+
+      expect(script).toContain('if [ -f "tsconfig.json" ]');
+      expect(script).toContain("npx tsc --noEmit");
+    });
+
+    it("should include all required functions", () => {
+      const script = generateInitScriptWithTypeCheck(commands, "tsc --noEmit");
+
+      expect(script).toContain("bootstrap()");
+      expect(script).toContain("dev()");
+      expect(script).toContain("check()");
+      expect(script).toContain("build()");
+      expect(script).toContain("status()");
+      expect(script).toContain("show_help()");
+    });
+
+    it("should include quick mode handling", () => {
+      const script = generateInitScriptWithTypeCheck(commands);
+
+      expect(script).toContain("--quick");
+      expect(script).toContain("quick_mode=false");
+      expect(script).toContain("Quick mode: skipping type check, lint, and build");
+    });
+
+    it("should handle Python typecheck (mypy)", () => {
+      const pythonCommands: ProjectCommands = {
+        install: "pip install -r requirements.txt",
+        test: "pytest",
+      };
+
+      const script = generateInitScriptWithTypeCheck(pythonCommands, "mypy src/");
+
+      expect(script).toContain("mypy src/");
+      expect(script).toContain("Running type check...");
     });
   });
 });

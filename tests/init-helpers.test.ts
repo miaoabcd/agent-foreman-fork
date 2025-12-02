@@ -64,6 +64,15 @@ vi.mock("../src/ai-scanner.js", () => ({
   generateAISurveyMarkdown: mockGenerateAISurveyMarkdown,
 }));
 
+// Mock project-capabilities module (detectCapabilities)
+const { mockDetectCapabilities } = vi.hoisted(() => ({
+  mockDetectCapabilities: vi.fn(),
+}));
+
+vi.mock("../src/project-capabilities.js", () => ({
+  detectCapabilities: mockDetectCapabilities,
+}));
+
 // Import after mocks are set up
 import { generateHarnessFiles, detectAndAnalyzeProject, mergeOrCreateFeatures } from "../src/init-helpers.js";
 import type { FeatureList, Feature } from "../src/types.js";
@@ -110,6 +119,29 @@ describe("Init Helpers", () => {
         version: "1.0.0",
       },
     };
+
+    // Default capabilities returned by detectCapabilities mock
+    const defaultCapabilities = {
+      hasTests: true,
+      testCommand: "npm test",
+      testFramework: "vitest",
+      hasTypeCheck: true,
+      typeCheckCommand: "npx tsc --noEmit",
+      hasLint: true,
+      lintCommand: "npm run lint",
+      hasBuild: true,
+      buildCommand: "npm run build",
+      hasGit: true,
+      source: "ai" as const,
+      confidence: 0.9,
+      languages: ["typescript"],
+      detectedAt: new Date().toISOString(),
+    };
+
+    beforeEach(() => {
+      // Set default mock for detectCapabilities
+      mockDetectCapabilities.mockResolvedValue(defaultCapabilities);
+    });
 
     it("should create new init.sh when none exists (new mode)", async () => {
       // Default mock for any AI calls
@@ -248,6 +280,20 @@ bootstrap() {
         modules: [],
         structure: { entryPoints: [], sourceDirectories: [], testDirectories: [] },
       };
+
+      // Mock capabilities with no commands detected
+      const emptyCapabilities = {
+        hasTests: false,
+        hasTypeCheck: false,
+        hasLint: false,
+        hasBuild: false,
+        hasGit: true,
+        source: "ai" as const,
+        confidence: 0.5,
+        languages: [],
+        detectedAt: new Date().toISOString(),
+      };
+      mockDetectCapabilities.mockResolvedValue(emptyCapabilities);
 
       mockCallAnyAvailableAgent.mockResolvedValue({ success: true, output: "# CLAUDE.md" });
 

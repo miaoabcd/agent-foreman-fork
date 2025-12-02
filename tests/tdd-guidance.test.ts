@@ -7,7 +7,10 @@ import {
   criterionToTestCase,
   criterionToE2EScenario,
   generateTDDGuidance,
+  generateUnitTestSkeleton,
+  generateE2ETestSkeleton,
   type TDDGuidance,
+  type TestFramework,
 } from "../src/tdd-guidance.js";
 import type { Feature } from "../src/types.js";
 import type { ExtendedCapabilities } from "../src/verification-types.js";
@@ -319,5 +322,168 @@ describe("generateTDDGuidance", () => {
     const guidance = generateTDDGuidance(mockFeature, cargoCapabilities, "/project");
 
     expect(guidance.suggestedTestFiles.unit[0]).toContain(".rs");
+  });
+});
+
+describe("generateUnitTestSkeleton", () => {
+  const mockFeature: Feature = {
+    id: "auth.login",
+    description: "User login functionality",
+    module: "auth",
+    priority: 1,
+    status: "failing",
+    acceptance: [],
+    dependsOn: [],
+    supersedes: [],
+    tags: [],
+    version: 1,
+    origin: "manual",
+    notes: "",
+  };
+
+  const testCases = [
+    "should allow user to enter email and password",
+    "should show error for invalid credentials",
+  ];
+
+  it("should generate vitest skeleton with imports and describe block", () => {
+    const skeleton = generateUnitTestSkeleton(mockFeature, testCases, "vitest");
+
+    expect(skeleton).toContain('import { describe, it, expect, beforeEach, afterEach } from "vitest"');
+    expect(skeleton).toContain('describe("login"');
+    expect(skeleton).toContain("beforeEach");
+    expect(skeleton).toContain("afterEach");
+  });
+
+  it("should include all test cases in vitest skeleton", () => {
+    const skeleton = generateUnitTestSkeleton(mockFeature, testCases, "vitest");
+
+    expect(skeleton).toContain('it("should allow user to enter email and password"');
+    expect(skeleton).toContain('it("should show error for invalid credentials"');
+    expect(skeleton).toContain("// Arrange");
+    expect(skeleton).toContain("// Act");
+    expect(skeleton).toContain("// Assert");
+  });
+
+  it("should generate jest skeleton without vitest imports", () => {
+    const skeleton = generateUnitTestSkeleton(mockFeature, testCases, "jest");
+
+    expect(skeleton).not.toContain('import { describe');
+    expect(skeleton).toContain('describe("login"');
+    expect(skeleton).toContain("expect(true).toBe(true)");
+  });
+
+  it("should generate mocha skeleton with chai import", () => {
+    const skeleton = generateUnitTestSkeleton(mockFeature, testCases, "mocha");
+
+    expect(skeleton).toContain('import { expect } from "chai"');
+    expect(skeleton).toContain('describe("login"');
+    expect(skeleton).toContain("expect(true).to.be.true");
+  });
+
+  it("should generate pytest skeleton with class structure", () => {
+    const skeleton = generateUnitTestSkeleton(mockFeature, testCases, "pytest");
+
+    expect(skeleton).toContain("import pytest");
+    expect(skeleton).toContain("class TestLogin:");
+    expect(skeleton).toContain("@pytest.fixture(autouse=True)");
+    expect(skeleton).toContain("def test_allow_user_to_enter_email_and_password(self)");
+    expect(skeleton).toContain("assert True");
+  });
+
+  it("should generate go test skeleton with testing package", () => {
+    const skeleton = generateUnitTestSkeleton(mockFeature, testCases, "go");
+
+    expect(skeleton).toContain("package auth");
+    expect(skeleton).toContain('"testing"');
+    expect(skeleton).toContain("func TestAllowUserToEnterEmailAndPassword(t *testing.T)");
+    expect(skeleton).toContain('t.Error("Test not implemented")');
+  });
+
+  it("should generate cargo test skeleton with test attribute", () => {
+    const skeleton = generateUnitTestSkeleton(mockFeature, testCases, "cargo");
+
+    expect(skeleton).toContain("#[cfg(test)]");
+    expect(skeleton).toContain("mod login_tests");
+    expect(skeleton).toContain("use super::*");
+    expect(skeleton).toContain("#[test]");
+    expect(skeleton).toContain("fn test_allow_user_to_enter_email_and_password()");
+    expect(skeleton).toContain("assert!(true)");
+  });
+});
+
+describe("generateE2ETestSkeleton", () => {
+  const mockFeature: Feature = {
+    id: "auth.login",
+    description: "User login functionality",
+    module: "auth",
+    priority: 1,
+    status: "failing",
+    acceptance: [],
+    dependsOn: [],
+    supersedes: [],
+    tags: [],
+    version: 1,
+    origin: "manual",
+    notes: "",
+  };
+
+  const scenarios = [
+    "user enters email and password",
+    "user sees error for invalid credentials",
+  ];
+
+  it("should generate Playwright skeleton with imports", () => {
+    const skeleton = generateE2ETestSkeleton(mockFeature, scenarios);
+
+    expect(skeleton).toContain('import { test, expect, type Page, type Locator } from "@playwright/test"');
+  });
+
+  it("should generate page object class", () => {
+    const skeleton = generateE2ETestSkeleton(mockFeature, scenarios);
+
+    expect(skeleton).toContain("class LoginPage");
+    expect(skeleton).toContain("readonly page: Page");
+    expect(skeleton).toContain("constructor(page: Page)");
+    expect(skeleton).toContain("async goto()");
+    expect(skeleton).toContain('await this.page.goto("/auth/login")');
+  });
+
+  it("should include all scenarios in test blocks", () => {
+    const skeleton = generateE2ETestSkeleton(mockFeature, scenarios);
+
+    expect(skeleton).toContain('test("user enters email and password"');
+    expect(skeleton).toContain('test("user sees error for invalid credentials"');
+    expect(skeleton).toContain("const loginPage = new LoginPage(page)");
+    expect(skeleton).toContain("await loginPage.goto()");
+  });
+
+  it("should include test.describe and beforeEach", () => {
+    const skeleton = generateE2ETestSkeleton(mockFeature, scenarios);
+
+    expect(skeleton).toContain('test.describe("login"');
+    expect(skeleton).toContain("test.beforeEach");
+  });
+
+  it("should include tag annotations when provided", () => {
+    const skeleton = generateE2ETestSkeleton(mockFeature, scenarios, ["@smoke", "@auth"]);
+
+    expect(skeleton).toContain("@smoke @auth");
+  });
+
+  it("should not include tag annotations when empty", () => {
+    const skeleton = generateE2ETestSkeleton(mockFeature, scenarios, []);
+
+    expect(skeleton).not.toContain("@smoke");
+    expect(skeleton).toContain('test("user enters email and password", async');
+  });
+
+  it("should include page object pattern comments", () => {
+    const skeleton = generateE2ETestSkeleton(mockFeature, scenarios);
+
+    expect(skeleton).toContain("// Locators");
+    expect(skeleton).toContain("// TODO: Add your locators here");
+    expect(skeleton).toContain("// Page actions");
+    expect(skeleton).toContain("// TODO: Add your page actions here");
   });
 });

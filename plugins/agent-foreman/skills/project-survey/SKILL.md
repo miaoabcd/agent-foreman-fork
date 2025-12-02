@@ -3,36 +3,34 @@ name: project-survey
 description: Analyze existing projects to generate comprehensive survey reports
 ---
 
-# Project Survey
+# 🔍 Project Survey
 
-Scan and analyze existing codebases to understand structure, tech stack, and features.
+**One command**: `agent-foreman survey`
 
-## When to Use
-
-- Joining an existing project for the first time
-- Understanding codebase structure before making changes
-- Preparing for `agent-foreman init` (survey makes init faster)
-
-**Skip this for new/empty projects** - use `agent-foreman init` directly.
-
-## Command
+## Quick Start
 
 ```bash
-# Default: generates docs/PROJECT_SURVEY.md
 agent-foreman survey
-
-# Custom output path
-agent-foreman survey ./custom/path/SURVEY.md
-
-# Verbose output
-agent-foreman survey --verbose
 ```
 
-## What It Does
+Output: `docs/PROJECT_SURVEY.md`
 
-1. Detects tech stack (language, framework, build tools)
-2. Maps directory structure
-3. Discovers modules and features from routes/tests
-4. Assesses project completion
+## Options
 
-**Note:** This is read-only - does not modify code or create commits.
+| Flag | Effect |
+|------|--------|
+| `./path/FILE.md` | Custom output path |
+| `--verbose` | Show detailed progress |
+
+## Use When
+
+- Joining existing project → understand before changing
+- Before `agent-foreman init` → faster initialization
+
+## Skip When
+
+- New/empty project → use `agent-foreman init` directly
+
+## Read-Only
+
+No code changes. No commits. Safe to run anytime.

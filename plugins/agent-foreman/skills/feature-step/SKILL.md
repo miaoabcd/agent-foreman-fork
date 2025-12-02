@@ -3,77 +3,47 @@ name: feature-step
 description: Work on the next priority feature with guided implementation
 ---
 
-# Feature Step
+# 🚀 Feature Step
 
-Select and work on the next priority feature from the backlog.
+**One command**: `agent-foreman step`
 
-## When to Use
-
-- Starting a development session
-- After completing a feature to get the next task
-- Checking feature details before implementation
-
-## Command
+## Quick Start
 
 ```bash
-# Auto-select next priority feature
-agent-foreman step
-
-# Work on specific feature
-agent-foreman step <feature_id>
-
-# Run tests first
-agent-foreman step --check
-
-# Preview without changes
-agent-foreman step --dry-run
+agent-foreman step           # Auto-select next priority
+agent-foreman step auth.login  # Specific feature
 ```
-
-## Feature Selection Priority
-
-1. `needs_review` - May be broken by recent changes
-2. `failing` - Not yet implemented
-3. By `priority` field - Lower number = higher priority
 
 ## Workflow
 
-1. `agent-foreman step` - Get next task
-2. Review acceptance criteria
-3. Implement the feature
-4. `agent-foreman complete <feature_id>` - Verify + mark passing + auto-commit
-
-**Note:** `complete` runs AI-powered verification automatically (tests, typecheck, lint, build + AI analysis).
-
-## Related Commands
+```
+step → implement → complete
+```
 
 ```bash
-# Check project status
-agent-foreman status
-
-# Complete feature (auto-runs verification + auto-commit)
-# Uses quick mode by default - runs only related tests based on testPattern
-agent-foreman complete <feature_id>
-
-# Full mode - run all tests (slower, for final verification)
-agent-foreman complete <feature_id> --full
-
-# Skip verification (not recommended)
-agent-foreman complete <feature_id> --skip-verify
-
-# Add notes when completing
-agent-foreman complete <feature_id> --notes "Added extra validation"
+agent-foreman step              # 1. Get task + acceptance criteria
+# ... implement the feature ... # 2. Write code
+agent-foreman complete <id>     # 3. Verify + commit
 ```
 
-## Test Pattern Auto-Generation
+## Priority Order
 
-During `agent-foreman init`, each feature automatically gets a `testPattern` field based on its module:
+1. `needs_review` → may be broken
+2. `failing` → not implemented
+3. Lower `priority` number → higher priority
 
-```json
-{
-  "id": "auth.login",
-  "module": "auth",
-  "testPattern": "tests/auth/**/*.test.*"  // Auto-generated
-}
+## Options
+
+| Flag | Effect |
+|------|--------|
+| `--check` | Run tests before showing feature |
+| `--dry-run` | Preview without changes |
+
+## Complete Options
+
+```bash
+agent-foreman complete <id>             # Quick mode (related tests only)
+agent-foreman complete <id> --full      # All tests
+agent-foreman complete <id> --skip-e2e  # Skip E2E tests
+agent-foreman complete <id> --no-commit # Manual commit
 ```
-
-This enables quick mode to run only related tests, making verification faster.

@@ -2,36 +2,32 @@
 description: Analyze existing project structure and generate comprehensive survey report
 ---
 
-# Project Survey
+# EXECUTE NOW
 
-Scan and analyze existing codebases to understand structure, tech stack, and features.
-
-## When to Use
-
-- Joining an existing project for the first time
-- Understanding codebase structure before making changes
-- Preparing for `agent-foreman init` (survey makes init faster)
-
-**Skip this for new/empty projects** - use `agent-foreman init` directly.
-
-## Command
+Run this command immediately:
 
 ```bash
-# Default: generates docs/PROJECT_SURVEY.md
 agent-foreman survey
-
-# Custom output path
-agent-foreman survey ./custom/path/SURVEY.md
-
-# Verbose output
-agent-foreman survey --verbose
 ```
 
-## What It Does
+Wait for completion. Do not interrupt.
 
-1. Detects tech stack (language, framework, build tools)
-2. Maps directory structure
-3. Discovers modules and features from routes/tests
-4. Assesses project completion
+Output: `docs/PROJECT_SURVEY.md`
 
-**Note:** This is read-only - does not modify code or create commits.
+## If User Specifies Path
+
+| User Says | Execute |
+|-----------|---------|
+| Custom path provided | `agent-foreman survey <path>` |
+| "verbose" / "detailed" | `agent-foreman survey --verbose` |
+| (default) | `agent-foreman survey` |
+
+## After Completion
+
+Report the survey location and key findings:
+- Tech stack detected
+- Directory structure
+- Modules discovered
+- Completion assessment
+
+**Note:** Read-only operation. No code changes. No commits.

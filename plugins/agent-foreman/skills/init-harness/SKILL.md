@@ -3,58 +3,48 @@ name: init-harness
 description: Initialize or upgrade the long-task harness for a project
 ---
 
-# Init Harness
+# ⚡ Init Harness
 
-Set up feature-driven development infrastructure with ai/feature_list.json, ai/progress.log, and ai/init.sh.
+**One command**: `agent-foreman init`
 
-## When to Use
-
-- Starting a new project that needs structured feature tracking
-- Adding harness to an existing project
-- Re-scanning features after significant changes
-
-## Command
+## Quick Start
 
 ```bash
-# Default: merge mode (keeps existing features, adds new ones)
 agent-foreman init
-
-# Fresh start (replaces all features)
-agent-foreman init --mode new
-
-# Preview only (no changes)
-agent-foreman init --mode scan
 ```
 
-## How It Works
+Creates: `ai/feature_list.json`, `ai/progress.log`, `ai/init.sh`, `CLAUDE.md`
 
-1. If `PROJECT_SURVEY.md` exists → uses survey (fast)
-2. If source code exists → AI scan + auto-saves survey
-3. If empty project → generates features from goal
+## Modes
+
+| Mode | Command | Effect |
+|------|---------|--------|
+| Merge (default) | `agent-foreman init` | Keep existing + add new features |
+| Fresh | `agent-foreman init --mode new` | Replace all features |
+| Preview | `agent-foreman init --mode scan` | Show without changes |
+
+## Auto-Detection
+
+1. `PROJECT_SURVEY.md` exists → use survey (fast)
+2. Source code exists → AI scan + auto-save survey
+3. Empty project → generate from goal
+
+## Pre-Init (Recommended)
+
+For existing projects:
+```bash
+agent-foreman survey    # First: understand project
+agent-foreman init      # Then: create harness
+```
 
 ## Created Files
 
-| File | Purpose |
-|------|---------|
-| `ai/feature_list.json` | Feature backlog with status tracking |
-| `ai/progress.log` | Session handoff audit log |
-| `ai/init.sh` | Bootstrap script (install/dev/check) |
-| `ai/capabilities.json` | Detected project capabilities (test/lint/build) |
-| `CLAUDE.md` | Instructions for AI agents |
-| `docs/PROJECT_SURVEY.md` | Auto-generated when scanning existing project |
-
-**Tip:** For existing projects, run `agent-foreman survey` first for better results.
-
-## Auto-Generated Test Patterns
-
-During init, each feature automatically gets a `testPattern` field based on its module:
-
-```json
-{
-  "id": "auth.login",
-  "module": "auth",
-  "testPattern": "tests/auth/**/*.test.*"  // Auto-generated
-}
 ```
-
-This enables the default quick mode in `agent-foreman complete` to run only related tests, making verification faster.
+ai/
+├── feature_list.json   # Feature backlog
+├── progress.log        # Session audit log
+├── init.sh             # Bootstrap script
+└── capabilities.json   # Detected test/lint/build
+CLAUDE.md               # AI agent instructions
+docs/PROJECT_SURVEY.md  # Auto-generated survey
+```

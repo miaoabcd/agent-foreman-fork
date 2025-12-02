@@ -2,77 +2,42 @@
 description: Work on the next priority feature with guided implementation workflow
 ---
 
-# Feature Step
+# EXECUTE NOW
 
-Select and work on the next priority feature from the backlog.
-
-## When to Use
-
-- Starting a development session
-- After completing a feature to get the next task
-- Checking feature details before implementation
-
-## Command
+Run this command immediately:
 
 ```bash
-# Auto-select next priority feature
 agent-foreman step
-
-# Work on specific feature
-agent-foreman step <feature_id>
-
-# Run tests first
-agent-foreman step --check
-
-# Preview without changes
-agent-foreman step --dry-run
 ```
 
-## Feature Selection Priority
+Wait for completion. Review the feature shown.
 
-1. `needs_review` - May be broken by recent changes
-2. `failing` - Not yet implemented
-3. By `priority` field - Lower number = higher priority
+## If User Specifies Feature
 
-## Workflow
+| User Says | Execute |
+|-----------|---------|
+| Feature ID provided | `agent-foreman step <feature_id>` |
+| "check" / "test first" | `agent-foreman step --check` |
+| "preview" / "dry-run" | `agent-foreman step --dry-run` |
+| (default) | `agent-foreman step` |
 
-1. `agent-foreman step` - Get next task
-2. Review acceptance criteria
-3. Implement the feature
-4. `agent-foreman complete <feature_id>` - Verify + mark passing + auto-commit
+## After Step Command
 
-**Note:** `complete` runs AI-powered verification automatically (tests, typecheck, lint, build + AI analysis).
+1. **Read** the acceptance criteria shown
+2. **Implement** the feature to satisfy ALL criteria
+3. **Complete** with: `agent-foreman complete <feature_id>`
 
-## Related Commands
+## Complete Options
 
-```bash
-# Check project status
-agent-foreman status
+| User Says | Execute |
+|-----------|---------|
+| "full test" / "all tests" | `agent-foreman complete <id> --full` |
+| "skip e2e" | `agent-foreman complete <id> --skip-e2e` |
+| "no commit" / "manual commit" | `agent-foreman complete <id> --no-commit` |
+| (default) | `agent-foreman complete <id>` |
 
-# Complete feature (auto-runs verification + auto-commit)
-# Uses quick mode by default - runs only related tests based on testPattern
-agent-foreman complete <feature_id>
+## Priority Order (Auto-Selected)
 
-# Full mode - run all tests (slower, for final verification)
-agent-foreman complete <feature_id> --full
-
-# Skip verification (not recommended)
-agent-foreman complete <feature_id> --skip-verify
-
-# Add notes when completing
-agent-foreman complete <feature_id> --notes "Added extra validation"
-```
-
-## Test Pattern Auto-Generation
-
-During `agent-foreman init`, each feature automatically gets a `testPattern` field based on its module:
-
-```json
-{
-  "id": "auth.login",
-  "module": "auth",
-  "testPattern": "tests/auth/**/*.test.*"  // Auto-generated
-}
-```
-
-This enables quick mode to run only related tests, making verification faster.
+1. `needs_review` → may be broken (highest)
+2. `failing` → not implemented
+3. Lower `priority` number

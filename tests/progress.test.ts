@@ -872,4 +872,308 @@ describe("progress indicators", () => {
     });
   });
 
+  describe("TTY mode coverage - Spinner render()", () => {
+    let originalIsTTY: boolean | undefined;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      originalIsTTY = process.stdout.isTTY;
+      // Force TTY mode
+      Object.defineProperty(process.stdout, "isTTY", {
+        value: true,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      // Restore original value
+      Object.defineProperty(process.stdout, "isTTY", {
+        value: originalIsTTY,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it("should render spinner frames in TTY mode", () => {
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const spinner = new Spinner("Loading data");
+      spinner.start();
+
+      // Advance time to trigger multiple render cycles
+      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
+
+      spinner.stop();
+
+      // Verify stdout.write was called with spinner frames
+      expect(mockWrite).toHaveBeenCalled();
+      const calls = mockWrite.mock.calls.map(c => String(c[0]));
+      const hasSpinnerOutput = calls.some(c => c.includes("Loading data"));
+      expect(hasSpinnerOutput).toBe(true);
+
+      mockWrite.mockRestore();
+    });
+
+    it("should update spinner message in TTY mode", () => {
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const spinner = new Spinner("Initial");
+      spinner.start();
+
+      // Update should not call console.log in TTY mode
+      spinner.update("Updated message");
+
+      vi.advanceTimersByTime(100);
+
+      spinner.stop();
+
+      mockWrite.mockRestore();
+    });
+
+    it("should render with time format in TTY mode", () => {
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const spinner = new Spinner("Long task");
+      spinner.start();
+
+      // Advance time by 65 seconds to get minute format
+      vi.advanceTimersByTime(65000);
+
+      spinner.succeed("Completed");
+
+      const calls = mockWrite.mock.calls.map(c => String(c[0])).join("");
+      // Should have time format like "1m 5s"
+      expect(calls).toMatch(/\d+m.*\d+s|\d+s/);
+
+      mockWrite.mockRestore();
+    });
+  });
+
+  describe("TTY mode coverage - StepProgress", () => {
+    let originalIsTTY: boolean | undefined;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      originalIsTTY = process.stdout.isTTY;
+      Object.defineProperty(process.stdout, "isTTY", {
+        value: true,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      Object.defineProperty(process.stdout, "isTTY", {
+        value: originalIsTTY,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it("should use Spinner in TTY mode and call succeed on completeStep(true)", () => {
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const progress = new StepProgress(["Step 1", "Step 2", "Step 3"]);
+      progress.start();
+
+      // Complete with success - should call stepSpinner.succeed()
+      progress.completeStep(true);
+
+      const calls = mockWrite.mock.calls.map(c => String(c[0])).join("");
+      // Should have success checkmark
+      expect(calls).toContain("✓");
+
+      progress.complete();
+      mockWrite.mockRestore();
+    });
+
+    it("should call fail on completeStep(false) in TTY mode", () => {
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const progress = new StepProgress(["Step 1", "Step 2"]);
+      progress.start();
+
+      // Complete with failure - should call stepSpinner.fail()
+      progress.completeStep(false);
+
+      const calls = mockWrite.mock.calls.map(c => String(c[0])).join("");
+      // Should have failure X mark
+      expect(calls).toContain("✗");
+
+      progress.complete();
+      mockWrite.mockRestore();
+    });
+
+    it("should call warn on warnStep() in TTY mode", () => {
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const progress = new StepProgress(["Step 1", "Step 2"]);
+      progress.start();
+
+      // Warn step - should call stepSpinner.warn()
+      progress.warnStep();
+
+      const calls = mockWrite.mock.calls.map(c => String(c[0])).join("");
+      // Should have warning symbol
+      expect(calls).toContain("⚠");
+
+      progress.complete();
+      mockWrite.mockRestore();
+    });
+
+    it("should call stop on complete() in TTY mode", () => {
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const progress = new StepProgress(["Step 1", "Step 2"]);
+      progress.start();
+
+      // Advance time
+      vi.advanceTimersByTime(100);
+
+      // Complete should stop the spinner
+      progress.complete();
+
+      // Verify stop was called (clears line)
+      const calls = mockWrite.mock.calls.map(c => String(c[0]));
+      const hasClearLine = calls.some(c => c.includes("\r"));
+      expect(hasClearLine).toBe(true);
+
+      mockWrite.mockRestore();
+    });
+
+    it("should not show overview in TTY mode", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const progress = new StepProgress(["Step A", "Step B"]);
+      progress.start();
+
+      // In TTY mode, showOverview should not log to console
+      const logCalls = mockLog.mock.calls.map(c => String(c[0])).join("");
+      expect(logCalls).not.toContain("Verification steps");
+
+      progress.complete();
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+  });
+
+  describe("TTY mode coverage - ProgressBar", () => {
+    let originalIsTTY: boolean | undefined;
+
+    beforeEach(() => {
+      originalIsTTY = process.stdout.isTTY;
+      Object.defineProperty(process.stdout, "isTTY", {
+        value: true,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    afterEach(() => {
+      Object.defineProperty(process.stdout, "isTTY", {
+        value: originalIsTTY,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it("should render progress bar to stdout.write in TTY mode", () => {
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const bar = new ProgressBar("Processing", 10);
+      bar.start();
+      bar.update(5);
+      bar.complete("Done");
+
+      const calls = mockWrite.mock.calls.map(c => String(c[0])).join("");
+      // Should have progress bar characters
+      expect(calls).toContain("█");
+      expect(calls).toContain("░");
+
+      mockWrite.mockRestore();
+    });
+
+    it("should show percentage in TTY mode", () => {
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const bar = new ProgressBar("Task", 4);
+      bar.start();
+      bar.update(2);
+      bar.complete();
+
+      const calls = mockWrite.mock.calls.map(c => String(c[0])).join("");
+      expect(calls).toMatch(/50%|100%/);
+
+      mockWrite.mockRestore();
+    });
+  });
+
+  describe("Edge cases for Spinner stopped state", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should not start if already stopped", () => {
+      const mockLog = vi.spyOn(console, "log").mockImplementation(() => {});
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const spinner = new Spinner("Test");
+      spinner.start();
+      spinner.stop();
+
+      // Try to start again - should not start
+      const logCountBefore = mockLog.mock.calls.length;
+      const writeCountBefore = mockWrite.mock.calls.length;
+
+      spinner.start();
+
+      // Should not have logged/written anything new
+      expect(mockLog.mock.calls.length).toBe(logCountBefore);
+      expect(mockWrite.mock.calls.length).toBe(writeCountBefore);
+
+      mockLog.mockRestore();
+      mockWrite.mockRestore();
+    });
+
+    it("should not render if stopped", () => {
+      const originalIsTTY = process.stdout.isTTY;
+      Object.defineProperty(process.stdout, "isTTY", {
+        value: true,
+        writable: true,
+        configurable: true,
+      });
+
+      const mockWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      const spinner = new Spinner("Test");
+      spinner.start();
+      spinner.stop();
+
+      const writeCountAfterStop = mockWrite.mock.calls.length;
+
+      // Advance timers - render should not be called
+      vi.advanceTimersByTime(200);
+
+      // Write count should not increase
+      expect(mockWrite.mock.calls.length).toBe(writeCountAfterStop);
+
+      mockWrite.mockRestore();
+      Object.defineProperty(process.stdout, "isTTY", {
+        value: originalIsTTY,
+        writable: true,
+        configurable: true,
+      });
+    });
+  });
+
 });

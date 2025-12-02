@@ -581,6 +581,88 @@ describe("Test Discovery", () => {
 
       expect(result).toBe("make test");
     });
+
+    // pnpm support
+    it("should append pattern to pnpm test commands", () => {
+      const caps = createMockCapabilities({
+        testFramework: undefined,
+        testCommand: "pnpm test",
+      });
+
+      const result = buildSelectiveTestCommand(caps, "auth", defaultDiscovery);
+
+      expect(result).toBe('pnpm test -- "auth"');
+    });
+
+    // yarn support
+    it("should append pattern to yarn test commands", () => {
+      const caps = createMockCapabilities({
+        testFramework: undefined,
+        testCommand: "yarn test",
+      });
+
+      const result = buildSelectiveTestCommand(caps, "auth", defaultDiscovery);
+
+      expect(result).toBe('yarn test "auth"');
+    });
+
+    // bun support
+    it("should append pattern to bun test commands", () => {
+      const caps = createMockCapabilities({
+        testFramework: undefined,
+        testCommand: "bun test",
+      });
+
+      const result = buildSelectiveTestCommand(caps, "auth", defaultDiscovery);
+
+      expect(result).toBe('bun test "auth"');
+    });
+
+    // AI-discovered selective templates
+    it("should use testInfo.selectiveFileTemplate when test files are found", () => {
+      const caps = {
+        ...createMockCapabilities({ testFramework: "custom" }),
+        testInfo: {
+          selectiveFileTemplate: "custom-runner --files {files}",
+          selectiveNameTemplate: "custom-runner --name {pattern}",
+        },
+      };
+      const discovery: TestDiscoveryResult = {
+        ...defaultDiscovery,
+        testFiles: ["tests/a.test.ts", "tests/b.test.ts"],
+      };
+
+      const result = buildSelectiveTestCommand(caps, "auth", discovery);
+
+      expect(result).toBe("custom-runner --files tests/a.test.ts tests/b.test.ts");
+    });
+
+    it("should use testInfo.selectiveNameTemplate when no test files", () => {
+      const caps = {
+        ...createMockCapabilities({ testFramework: "custom" }),
+        testInfo: {
+          selectiveFileTemplate: "custom-runner --files {files}",
+          selectiveNameTemplate: "custom-runner --name {pattern}",
+        },
+      };
+
+      const result = buildSelectiveTestCommand(caps, "auth", defaultDiscovery);
+
+      expect(result).toBe("custom-runner --name auth");
+    });
+
+    it("should fall back to hardcoded when testInfo templates are missing", () => {
+      const caps = {
+        ...createMockCapabilities({ testFramework: "jest" }),
+        testInfo: {
+          // No templates defined
+        },
+      };
+
+      const result = buildSelectiveTestCommand(caps, "auth", defaultDiscovery);
+
+      expect(result).toBe('npx jest --testPathPattern "auth"');
+    });
   });
 
   // ==========================================================================
@@ -751,6 +833,22 @@ describe("E2E Test Command Building", () => {
       const result = buildE2ECommand(e2eInfo, ["@smoke"], "tags");
       expect(result).toBe('npm run e2e --grep "@smoke"');
     });
+
+    it("should build Puppeteer command with jest pattern", () => {
+      const e2eInfo = createMockE2EInfo({
+        framework: "puppeteer",
+        command: "npx jest e2e",
+        grepTemplate: undefined,
+      });
+      const result = buildE2ECommand(e2eInfo, ["@feature-login"], "tags");
+      expect(result).toBe('npx jest --testPathPattern "e2e" --testNamePattern "@feature-login"');
+    });
+
+    it("should handle mode being undefined by using default tags mode", () => {
+      const e2eInfo = createMockE2EInfo();
+      const result = buildE2ECommand(e2eInfo, ["@critical"]);
+      expect(result).toBe('npx playwright test --grep "@critical"');
+    });
   });
 
   describe("getE2ETagsForFeature", () => {
@@ -785,6 +883,12 @@ describe("E2E Test Command Building", () => {
 
     it("should return smoke when testMode is quick and feature has no e2eTags", () => {
       const result = determineE2EMode("quick", false);
+      expect(result).toBe("smoke");
+    });
+
+    it("should return smoke for unknown testMode as default", () => {
+      // TypeScript won't allow invalid values, but runtime could have edge cases
+      const result = determineE2EMode("unknown" as unknown as "full" | "quick" | "skip", false);
       expect(result).toBe("smoke");
     });
   });

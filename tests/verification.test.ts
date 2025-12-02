@@ -20,6 +20,7 @@ import {
 
 import {
   buildVerificationPrompt,
+  buildQuickCheckPrompt,
   parseVerificationResponse,
   truncateDiffIntelligently,
   DEFAULT_MAX_DIFF_SIZE,
@@ -1401,6 +1402,274 @@ describe("Verification Store Migration", () => {
 
       const count = await migrateResultsJson(tempDir);
       expect(count).toBe(0);
+    });
+  });
+});
+
+// ============================================================================
+// Additional verification-prompts.ts coverage tests
+// ============================================================================
+
+describe("verification-prompts additional coverage", () => {
+  describe("buildQuickCheckPrompt", () => {
+    it("should build a simplified prompt for quick verification", () => {
+      const feature: Feature = {
+        id: "quick.test",
+        description: "Quick test feature",
+        module: "test",
+        priority: 1,
+        status: "failing",
+        acceptance: ["Criterion A", "Criterion B"],
+        dependsOn: [],
+        supersedes: [],
+        tags: [],
+        version: 1,
+        origin: "manual",
+        notes: "",
+      };
+      const diff = "diff content here";
+
+      const prompt = buildQuickCheckPrompt(feature, diff);
+
+      expect(prompt).toContain("quick.test");
+      expect(prompt).toContain("Quick test feature");
+      expect(prompt).toContain("1. Criterion A");
+      expect(prompt).toContain("2. Criterion B");
+      expect(prompt).toContain("diff content here");
+      expect(prompt).toContain("verdict");
+      expect(prompt).toContain("criteriaResults");
+    });
+
+    it("should truncate long diffs to 3000 characters", () => {
+      const feature: Feature = {
+        id: "quick.test",
+        description: "Quick test feature",
+        module: "test",
+        priority: 1,
+        status: "failing",
+        acceptance: ["Criterion"],
+        dependsOn: [],
+        supersedes: [],
+        tags: [],
+        version: 1,
+        origin: "manual",
+        notes: "",
+      };
+      // Create a diff longer than 3000 characters
+      const longDiff = "a".repeat(5000);
+
+      const prompt = buildQuickCheckPrompt(feature, longDiff);
+
+      expect(prompt).toContain("... (truncated)");
+      // Should not contain the full diff
+      expect(prompt).not.toContain("a".repeat(5000));
+    });
+
+    it("should not truncate short diffs", () => {
+      const feature: Feature = {
+        id: "quick.test",
+        description: "Quick test feature",
+        module: "test",
+        priority: 1,
+        status: "failing",
+        acceptance: ["Criterion"],
+        dependsOn: [],
+        supersedes: [],
+        tags: [],
+        version: 1,
+        origin: "manual",
+        notes: "",
+      };
+      const shortDiff = "short diff";
+
+      const prompt = buildQuickCheckPrompt(feature, shortDiff);
+
+      expect(prompt).not.toContain("truncated");
+      expect(prompt).toContain("short diff");
+    });
+  });
+
+  describe("parseVerificationResponse - error handling", () => {
+    it("should log warning and return default when JSON parse fails", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      // Valid JSON structure but will cause error during parsing/validation
+      // when JSON.parse throws due to malformed JSON
+      const malformedJson = '{"criteriaResults": [{"index": 0';  // incomplete JSON
+
+      const result = parseVerificationResponse(malformedJson, ["Criterion 1"]);
+
+      expect(result.verdict).toBe("needs_review");
+      expect(result.criteriaResults[0].satisfied).toBe(false);
+      expect(result.criteriaResults[0].reasoning).toContain("Failed to parse");
+      expect(warnSpy).toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+    });
+
+    it("should return needs_review when response contains invalid JSON structure", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      // JSON that parses but throws during processing
+      const invalidStructure = '{"not": "the expected structure"}';
+
+      const result = parseVerificationResponse(invalidStructure, ["Criterion 1"]);
+
+      // Should still return a valid result with defaults
+      expect(result.criteriaResults).toHaveLength(1);
+      expect(result.verdict).toBe("needs_review");
+
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe("buildVerificationPrompt - related files", () => {
+    it("should include related file contents when provided", () => {
+      const feature: Feature = {
+        id: "test.feature",
+        description: "Test feature",
+        module: "test",
+        priority: 1,
+        status: "failing",
+        acceptance: ["Criterion"],
+        dependsOn: [],
+        supersedes: [],
+        tags: [],
+        version: 1,
+        origin: "manual",
+        notes: "",
+      };
+
+      const relatedFiles = new Map<string, string>();
+      relatedFiles.set("src/utils.ts", "export function helper() { return true; }");
+      relatedFiles.set("src/types.ts", "export type MyType = string;");
+
+      const prompt = buildVerificationPrompt(
+        feature,
+        "diff",
+        [],
+        [],
+        relatedFiles
+      );
+
+      expect(prompt).toContain("Related Files");
+      expect(prompt).toContain("src/utils.ts");
+      expect(prompt).toContain("src/types.ts");
+      expect(prompt).toContain("export function helper");
+      expect(prompt).toContain("export type MyType");
+    });
+
+    it("should truncate very long related file contents", () => {
+      const feature: Feature = {
+        id: "test.feature",
+        description: "Test feature",
+        module: "test",
+        priority: 1,
+        status: "failing",
+        acceptance: ["Criterion"],
+        dependsOn: [],
+        supersedes: [],
+        tags: [],
+        version: 1,
+        origin: "manual",
+        notes: "",
+      };
+
+      const relatedFiles = new Map<string, string>();
+      const longContent = "x".repeat(6000);  // More than 5000 chars
+      relatedFiles.set("src/big-file.ts", longContent);
+
+      const prompt = buildVerificationPrompt(
+        feature,
+        "diff",
+        [],
+        [],
+        relatedFiles
+      );
+
+      expect(prompt).toContain("... (truncated)");
+      // Should not contain the full content
+      expect(prompt).not.toContain("x".repeat(6000));
+    });
+
+    it("should not include related files section when empty", () => {
+      const feature: Feature = {
+        id: "test.feature",
+        description: "Test feature",
+        module: "test",
+        priority: 1,
+        status: "failing",
+        acceptance: ["Criterion"],
+        dependsOn: [],
+        supersedes: [],
+        tags: [],
+        version: 1,
+        origin: "manual",
+        notes: "",
+      };
+
+      const emptyFiles = new Map<string, string>();
+
+      const prompt = buildVerificationPrompt(
+        feature,
+        "diff",
+        [],
+        [],
+        emptyFiles
+      );
+
+      expect(prompt).not.toContain("Related Files");
+    });
+  });
+
+  describe("formatAutomatedChecks edge cases", () => {
+    it("should handle checks without duration", () => {
+      const feature: Feature = {
+        id: "test.feature",
+        description: "Test",
+        module: "test",
+        priority: 1,
+        status: "failing",
+        acceptance: ["Criterion"],
+        dependsOn: [],
+        supersedes: [],
+        tags: [],
+        version: 1,
+        origin: "manual",
+        notes: "",
+      };
+
+      const checks: AutomatedCheckResult[] = [
+        { type: "test", success: true },  // No duration
+        { type: "build", success: true, duration: 5000 },
+      ];
+
+      const prompt = buildVerificationPrompt(feature, "diff", [], checks);
+
+      expect(prompt).toContain("TEST");
+      expect(prompt).toContain("BUILD");
+      expect(prompt).toContain("5000ms");
+    });
+
+    it("should handle empty checks array", () => {
+      const feature: Feature = {
+        id: "test.feature",
+        description: "Test",
+        module: "test",
+        priority: 1,
+        status: "failing",
+        acceptance: ["Criterion"],
+        dependsOn: [],
+        supersedes: [],
+        tags: [],
+        version: 1,
+        origin: "manual",
+        notes: "",
+      };
+
+      const prompt = buildVerificationPrompt(feature, "diff", [], []);
+
+      expect(prompt).toContain("No automated checks were run");
     });
   });
 });

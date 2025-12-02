@@ -45,7 +45,7 @@ export interface VerificationCapabilities {
 /**
  * Types of automated checks that can be run
  */
-export type AutomatedCheckType = "test" | "typecheck" | "lint" | "build" | "e2e";
+export type AutomatedCheckType = "test" | "typecheck" | "lint" | "build" | "e2e" | "init-script";
 
 /**
  * Result of an automated check (test, lint, type check, or build)

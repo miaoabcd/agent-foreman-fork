@@ -142,6 +142,18 @@ async function runCheck(
   type: AutomatedCheckResult["type"],
   command: string
 ): Promise<AutomatedCheckResult> {
+  return runCheckWithEnv(cwd, type, command, {});
+}
+
+/**
+ * Run a single automated check with custom environment variables
+ */
+async function runCheckWithEnv(
+  cwd: string,
+  type: AutomatedCheckResult["type"],
+  command: string,
+  env: Record<string, string>
+): Promise<AutomatedCheckResult> {
   const startTime = Date.now();
 
   try {
@@ -149,6 +161,7 @@ async function runCheck(
       cwd,
       maxBuffer: 5 * 1024 * 1024,
       timeout: 300000, // 5 minute timeout
+      env: { ...process.env, ...env },
     });
 
     return {
@@ -194,6 +207,14 @@ export interface AutomatedCheckOptions {
    * - "skip": Skip E2E tests entirely
    */
   e2eMode?: E2ETestMode;
+  /**
+   * Use ai/init.sh check instead of direct commands
+   * When true, delegates all test orchestration to the generated shell script
+   * which implements quick mode, selective testing, and E2E tag filtering
+   */
+  useInitScript?: boolean;
+  /** Path to the init script (default: ai/init.sh) */
+  initScriptPath?: string;
 }
 
 /**
@@ -219,8 +240,74 @@ export async function runAutomatedChecks(
     e2eInfo,
     e2eTags = [],
     e2eMode: explicitE2EMode,
+    useInitScript = false,
+    initScriptPath,
   } = options;
   const results: AutomatedCheckResult[] = [];
+
+  // ========================================================================
+  // Init Script Mode: Delegate all checks to ai/init.sh
+  // ========================================================================
+  if (useInitScript) {
+    const scriptPath = initScriptPath || path.join(cwd, "ai/init.sh");
+
+    // Build command with appropriate flags
+    let command = `"${scriptPath}" check`;
+
+    // Add mode flags
+    if (testMode === "quick") {
+      command += " --quick";
+    } else if (testMode === "full") {
+      command += " --full";
+    }
+
+    if (skipE2E) {
+      command += " --skip-e2e";
+    }
+
+    // Add test pattern if selective testing
+    if (testMode === "quick" && testDiscovery?.pattern) {
+      command += ` "${testDiscovery.pattern}"`;
+    }
+
+    // Prepare environment variables
+    const env: Record<string, string> = {};
+    if (e2eTags.length > 0) {
+      env.E2E_TAGS = e2eTags.join(",");
+    }
+
+    // Log init script mode
+    const modeLabel = testMode === "quick" ? "quick" : testMode === "full" ? "full" : "default";
+    if (verbose) {
+      console.log(chalk.blue(`   Using init.sh check (${modeLabel} mode)`));
+      if (testDiscovery?.pattern) {
+        console.log(chalk.gray(`   Test pattern: ${testDiscovery.pattern}`));
+      }
+      if (e2eTags.length > 0) {
+        console.log(chalk.gray(`   E2E_TAGS: ${e2eTags.join(",")}`));
+      }
+    }
+
+    // Create progress bar for init script
+    const progressBar = createProgressBar("Running init.sh check", 1);
+    progressBar.start();
+    progressBar.update(0, `Running init.sh check (${modeLabel})`);
+
+    const result = await runCheckWithEnv(cwd, "init-script", command, env);
+    results.push(result);
+
+    if (result.success) {
+      progressBar.complete("init.sh check passed");
+    } else {
+      progressBar.complete("init.sh check failed");
+    }
+
+    return results;
+  }
+
+  // ========================================================================
+  // Direct Command Mode: Run individual checks
+  // ========================================================================
 
   // Collect checks to run
   const checks: Array<{ type: AutomatedCheckResult["type"]; command: string; name: string }> = [];
@@ -590,6 +677,19 @@ export async function verifyFeature(
     const capabilities = await detectCapabilities(cwd, { verbose });
     stepProgress.completeStep(true);
 
+    // Check if ai/init.sh exists for init script mode
+    const initScriptPath = path.join(cwd, "ai/init.sh");
+    let useInitScript = false;
+    try {
+      await fs.access(initScriptPath);
+      useInitScript = true;
+      if (verbose) {
+        console.log(chalk.gray(`   Found ai/init.sh - using init script mode`));
+      }
+    } catch {
+      // Init script doesn't exist, use direct command mode
+    }
+
     // Handle selective testing for quick mode
     let selectiveTestCommand: string | null = null;
     let testDiscovery: TestDiscoveryResult | undefined;
@@ -625,6 +725,8 @@ export async function verifyFeature(
       e2eInfo: capabilities.e2eInfo,
       e2eTags,
       e2eMode,
+      useInitScript,
+      initScriptPath,
     });
     const allPassed = automatedResults.every((r) => r.success);
     stepProgress.completeStep(allPassed);
@@ -969,7 +1071,31 @@ export async function verifyFeatureAutonomous(
     const capabilities = await detectCapabilities(cwd, { verbose });
     stepProgress.completeStep(true);
 
-    automatedResults = await runAutomatedChecks(cwd, capabilities, verbose);
+    // Check if ai/init.sh exists for init script mode
+    const initScriptPath = path.join(cwd, "ai/init.sh");
+    let useInitScript = false;
+    try {
+      await fs.access(initScriptPath);
+      useInitScript = true;
+      if (verbose) {
+        console.log(chalk.gray(`   Found ai/init.sh - using init script mode`));
+      }
+    } catch {
+      // Init script doesn't exist, use direct command mode
+    }
+
+    // Get E2E tags from feature
+    const e2eTags = getE2ETagsForFeature(feature);
+
+    automatedResults = await runAutomatedChecks(cwd, capabilities, {
+      verbose,
+      testMode: options.testMode || "full",
+      skipE2E: options.skipE2E,
+      e2eTags,
+      e2eMode: options.e2eMode,
+      useInitScript,
+      initScriptPath,
+    });
     const allPassed = automatedResults.every((r) => r.success);
     stepProgress.completeStep(allPassed);
   }

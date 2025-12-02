@@ -65,6 +65,10 @@ function formatCheckType(type: string): string {
       return "Lint";
     case "build":
       return "Build";
+    case "e2e":
+      return "E2E Tests";
+    case "init-script":
+      return "Init Script Check";
     default:
       return type.charAt(0).toUpperCase() + type.slice(1);
   }

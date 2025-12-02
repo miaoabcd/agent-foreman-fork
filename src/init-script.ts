@@ -105,24 +105,25 @@ function buildE2ESection(e2eCommands: E2ECommands): string {
   const grepTemplate = e2eCommands.grepTemplate || `${baseCommand} --grep {tags}`;
 
   return `# Run E2E tests based on mode
+    # CI=true ensures Playwright runs in CI mode (no interactive prompts, proper exit codes)
     if [ "\$skip_e2e" = true ]; then
       log_info "E2E tests: skipped (--skip-e2e)"
     elif [ "\$full_mode" = true ]; then
       log_info "Running E2E tests (full)..."
-      if ! ${baseCommand}; then
+      if ! CI=true ${baseCommand}; then
         log_error "E2E tests failed"
         e2e_exit_code=1
       fi
     elif [ -n "\$e2e_tags" ]; then
       log_info "Running E2E tests (tags: \$e2e_tags)..."
-      local e2e_cmd="${grepTemplate.replace("{tags}", "\\$e2e_tags")}"
+      local e2e_cmd="CI=true ${grepTemplate.replace("{tags}", "\\$e2e_tags")}"
       if ! eval "\$e2e_cmd"; then
         log_error "E2E tests failed"
         e2e_exit_code=1
       fi
     else
       log_info "Running E2E tests (@smoke)..."
-      if ! ${grepTemplate.replace("{tags}", "@smoke")}; then
+      if ! CI=true ${grepTemplate.replace("{tags}", "@smoke")}; then
         log_error "E2E tests failed"
         e2e_exit_code=1
       fi

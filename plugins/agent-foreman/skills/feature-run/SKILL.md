@@ -1,13 +1,44 @@
 ---
 name: feature-run
-description: Automatically complete all pending features from the feature list in priority order
+description: Work on features - auto-complete all pending features or work on a specific one
 ---
 
 # 🔄 Feature Run
 
-**Loop**: `status → step → implement → complete → repeat`
+**Mode**: Work on all features or a specific one
 
-## EXECUTE THIS LOOP
+## Mode Detection
+
+**If feature_id provided** (e.g., `feature-run auth.login`):
+- Work on that specific feature only
+- Complete it and stop
+
+**If no feature_id** (e.g., `feature-run`):
+- Auto-complete all pending features
+- Loop until all done
+
+---
+
+## Single Feature Mode
+
+When feature_id is provided:
+
+```bash
+# STEP 1: Get the specified feature
+agent-foreman next <feature_id>
+
+# STEP 2: Implement (satisfy ALL acceptance criteria)
+# ... write code ...
+
+# STEP 3: Verify + commit
+agent-foreman done <feature_id>
+```
+
+---
+
+## All Features Mode
+
+When no feature_id:
 
 ```bash
 # STEP 1: Check remaining features
@@ -28,12 +59,14 @@ agent-foreman done <feature_id>
 # - Verification failed? → STOP
 ```
 
+---
+
 ## Rules
 
 | Rule | Description |
 |------|-------------|
 | One at a time | Complete current before next |
-| No skipping | Always status → step → complete |
+| No skipping | Always status → next → implement → done |
 | No editing criteria | Implement as specified |
 | Never kill processes | Let commands finish naturally |
 
@@ -46,5 +79,6 @@ agent-foreman done <feature_id>
 ## Exit When
 
 - ✅ All features `passing` or `deprecated`
+- ✅ Single feature completed (when feature_id provided)
 - ❌ Verification fails
 - ⏹️ User interrupts

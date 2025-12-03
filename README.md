@@ -66,11 +66,6 @@ agent-foreman is designed as a **Claude Code plugin**. This is the recommended w
 /agent-foreman:init Build a REST API for user management
 ```
 
-**Another example:**
-```
-/agent-foreman:init Create an e-commerce backend API
-```
-
 **Check status and work on features:**
 ```
 /agent-foreman:status

@@ -66,11 +66,6 @@ agent-foreman 设计为 **Claude Code 插件**，这是推荐的使用方式。
 /agent-foreman:init 搭建一个用户管理 REST API
 ```
 
-**另一个示例：**
-```
-/agent-foreman:init 搭建一个电商后端 API
-```
-
 **查看状态并开始工作：**
 ```
 /agent-foreman:status

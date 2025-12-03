@@ -1,0 +1,41 @@
+---
+description: Show current project status with feature completion and recent activity
+---
+
+# EXECUTE NOW
+
+Run this command immediately:
+
+```bash
+agent-foreman status
+```
+
+Wait for completion. Review the status shown.
+
+## If User Specifies Options
+
+| User Says | Execute |
+|-----------|---------|
+| "json" / "as json" | `agent-foreman status --json` |
+| "quiet" / "minimal" | `agent-foreman status --quiet` |
+| (default) | `agent-foreman status` |
+
+## Status Output
+
+The command displays:
+- **Project goal** - What the project aims to achieve
+- **Feature counts** - Passing, failing, blocked, needs_review, deprecated
+- **Completion percentage** - Visual progress bar
+- **Recent activity** - Latest entries from progress log
+
+## Feature Status Indicators
+
+| Symbol | Status | Meaning |
+|--------|--------|---------|
+| ✓ | Passing | Acceptance criteria met |
+| ✗ | Failing | Not yet implemented |
+| ⚠ | Needs Review | May be affected by changes |
+| ⏸ | Blocked | External dependency blocking |
+| ⊘ | Deprecated | No longer needed |
+
+**Note:** Read-only operation. No code changes. No commits.

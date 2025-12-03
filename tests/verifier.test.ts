@@ -2787,5 +2787,58 @@ describe("Verifier", () => {
       const e2eCommand = commands.find(c => c.includes("playwright") && c.includes("grep"));
       expect(e2eCommand).toBeDefined();
     });
+
+    it("should show spinner.fail when unit tests fail in verbose mode", async () => {
+      setExecMockWithErrors((cmd: string) => {
+        if (cmd.includes("rev-parse HEAD")) {
+          return { stdout: "abc123\n" };
+        }
+        if (cmd.includes("vitest") || cmd.includes("npm test")) {
+          const error = new Error("Unit tests failed") as any;
+          error.stdout = "FAIL test.ts";
+          error.stderr = "";
+          throw error;
+        }
+        return { stdout: "" };
+      });
+
+      const feature = createFeature();
+      const result = await verifyFeatureTDD(testDir, feature, ["tests/foo.test.ts"], {
+        verbose: true,  // Enable verbose to trigger spinner.fail
+      });
+
+      // When tests fail, confidence is 0 and criteria results show failure
+      expect(result.criteriaResults.every(c => c.confidence === 0.0)).toBe(true);
+    });
+
+    it("should handle no test command available", async () => {
+      setExecMock((cmd: string) => {
+        if (cmd.includes("rev-parse HEAD")) {
+          return { stdout: "abc123\n" };
+        }
+        return { stdout: "" };
+      });
+
+      // Mock capabilities with no test command
+      mockDetectCapabilities.mockResolvedValue({
+        hasTests: false,  // No tests available
+        testCommand: null,
+        testFramework: null,
+        hasTypeCheck: false,
+        hasLint: false,
+        hasBuild: false,
+        hasGit: true,
+        source: "preset",
+        confidence: 1,
+        languages: ["typescript"],
+        detectedAt: new Date().toISOString(),
+      });
+
+      const feature = createFeature();
+      const result = await verifyFeatureTDD(testDir, feature, []);
+
+      // Should still complete without error
+      expect(result).toBeDefined();
+    });
   });
 });

@@ -286,7 +286,7 @@ agent-foreman 采用 **TDD (测试驱动开发)** 理念：先定义验收标准
 │                                   │                         │           │
 │                                   ▼                         │           │
 │                  ┌──────────────────────────────────────┐  │           │
-│                  │  complete <id>                        │  │           │
+│                  │  done <id>                            │  │           │
 │                  │  - 运行测试 (验证 GREEN)              │  │           │
 │                  │  - AI 验证验收标准                    │  │           │
 │                  │  - 自动提交 (REFACTOR 可选)           │  │           │
@@ -319,7 +319,7 @@ agent-foreman 采用 **TDD (测试驱动开发)** 理念：先定义验收标准
 | 初始化 | `init <goal>` | 生成框架和功能列表 |
 | 开发 | `status` | 查看当前进度 |
 | 开发 | `next` | 获取下一个优先任务 (RED) |
-| 开发 | `complete <id>` | 验证 + 提交 (GREEN → REFACTOR) |
+| 开发 | `done <id>` | 验证 + 提交 (GREEN → REFACTOR) |
 | 调试 | `impact <id>` | 检查可能受影响的功能 |
 
 ---
@@ -333,12 +333,12 @@ agent-foreman 采用 **TDD (测试驱动开发)** 理念：先定义验收标准
 | `next` | 显示下一个要做的任务 |
 | `status` | 查看项目进度 |
 | `impact <feature_id>` | 分析改动的影响范围 |
-| `complete <feature_id>` | 验证 + 标记完成 + 自动提交 |
+| `done <feature_id>` | 验证 + 标记完成 + 自动提交 |
 | `check <feature_id>` | 只验证不完成 |
 | `agents` | 查看可用的 AI 代理 |
 | `detect-capabilities` | 检测项目的验证能力 |
 
-### complete 命令选项
+### done 命令选项
 
 | 参数 | 说明 |
 |------|------|

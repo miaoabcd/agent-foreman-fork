@@ -291,7 +291,7 @@ agent-foreman next --check              # Run tests first
 agent-foreman next -d                   # Dry run
 ```
 
-### `complete <feature_id>`
+### `done <feature_id>`
 
 Mark a feature as complete with AI verification.
 
@@ -427,7 +427,7 @@ agent-foreman agents
 │             ↓                                                │
 │    ┌──────────────────┐                                     │
 │    │ agent-foreman    │                                     │
-│    │   complete <id>  │  ← Verify + update status + commit  │
+│    │   done <id>      │  ← Verify + update status + commit  │
 │    └────────┬─────────┘                                     │
 │             │                                                │
 │             └──────────→ Loop back to step                  │

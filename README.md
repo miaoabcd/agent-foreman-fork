@@ -290,7 +290,7 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 │                                   │                         │           │
 │                                   ▼                         │           │
 │                  ┌──────────────────────────────────────┐  │           │
-│                  │  complete <id>                        │  │           │
+│                  │  done <id>                            │  │           │
 │                  │  - Run tests (verify GREEN)           │  │           │
 │                  │  - AI validates acceptance            │  │           │
 │                  │  - Auto-commit (REFACTOR optional)    │  │           │
@@ -323,7 +323,7 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 | Setup | `init <goal>` | Generate harness with features |
 | Work | `status` | View current progress |
 | Work | `next` | Get next priority feature (RED) |
-| Work | `complete <id>` | Verify + commit (GREEN → REFACTOR) |
+| Work | `done <id>` | Verify + commit (GREEN → REFACTOR) |
 | Debug | `impact <id>` | Check what might be affected |
 
 ---
@@ -337,12 +337,12 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 | `next` | Show next feature to work on |
 | `status` | Show current project status |
 | `impact <feature_id>` | Analyze impact of changes |
-| `complete <feature_id>` | Verify, mark complete, and auto-commit |
+| `done <feature_id>` | Verify, mark complete, and auto-commit |
 | `check <feature_id>` | Preview verification without completing |
 | `agents` | Show available AI agents |
 | `detect-capabilities` | Detect project verification capabilities |
 
-### Complete Command Options
+### Done Command Options
 
 | Flag | Description |
 |------|-------------|

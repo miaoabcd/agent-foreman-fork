@@ -7,7 +7,7 @@ description: Analyze existing project structure and generate comprehensive surve
 Run this command immediately:
 
 ```bash
-agent-foreman survey
+agent-foreman analyze
 ```
 
 Wait for completion. Do not interrupt.
@@ -18,9 +18,9 @@ Output: `docs/PROJECT_SURVEY.md`
 
 | User Says | Execute |
 |-----------|---------|
-| Custom path provided | `agent-foreman survey <path>` |
-| "verbose" / "detailed" | `agent-foreman survey --verbose` |
-| (default) | `agent-foreman survey` |
+| Custom path provided | `agent-foreman analyze <path>` |
+| "verbose" / "detailed" | `agent-foreman analyze --verbose` |
+| (default) | `agent-foreman analyze` |
 
 ## After Completion
 

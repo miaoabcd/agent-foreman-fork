@@ -116,12 +116,6 @@ export interface Feature {
   /** Last verification result (optional) */
   verification?: FeatureVerificationSummary;
   /**
-   * Test pattern for selective test execution (optional)
-   * Glob pattern or test name pattern for running related tests only
-   * Examples: "tests/auth/**", "src/auth/*.test.ts", "--grep auth"
-   */
-  testPattern?: string;
-  /**
    * E2E test tags for selective E2E test execution (optional)
    * Array of Playwright test tags to filter E2E tests
    * Used with Playwright's --grep flag for tag-based filtering
@@ -144,6 +138,17 @@ export interface Feature {
    * Populated by the complete command after verification passes
    */
   testFiles?: string[];
+}
+
+/**
+ * Get the effective test pattern for a feature
+ * Uses testRequirements.unit.pattern if available
+ *
+ * @param feature - The feature to get test pattern from
+ * @returns Test pattern string or undefined
+ */
+export function getTestPattern(feature: Feature): string | undefined {
+  return feature.testRequirements?.unit?.pattern;
 }
 
 /**

@@ -1,16 +1,16 @@
 ---
-name: project-survey
+name: project-analyze
 description: Analyze existing projects to generate comprehensive survey reports
 ---
 
-# 🔍 Project Survey
+# 🔍 Project Analyze
 
-**One command**: `agent-foreman survey`
+**One command**: `agent-foreman analyze`
 
 ## Quick Start
 
 ```bash
-agent-foreman survey
+agent-foreman analyze
 ```
 
 Output: `docs/PROJECT_SURVEY.md`

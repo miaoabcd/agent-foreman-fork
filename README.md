@@ -103,7 +103,7 @@ Goal: Build a REST API for task management
 For projects with existing code:
 
 ```bash
-agent-foreman survey
+agent-foreman analyze
 agent-foreman init "Your project goal"
 ```
 
@@ -130,9 +130,9 @@ Use foreman to get the next task, implement it, and mark it complete.
 ```text
 Use foreman to check the project status, then continuously work through
 all tasks one by one until everything is complete. For each task:
-1. Run `agent-foreman step` to get the next task
+1. Run `agent-foreman next` to get the next task
 2. Implement the feature according to acceptance criteria
-3. Run `agent-foreman complete <feature_id>` to verify + mark done + auto-commit
+3. Run `agent-foreman done <feature_id>` to verify + mark done + auto-commit
 4. Repeat until all tasks are passing
 ```
 
@@ -222,9 +222,9 @@ I want you to act as an autonomous developer. Use the agent-foreman
 harness to continuously complete all remaining tasks:
 
 1. Check status with `agent-foreman status`
-2. Get next task with `agent-foreman step`
+2. Get next task with `agent-foreman next`
 3. Implement the feature completely
-4. Run `agent-foreman complete <id>` (auto-verifies + auto-commits)
+4. Run `agent-foreman done <id>` (auto-verifies + auto-commits)
 5. Loop back to step 2 until all tasks pass
 
 Do not stop until all features are passing. Ask me only if you
@@ -318,11 +318,11 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 **Key Commands:**
 | Phase | Command | Purpose |
 |-------|---------|---------|
-| Setup | `survey` | Analyze existing project structure |
+| Setup | `analyze` | Analyze existing project structure |
 | Setup | `detect-capabilities` | Auto-detect build/test/lint tools |
 | Setup | `init <goal>` | Generate harness with features |
 | Work | `status` | View current progress |
-| Work | `step` | Get next priority feature (RED) |
+| Work | `next` | Get next priority feature (RED) |
 | Work | `complete <id>` | Verify + commit (GREEN → REFACTOR) |
 | Debug | `impact <id>` | Check what might be affected |
 
@@ -332,9 +332,9 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 
 | Command | Description |
 |---------|-------------|
-| `survey` | Generate project survey report |
+| `analyze` | Generate project survey report |
 | `init <goal>` | Initialize or upgrade the harness |
-| `step` | Show next feature to work on |
+| `next` | Show next feature to work on |
 | `status` | Show current project status |
 | `impact <feature_id>` | Analyze impact of changes |
 | `complete <feature_id>` | Verify, mark complete, and auto-commit |

@@ -98,9 +98,9 @@ Install the plugin and try this:
 "I want you to act as an autonomous developer. Use the agent-foreman harness to continuously complete all remaining tasks:
 
 1. Check status with agent-foreman status
-2. Get next task with agent-foreman step
+2. Get next task with agent-foreman next
 3. Implement the feature completely
-4. Verify and mark complete with agent-foreman complete <id> (auto-runs tests)
+4. Verify and mark complete with agent-foreman done <id> (auto-runs tests)
 5. Commit the changes
 6. Loop back to step 2 until all tasks pass
 
@@ -230,9 +230,9 @@ Code Review → 验收标准
 "我希望你作为一个自主开发者。使用 agent-foreman 框架持续完成所有任务：
 
 1. 用 agent-foreman status 检查状态
-2. 用 agent-foreman step 获取下一个任务
+2. 用 agent-foreman next 获取下一个任务
 3. 完整实现功能
-4. 用 agent-foreman complete <id> 验证并标记完成（自动运行测试）
+4. 用 agent-foreman done <id> 验证并标记完成（自动运行测试）
 5. 提交更改
 6. 循环直到所有任务通过
 

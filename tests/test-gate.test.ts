@@ -195,8 +195,8 @@ describe("verifyTestFilesExist", () => {
     expect(result.foundTestFiles).toHaveLength(2);
   });
 
-  it("should use testPattern fallback when unit pattern not specified", async () => {
-    // Create test file matching testPattern
+  it("should use testRequirements.unit.pattern when specified", async () => {
+    // Create test file matching pattern
     await fs.mkdir(path.join(tempDir, "tests/auth"), { recursive: true });
     await fs.writeFile(
       path.join(tempDir, "tests/auth/login.test.ts"),
@@ -204,11 +204,10 @@ describe("verifyTestFilesExist", () => {
     );
 
     const feature = createFeature({
-      testPattern: "tests/auth/**/*.test.ts",
       testRequirements: {
         unit: {
           required: true,
-          // No pattern specified - should fall back to testPattern
+          pattern: "tests/auth/**/*.test.ts",
         },
       },
     });
@@ -365,7 +364,7 @@ describe("discoverFeatureTestFiles", () => {
     expect(files).toContain("e2e/auth/login.spec.ts");
   });
 
-  it("should discover files from legacy testPattern", async () => {
+  it("should discover files from testRequirements.unit.pattern", async () => {
     await fs.mkdir(path.join(tempDir, "tests/auth"), { recursive: true });
     await fs.writeFile(
       path.join(tempDir, "tests/auth/login.test.ts"),
@@ -373,7 +372,12 @@ describe("discoverFeatureTestFiles", () => {
     );
 
     const feature = createFeature({
-      testPattern: "tests/auth/**/*.test.ts",
+      testRequirements: {
+        unit: {
+          required: false,
+          pattern: "tests/auth/**/*.test.ts",
+        },
+      },
     });
 
     const files = await discoverFeatureTestFiles(tempDir, feature);
@@ -421,11 +425,14 @@ describe("discoverFeatureTestFiles", () => {
     );
 
     const feature = createFeature({
-      testPattern: "tests/auth/**/*.test.ts",
       testRequirements: {
         unit: {
           required: true,
-          pattern: "tests/auth/**/*.test.ts", // Same pattern
+          pattern: "tests/auth/**/*.test.ts",
+        },
+        e2e: {
+          required: false,
+          pattern: "tests/auth/**/*.test.ts", // Same pattern - should dedupe
         },
       },
     });

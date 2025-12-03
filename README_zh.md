@@ -103,7 +103,7 @@ agent-foreman init "搭建一个任务管理 REST API" --mode new
 给现有项目加上 foreman 管理：
 
 ```bash
-agent-foreman survey
+agent-foreman analyze
 agent-foreman init "你的项目目标"
 ```
 
@@ -129,9 +129,9 @@ agent-foreman init "你的项目目标"
 
 ```text
 用 foreman 检查项目状态，然后循环完成所有任务。每个任务：
-1. 执行 `agent-foreman step` 获取任务
+1. 执行 `agent-foreman next` 获取任务
 2. 按验收标准实现功能
-3. 执行 `agent-foreman complete <feature_id>` 验证并完成（自动提交）
+3. 执行 `agent-foreman done <feature_id>` 验证并完成（自动提交）
 4. 循环直到全部通过
 ```
 
@@ -220,9 +220,9 @@ agent-foreman init "你的项目目标"
 作为自主开发者，用 agent-foreman 持续完成所有待办任务：
 
 1. `agent-foreman status` 检查状态
-2. `agent-foreman step` 获取任务
+2. `agent-foreman next` 获取任务
 3. 完整实现功能
-4. `agent-foreman complete <id>` 验证完成（自动测试+提交）
+4. `agent-foreman done <id>` 验证完成（自动测试+提交）
 5. 回到步骤 2，直到全部通过
 
 除非遇到必须我介入的问题，否则不要停。
@@ -314,11 +314,11 @@ agent-foreman 采用 **TDD (测试驱动开发)** 理念：先定义验收标准
 **核心命令：**
 | 阶段 | 命令 | 用途 |
 |------|------|------|
-| 初始化 | `survey` | 分析现有项目结构 |
+| 初始化 | `analyze` | 分析现有项目结构 |
 | 初始化 | `detect-capabilities` | 自动检测构建/测试/检查工具 |
 | 初始化 | `init <goal>` | 生成框架和功能列表 |
 | 开发 | `status` | 查看当前进度 |
-| 开发 | `step` | 获取下一个优先任务 (RED) |
+| 开发 | `next` | 获取下一个优先任务 (RED) |
 | 开发 | `complete <id>` | 验证 + 提交 (GREEN → REFACTOR) |
 | 调试 | `impact <id>` | 检查可能受影响的功能 |
 
@@ -328,9 +328,9 @@ agent-foreman 采用 **TDD (测试驱动开发)** 理念：先定义验收标准
 
 | 命令 | 说明 |
 |------|------|
-| `survey` | 生成项目分析报告 |
+| `analyze` | 生成项目分析报告 |
 | `init <goal>` | 初始化或升级框架 |
-| `step` | 显示下一个要做的任务 |
+| `next` | 显示下一个要做的任务 |
 | `status` | 查看项目进度 |
 | `impact <feature_id>` | 分析改动的影响范围 |
 | `complete <feature_id>` | 验证 + 标记完成 + 自动提交 |

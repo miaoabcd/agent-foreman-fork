@@ -51,7 +51,7 @@ describe("Prompts", () => {
       expect(section).toContain("2. **Select**");
       expect(section).toContain("3. **Plan**");
       expect(section).toContain("4. **Implement**");
-      expect(section).toContain("5. **Complete**");
+      expect(section).toContain("5. **Done**");
       expect(section).toContain("6. **Log**");
       expect(section).toContain("7. **Next**");
     });
@@ -81,7 +81,7 @@ describe("Prompts", () => {
 
       expect(section).toContain("### Commands");
       expect(section).toContain("agent-foreman status");
-      expect(section).toContain("agent-foreman step");
+      expect(section).toContain("agent-foreman next");
       expect(section).toContain("agent-foreman impact");
       expect(section).toContain("./ai/init.sh bootstrap");
       expect(section).toContain("./ai/init.sh dev");
@@ -307,7 +307,7 @@ describe("Prompts", () => {
       expect(guidance).toContain("### Workflow");
       expect(guidance).toContain("1. Review acceptance criteria above");
       expect(guidance).toContain("2. Implement the feature");
-      expect(guidance).toContain("3. Run `agent-foreman complete");
+      expect(guidance).toContain("3. Run `agent-foreman done");
       expect(guidance).toContain("(auto-verifies + commits)");
     });
   });

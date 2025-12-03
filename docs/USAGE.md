@@ -75,7 +75,7 @@ The AI will automatically detect this is an empty project and generate 10-20 ini
 ### Step 3: Start Working on Features
 
 ```bash
-agent-foreman step
+agent-foreman next
 ```
 
 This shows external memory sync:
@@ -98,10 +98,10 @@ This shows external memory sync:
 After implementing a feature:
 
 ```bash
-agent-foreman complete <feature_id>
+agent-foreman done <feature_id>
 
 # Example
-agent-foreman complete api.users.create
+agent-foreman done api.users.create
 ```
 
 **Output (auto-commits by default):**
@@ -121,12 +121,12 @@ agent-foreman complete api.users.create
 
 ### Step 5: Continue to Next Task
 
-The `complete` command auto-commits, so just continue:
+The `done` command auto-commits, so just continue:
 
-> `complete` 命令会自动提交，直接继续即可：
+> `done` 命令会自动提交，直接继续即可：
 
 ```bash
-agent-foreman step      # See next task
+agent-foreman next      # See next task
 ```
 
 ### Step 6: (Optional) Generate Survey After Development
@@ -136,7 +136,7 @@ Once you have substantial code written, generate documentation:
 > 当你写了大量代码后，生成文档：
 
 ```bash
-agent-foreman survey
+agent-foreman analyze
 ```
 
 **Output:**
@@ -162,7 +162,7 @@ cd /path/to/existing-project
 AI will analyze your existing codebase:
 
 ```bash
-agent-foreman survey
+agent-foreman analyze
 ```
 
 This scans:
@@ -241,13 +241,13 @@ cat ai/feature_list.json
 
 ```bash
 # See next task with full context
-agent-foreman step
+agent-foreman next
 
 # Run tests before showing task
-agent-foreman step --check
+agent-foreman next --check
 
 # Work on specific feature
-agent-foreman step auth.login
+agent-foreman next auth.login
 ```
 
 ---
@@ -259,9 +259,9 @@ agent-foreman step auth.login
 Generate AI-powered project documentation.
 
 ```bash
-agent-foreman survey                    # Default: docs/PROJECT_SURVEY.md
-agent-foreman survey docs/ANALYSIS.md   # Custom output path
-agent-foreman survey -v                 # Verbose mode
+agent-foreman analyze                    # Default: docs/PROJECT_SURVEY.md
+agent-foreman analyze docs/ANALYSIS.md   # Custom output path
+agent-foreman analyze -v                 # Verbose mode
 ```
 
 ### `init [goal]`
@@ -285,10 +285,10 @@ agent-foreman init -v                   # Verbose mode
 Show external memory and next task.
 
 ```bash
-agent-foreman step                      # Next highest priority
-agent-foreman step cli.init             # Specific feature
-agent-foreman step --check              # Run tests first
-agent-foreman step -d                   # Dry run
+agent-foreman next                      # Next highest priority
+agent-foreman next cli.init             # Specific feature
+agent-foreman next --check              # Run tests first
+agent-foreman next -d                   # Dry run
 ```
 
 ### `complete <feature_id>`
@@ -296,8 +296,8 @@ agent-foreman step -d                   # Dry run
 Mark a feature as complete with AI verification.
 
 ```bash
-agent-foreman complete cli.survey
-agent-foreman complete cli.survey --notes "Added error handling"
+agent-foreman done cli.survey
+agent-foreman done cli.survey --notes "Added error handling"
 ```
 
 **Test mode options:**
@@ -326,13 +326,13 @@ agent-foreman complete cli.survey --notes "Added error handling"
 
 ```bash
 # Quick mode - runs only related tests (default, faster for large test suites)
-agent-foreman complete auth.login
+agent-foreman done auth.login
 
 # Full mode - runs all tests (for final verification)
-agent-foreman complete auth.login --full
+agent-foreman done auth.login --full
 
 # Explicit pattern - specify exact test files to run
-agent-foreman complete auth.login --test-pattern "tests/auth/*.test.ts"
+agent-foreman done auth.login --test-pattern "tests/auth/*.test.ts"
 ```
 
 **Auto-commits changes** with conventional commit message. Use `--no-commit` to disable.
@@ -349,9 +349,9 @@ agent-foreman status
 
 ### `check <feature_id>` (optional)
 
-Preview verification without completing. Useful for debugging - normally you can just use `complete` which auto-runs verification.
+Preview verification without completing. Useful for debugging - normally you can just use `done` which auto-runs verification.
 
-> 预览验证结果，不执行完成操作。用于调试 - 通常直接使用 `complete` 即可，它会自动运行验证。
+> 预览验证结果，不执行完成操作。用于调试 - 通常直接使用 `done` 即可，它会自动运行验证。
 
 ```bash
 agent-foreman check cli.survey
@@ -392,7 +392,7 @@ agent-foreman agents
 │                               + git commit (auto)            │
 │           ↓                                                  │
 │  (after coding)                                              │
-│  agent-foreman survey      →  docs/PROJECT_SURVEY.md        │
+│  agent-foreman analyze      →  docs/PROJECT_SURVEY.md        │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -400,7 +400,7 @@ agent-foreman agents
 ├─────────────────────────────────────────────────────────────┤
 │  cd existing-project                                         │
 │           ↓                                                  │
-│  agent-foreman survey     →  Analyzes existing code         │
+│  agent-foreman analyze     →  Analyzes existing code         │
 │                              docs/PROJECT_SURVEY.md          │
 │           ↓                                                  │
 │  agent-foreman init       →  Reads survey + generates       │
@@ -516,23 +516,23 @@ your-project/
 agent-foreman init "Build a user authentication system"
 ```
 
-**Existing project:** Start with `survey` to analyze existing code, then `init`.
+**Existing project:** Start with `analyze` to analyze existing code, then `init`.
 
-> **已有项目：** 先用 `survey` 分析现有代码，再用 `init`。
+> **已有项目：** 先用 `analyze` 分析现有代码，再用 `init`。
 
 ```bash
-agent-foreman survey   # ~45s AI scan of existing code
+agent-foreman analyze   # ~45s AI scan of existing code
 agent-foreman init     # Fast, reuses survey results
 ```
 
 ### 2. Automatic Commits
 
-The `complete` command auto-commits after successful verification:
+The `done` command auto-commits after successful verification:
 
-> `complete` 命令在验证成功后自动提交：
+> `done` 命令在验证成功后自动提交：
 
 ```bash
-agent-foreman complete api.users.create
+agent-foreman done api.users.create
 # Output: ✓ Changes committed: feat(api): Create user endpoint
 ```
 
@@ -547,7 +547,7 @@ Before starting new work, verify the environment is healthy.
 > 开始新工作前，验证环境是否健康。
 
 ```bash
-agent-foreman step --check
+agent-foreman next --check
 ```
 
 ### 4. Use Quick Mode for Faster Iterations
@@ -558,10 +558,10 @@ When working on features with large E2E test suites, use `--quick` mode to run o
 
 ```bash
 # During development - run only related tests
-agent-foreman complete auth.login --quick
+agent-foreman done auth.login --quick
 
 # Before release - run full test suite
-agent-foreman complete auth.login --full
+agent-foreman done auth.login --full
 ```
 
 **How selective testing works:**
@@ -602,7 +602,7 @@ If you significantly change the project structure:
 > 如果显著改变了项目结构：
 
 ```bash
-agent-foreman survey        # Re-scan
+agent-foreman analyze        # Re-scan
 agent-foreman init --mode merge  # Merge new features
 ```
 

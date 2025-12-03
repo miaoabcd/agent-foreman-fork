@@ -36,7 +36,7 @@ ${goal}
 2. **Select** - Pick the highest priority feature (\`needs_review\` > \`failing\`)
 3. **Plan** - Review acceptance criteria before coding
 4. **Implement** - Work on ONE feature at a time
-5. **Complete** - Run \`agent-foreman complete <feature_id>\` (auto-verifies + commits)
+5. **Done** - Run \`agent-foreman done <feature_id>\` (auto-verifies + commits)
 6. **Log** - Entry automatically added to progress log
 7. **Next** - Move to next feature or celebrate completion
 
@@ -70,26 +70,26 @@ Append entries to \`ai/progress.log\` using this **single-line format only**:
 agent-foreman status
 
 # Work on next priority feature
-agent-foreman step
+agent-foreman next
 
 # Work on specific feature
-agent-foreman step <feature_id>
+agent-foreman next <feature_id>
 
-# Complete feature (auto-runs verification + auto-commit)
-# Quick mode is default - runs only related tests based on testPattern
-agent-foreman complete <feature_id>
+# Mark feature as done (auto-runs verification + auto-commit)
+# Quick mode is default - runs only related tests based on testRequirements.unit.pattern
+agent-foreman done <feature_id>
 
 # Full mode - run all tests (slower, for final verification)
-agent-foreman complete <feature_id> --full
+agent-foreman done <feature_id> --full
 
 # Skip E2E tests (faster iterations)
-agent-foreman complete <feature_id> --skip-e2e
+agent-foreman done <feature_id> --skip-e2e
 
 # Skip auto-commit (manual commit)
-agent-foreman complete <feature_id> --no-commit
+agent-foreman done <feature_id> --no-commit
 
 # Skip verification (not recommended)
-agent-foreman complete <feature_id> --skip-verify
+agent-foreman done <feature_id> --skip-verify
 
 # Analyze impact of changes
 agent-foreman impact <feature_id>
@@ -143,7 +143,9 @@ Write criteria as testable statements:
       "version": 1,
       "origin": "manual",
       "notes": "",
-      "testPattern": "tests/module/**/*.test.ts"
+      "testRequirements": {
+        "unit": { "required": false, "pattern": "tests/module/**/*.test.ts" }
+      }
     }
   ],
   "metadata": {
@@ -157,13 +159,47 @@ Write criteria as testable statements:
 
 **Required fields**: \`id\`, \`description\`, \`module\`, \`priority\`, \`status\`, \`acceptance\`, \`version\`, \`origin\`
 
-**Auto-generated fields**: \`testPattern\` (auto-generated during init as \`tests/{module}/**/*.test.*\`)
+**Auto-generated fields**: \`testRequirements\` (auto-generated during init with pattern \`tests/{module}/**/*.test.*\`)
 
-**Optional fields**: \`testPattern\` (can be overridden), \`e2eTags\` (Playwright tags for E2E filtering)
+**Optional fields**: \`testRequirements\` (can be overridden), \`e2eTags\` (Playwright tags for E2E filtering)
+
+### testRequirements Structure
+
+\`\`\`json
+"testRequirements": {
+  "unit": {
+    "required": false,
+    "pattern": "tests/auth/**/*.test.ts",
+    "cases": ["should login", "should logout"]
+  },
+  "e2e": {
+    "required": false,
+    "pattern": "e2e/auth/**/*.spec.ts",
+    "tags": ["@auth"],
+    "scenarios": ["user can login"]
+  }
+}
+\`\`\`
+
+- \`required: true\` → Feature cannot complete without matching test files (TDD enforcement)
+- \`pattern\` → Glob pattern for selective test execution in quick mode
+- \`cases\`/\`scenarios\` → Expected test names (optional, for documentation)
 
 **Status values**: \`failing\` | \`passing\` | \`blocked\` | \`needs_review\` | \`deprecated\`
 
 **Origin values**: \`init-auto\` | \`init-from-routes\` | \`init-from-tests\` | \`manual\` | \`replan\`
+
+### TDD Workflow
+
+Run \`agent-foreman next\` to see TDD guidance:
+- Suggested test files for the current feature
+- Acceptance criteria → test case mapping
+- Test skeleton preview
+
+Follow the **RED → GREEN → REFACTOR** cycle:
+1. **RED**: View acceptance criteria (they are your failing tests)
+2. **GREEN**: Write minimum code to satisfy criteria
+3. **REFACTOR**: Clean up under test protection
 
 ---
 
@@ -241,7 +277,7 @@ export function generateFeatureGuidance(feature: {
   lines.push("");
   lines.push("1. Review acceptance criteria above");
   lines.push("2. Implement the feature");
-  lines.push("3. Run `agent-foreman complete ${feature.id}` (auto-verifies + commits)");
+  lines.push(`3. Run \`agent-foreman done ${feature.id}\` (auto-verifies + commits)`);
 
   return lines.join("\n");
 }

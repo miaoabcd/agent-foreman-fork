@@ -312,9 +312,14 @@ describe("Test Discovery", () => {
   // discoverTestsForFeature
   // ==========================================================================
   describe("discoverTestsForFeature", () => {
-    it("should return explicit testPattern with highest confidence", async () => {
+    it("should return explicit testRequirements.unit.pattern with highest confidence", async () => {
       const feature = createMockFeature({
-        testPattern: "tests/auth/**/*.test.ts",
+        testRequirements: {
+          unit: {
+            required: false,
+            pattern: "tests/auth/**/*.test.ts",
+          },
+        },
       });
 
       const result = await discoverTestsForFeature("/test/cwd", feature);
@@ -670,7 +675,14 @@ describe("Test Discovery", () => {
   // ==========================================================================
   describe("getSelectiveTestCommand", () => {
     it("should return selective command when pattern discovered", async () => {
-      const feature = createMockFeature({ testPattern: "tests/auth/**" });
+      const feature = createMockFeature({
+        testRequirements: {
+          unit: {
+            required: false,
+            pattern: "tests/auth/**",
+          },
+        },
+      });
       const caps = createMockCapabilities();
 
       const result = await getSelectiveTestCommand("/test/cwd", feature, caps);
@@ -714,7 +726,14 @@ describe("Test Discovery", () => {
     });
 
     it("should return null command when no test capability", async () => {
-      const feature = createMockFeature({ testPattern: "tests/**" });
+      const feature = createMockFeature({
+        testRequirements: {
+          unit: {
+            required: false,
+            pattern: "tests/**",
+          },
+        },
+      });
       const caps = createMockCapabilities({ hasTests: false });
 
       const result = await getSelectiveTestCommand("/test/cwd", feature, caps);

@@ -210,9 +210,9 @@ describe("CLI Integration", () => {
     });
   });
 
-  describe("step command", () => {
+  describe("next command", () => {
     it("should show error when no feature list exists", () => {
-      const result = spawnSync("node", [CLI_PATH, "step", "--allow-dirty"], {
+      const result = spawnSync("node", [CLI_PATH, "next", "--allow-dirty"], {
         cwd: tempDir,
         encoding: "utf-8",
       });
@@ -249,7 +249,7 @@ describe("CLI Integration", () => {
         JSON.stringify(featureList, null, 2)
       );
 
-      const result = spawnSync("node", [CLI_PATH, "step", "--json", "--allow-dirty"], {
+      const result = spawnSync("node", [CLI_PATH, "next", "--json", "--allow-dirty"], {
         cwd: tempDir,
         encoding: "utf-8",
       });
@@ -289,7 +289,7 @@ describe("CLI Integration", () => {
         JSON.stringify(featureList, null, 2)
       );
 
-      const result = spawnSync("node", [CLI_PATH, "step", "--allow-dirty"], {
+      const result = spawnSync("node", [CLI_PATH, "next", "--allow-dirty"], {
         cwd: tempDir,
         encoding: "utf-8",
       });
@@ -326,7 +326,7 @@ describe("CLI Integration", () => {
         JSON.stringify(featureList, null, 2)
       );
 
-      const result = spawnSync("node", [CLI_PATH, "step", "--json", "--allow-dirty"], {
+      const result = spawnSync("node", [CLI_PATH, "next", "--json", "--allow-dirty"], {
         cwd: tempDir,
         encoding: "utf-8",
       });
@@ -337,7 +337,7 @@ describe("CLI Integration", () => {
     });
   });
 
-  describe("complete command", () => {
+  describe("done command", () => {
     it("should update feature status to passing", async () => {
       const featureList = {
         features: [
@@ -373,7 +373,7 @@ describe("CLI Integration", () => {
       execSync('git commit -m "init"', { cwd: tempDir, stdio: "pipe" });
 
       // Use --skip-verify --no-commit to avoid verification and git commit (for fast testing)
-      const result = spawnSync("node", [CLI_PATH, "complete", "test.feature1", "--skip-verify", "--no-commit"], {
+      const result = spawnSync("node", [CLI_PATH, "done", "test.feature1", "--skip-verify", "--no-commit"], {
         cwd: tempDir,
         encoding: "utf-8",
         timeout: 10000,
@@ -408,7 +408,7 @@ describe("CLI Integration", () => {
         JSON.stringify(featureList, null, 2)
       );
 
-      const result = spawnSync("node", [CLI_PATH, "complete", "nonexistent"], {
+      const result = spawnSync("node", [CLI_PATH, "done", "nonexistent"], {
         cwd: tempDir,
         encoding: "utf-8",
       });
@@ -427,8 +427,8 @@ describe("CLI Integration", () => {
       expect(result.stdout).toContain("agent-foreman");
       expect(result.stdout).toContain("init");
       expect(result.stdout).toContain("status");
-      expect(result.stdout).toContain("step");
-      expect(result.stdout).toContain("complete");
+      expect(result.stdout).toContain("next");
+      expect(result.stdout).toContain("done");
     });
   });
 

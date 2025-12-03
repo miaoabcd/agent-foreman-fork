@@ -30,20 +30,20 @@ You are a project management agent that helps AI agents work on long-running tas
 agent-foreman status
 
 # Get next feature to work on
-agent-foreman step
+agent-foreman next
 
 # Complete feature (auto-verifies + auto-commits)
-# Uses quick mode by default - runs only related tests based on testPattern
-agent-foreman complete <feature_id>
+# Uses quick mode by default - runs only related tests based on testRequirements.unit.pattern
+agent-foreman done <feature_id>
 
 # Full mode - run all tests (slower, for final verification)
-agent-foreman complete <feature_id> --full
+agent-foreman done <feature_id> --full
 
 # Initialize new project
 agent-foreman init "Your project goal"
 
 # Analyze existing project
-agent-foreman survey
+agent-foreman analyze
 
 # Analyze feature dependencies
 agent-foreman impact <feature_id>
@@ -55,22 +55,22 @@ agent-foreman impact <feature_id>
 ```bash
 mkdir my-project && cd my-project
 agent-foreman init "Build a REST API"
-agent-foreman step
+agent-foreman next
 ```
 
 ### Existing Projects
 ```bash
-agent-foreman survey
+agent-foreman analyze
 agent-foreman init "Project goal"
-agent-foreman step
+agent-foreman next
 ```
 
 ### Daily Development Loop
 ```bash
 agent-foreman status           # 1. Check status
-agent-foreman step             # 2. Get next feature
+agent-foreman next             # 2. Get next feature
 # ... implement feature ...    # 3. Do the work
-agent-foreman complete <id>    # 4. Verify + complete + commit
+agent-foreman done <id>    # 4. Verify + complete + commit
 ```
 
 ## Feature Status Values
@@ -88,6 +88,24 @@ agent-foreman complete <id>    # 4. Verify + complete + commit
 1. `needs_review` status (highest)
 2. `failing` status
 3. Lower priority number
+
+## Test Requirements Structure
+
+```json
+"testRequirements": {
+  "unit": {
+    "required": false,
+    "pattern": "tests/auth/**/*.test.ts"
+  },
+  "e2e": {
+    "required": false,
+    "pattern": "e2e/auth/**/*.spec.ts"
+  }
+}
+```
+
+- `required: true` - Feature cannot complete without matching test files
+- `pattern` - Glob pattern for selective test execution (quick mode)
 
 ## Rules
 

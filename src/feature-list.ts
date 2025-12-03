@@ -177,23 +177,32 @@ export function createEmptyFeatureList(goal: string): FeatureList {
 }
 
 /**
- * Generate testPattern based on feature module and id
+ * Generate test pattern based on feature module
  *
  * Strategy:
- * 1. Use module name to create glob pattern: tests/{module}/**\/*.test.ts
- * 2. This covers the most common test directory structure
+ * Use module name to create glob pattern: tests/{module}/**\/*.test.*
  *
  * @param module - Feature module name (e.g., "auth", "verification")
- * @param featureId - Feature ID (e.g., "auth.login", "verify.core")
  * @returns Glob pattern for related tests
  */
-export function generateTestPattern(module: string, featureId: string): string {
-  // Primary pattern: module-based test directory
-  // This is the most common pattern: tests/auth/*.test.ts, tests/verification/*.test.ts
+export function generateTestPattern(module: string): string {
   const sanitizedModule = module.replace(/[^a-zA-Z0-9_-]/g, "");
-
-  // Use module-based pattern: tests/{module}/**/*.test.*
   return `tests/${sanitizedModule}/**/*.test.*`;
+}
+
+/**
+ * Generate default testRequirements for a feature
+ *
+ * @param module - Feature module name
+ * @returns Default TestRequirements with pattern
+ */
+export function generateTestRequirements(module: string): { unit: { required: boolean; pattern: string } } {
+  return {
+    unit: {
+      required: false,
+      pattern: generateTestPattern(module),
+    },
+  };
 }
 
 /**
@@ -203,9 +212,6 @@ export function discoveredToFeature(
   discovered: DiscoveredFeature,
   index: number
 ): Feature {
-  // Generate testPattern based on module
-  const testPattern = generateTestPattern(discovered.module, discovered.id);
-
   return {
     id: discovered.id,
     description: discovered.description,
@@ -224,7 +230,7 @@ export function discoveredToFeature(
           ? "init-from-tests"
           : "init-auto",
     notes: "",
-    testPattern, // Auto-generated based on module
+    testRequirements: generateTestRequirements(discovered.module),
   };
 }
 
@@ -326,7 +332,6 @@ export function createFeature(
     version: options.version ?? 1,
     origin: options.origin ?? "manual",
     notes: options.notes ?? "",
-    // Auto-generate testPattern if not provided
-    testPattern: options.testPattern ?? generateTestPattern(module, id),
+    testRequirements: options.testRequirements ?? generateTestRequirements(module),
   };
 }

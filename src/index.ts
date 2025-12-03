@@ -113,8 +113,8 @@ async function main() {
     .scriptName("agent-foreman")
     .usage("$0 <command> [options]")
     .command(
-      "survey [output]",
-      "Generate AI-powered project survey report",
+      "analyze [output]",
+      "Generate AI-powered project analysis report",
       (yargs) =>
         yargs
           .positional("output", {
@@ -127,20 +127,9 @@ async function main() {
             type: "boolean",
             default: false,
             describe: "Show detailed output",
-          })
-          .option("bilingual", {
-            alias: "b",
-            type: "boolean",
-            default: false,
-            describe: "Include inline Chinese translations (legacy format)",
-          })
-          .option("zh", {
-            type: "boolean",
-            default: false,
-            describe: "Also generate Chinese translation file (PROJECT_SURVEY.zh-CN.md)",
           }),
       async (argv) => {
-        await runSurvey(argv.output, argv.verbose, argv.bilingual, argv.zh);
+        await runAnalyze(argv.output, argv.verbose);
       }
     )
     .command(
@@ -170,7 +159,7 @@ async function main() {
       }
     )
     .command(
-      "step [feature_id]",
+      "next [feature_id]",
       "Show next feature to work on or specific feature details",
       (yargs) =>
         yargs
@@ -207,7 +196,7 @@ async function main() {
             describe: "Suppress decorative output",
           }),
       async (argv) => {
-        await runStep(argv.feature_id, argv.dryRun, argv.check, argv.allowDirty, argv.json, argv.quiet);
+        await runNext(argv.feature_id, argv.dryRun, argv.check, argv.allowDirty, argv.json, argv.quiet);
       }
     )
     .command(
@@ -244,7 +233,7 @@ async function main() {
       }
     )
     .command(
-      "complete <feature_id>",
+      "done <feature_id>",
       "Verify and mark a feature as complete",
       (yargs) =>
         yargs
@@ -312,7 +301,7 @@ async function main() {
           : argv.full
             ? "full"
             : undefined; // Quick mode: determined by tags in verifier
-        await runComplete(
+        await runDone(
           argv.feature_id!,
           argv.notes,
           !argv.noCommit,
@@ -424,10 +413,10 @@ async function main() {
 // Command Implementations
 // ============================================================================
 
-async function runSurvey(outputPath: string, verbose: boolean, bilingual: boolean = false, generateZh: boolean = false) {
+async function runAnalyze(outputPath: string, verbose: boolean) {
   const cwd = process.cwd();
 
-  console.log(chalk.blue("🤖 AI-powered project scan (priority: Codex > Gemini > Claude)"));
+  console.log(chalk.blue("🤖 AI-powered project analysis (priority: Codex > Gemini > Claude)"));
   if (verbose) {
     printAgentStatus();
   }
@@ -446,22 +435,13 @@ async function runSurvey(outputPath: string, verbose: boolean, bilingual: boolea
   const structure = await scanDirectoryStructure(cwd);
   const survey = aiResultToSurvey(aiResult, structure);
 
-  // Generate English-only markdown by default, or bilingual if flag is set
-  const markdown = generateAISurveyMarkdown(survey, aiResult, { bilingual });
+  const markdown = generateAISurveyMarkdown(survey, aiResult);
   const fullPath = path.join(cwd, outputPath);
 
   await fs.mkdir(path.dirname(fullPath), { recursive: true });
   await fs.writeFile(fullPath, markdown);
 
-  console.log(chalk.green(`✓ Survey written to ${outputPath}`));
-
-  // Generate Chinese translation file if requested
-  if (generateZh) {
-    const zhPath = outputPath.replace(/\.md$/, ".zh-CN.md");
-    const zhMarkdown = generateAISurveyMarkdown(survey, aiResult, { language: "zh-CN" });
-    await fs.writeFile(path.join(cwd, zhPath), zhMarkdown);
-    console.log(chalk.green(`✓ Chinese translation written to ${zhPath}`));
-  }
+  console.log(chalk.green(`✓ Analysis written to ${outputPath}`));
 
   console.log(chalk.gray(`  Tech stack: ${survey.techStack.language}/${survey.techStack.framework}`));
   console.log(chalk.gray(`  Modules: ${survey.modules.length}`));
@@ -530,10 +510,10 @@ async function runInit(goal: string, mode: InitMode, verbose: boolean) {
   await generateHarnessFiles(cwd, analysisResult.survey, featureList, goal, mode);
 
   console.log(chalk.bold.green("\n🎉 Harness initialized successfully!"));
-  console.log(chalk.gray("Next: Run 'agent-foreman step' to start working on features"));
+  console.log(chalk.gray("Next: Run 'agent-foreman next' to start working on features"));
 }
 
-async function runStep(
+async function runNext(
   featureId: string | undefined,
   dryRun: boolean,
   runCheck: boolean = false,
@@ -787,7 +767,7 @@ async function runStep(
 
   console.log("");
   console.log(chalk.bold.blue("═══════════════════════════════════════════════════════════════"));
-  console.log(chalk.gray("   When done, run: ") + chalk.cyan(`agent-foreman complete ${feature.id}`));
+  console.log(chalk.gray("   When done, run: ") + chalk.cyan(`agent-foreman done ${feature.id}`));
   console.log(chalk.bold.blue("═══════════════════════════════════════════════════════════════\n"));
 
   if (dryRun) {
@@ -1111,7 +1091,7 @@ async function runCheck(
   // Suggest next action
   if (result.verdict === "pass") {
     console.log(chalk.green("\n   ✓ Feature verified successfully!"));
-    console.log(chalk.cyan(`   Run 'agent-foreman complete ${featureId}' to mark as passing`));
+    console.log(chalk.cyan(`   Run 'agent-foreman done ${featureId}' to mark as passing`));
   } else if (result.verdict === "fail") {
     console.log(chalk.red("\n   ✗ Verification failed. Review the criteria above and fix issues."));
   } else {
@@ -1137,7 +1117,7 @@ async function promptConfirmation(message: string): Promise<boolean> {
   });
 }
 
-async function runComplete(
+async function runDone(
   featureId: string,
   notes?: string,
   autoCommit: boolean = true,
@@ -1198,7 +1178,7 @@ async function runComplete(
       }
 
       console.log(chalk.cyan("\n   Create the required tests before completing this feature."));
-      console.log(chalk.gray("   See TDD guidance from 'agent-foreman step' for test file suggestions."));
+      console.log(chalk.gray("   See TDD guidance from 'agent-foreman next' for test file suggestions."));
       process.exit(1);
     }
 

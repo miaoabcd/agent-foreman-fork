@@ -56,7 +56,6 @@ export async function verifyTestFilesExist(
   if (feature.testRequirements.unit?.required) {
     const pattern =
       feature.testRequirements.unit.pattern ||
-      feature.testPattern ||
       `tests/${sanitizeModuleName(feature.module)}/**/*.test.*`;
 
     try {
@@ -121,10 +120,6 @@ export async function discoverFeatureTestFiles(
     patterns.push(feature.testRequirements.e2e.pattern);
   }
 
-  // Also include legacy testPattern if defined
-  if (feature.testPattern) {
-    patterns.push(feature.testPattern);
-  }
 
   // Fallback to module-based pattern if no patterns found
   if (patterns.length === 0) {

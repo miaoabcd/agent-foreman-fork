@@ -31,7 +31,7 @@ describe("TDD Workflow Integration", () => {
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
-  describe("step command with TDD guidance", () => {
+  describe("next command with TDD guidance", () => {
     it("should display TDD guidance for feature with testRequirements", async () => {
       // Create ai directory and feature list with testRequirements
       await fs.mkdir(path.join(tempDir, "ai"), { recursive: true });
@@ -79,7 +79,7 @@ describe("TDD Workflow Integration", () => {
       // Commit the files to make working directory clean
       execSync("git add -A && git commit -m 'Add feature list'", { cwd: tempDir, stdio: "pipe" });
 
-      const result = spawnSync("node", [CLI_PATH, "step", "auth.login"], {
+      const result = spawnSync("node", [CLI_PATH, "next", "auth.login"], {
         cwd: tempDir,
         encoding: "utf-8",
       });
@@ -125,7 +125,7 @@ describe("TDD Workflow Integration", () => {
         JSON.stringify(featureList, null, 2)
       );
 
-      const result = spawnSync("node", [CLI_PATH, "step", "auth.login"], {
+      const result = spawnSync("node", [CLI_PATH, "next", "auth.login"], {
         cwd: tempDir,
         encoding: "utf-8",
       });
@@ -135,7 +135,7 @@ describe("TDD Workflow Integration", () => {
     });
   });
 
-  describe("complete command test gate", () => {
+  describe("done command test gate", () => {
     it("should fail gate when required tests are missing", async () => {
       // Create ai directory and feature list with required tests
       await fs.mkdir(path.join(tempDir, "ai"), { recursive: true });
@@ -184,7 +184,7 @@ describe("TDD Workflow Integration", () => {
 
       const result = spawnSync(
         "node",
-        [CLI_PATH, "complete", "auth.login", "--skip-verify"],
+        [CLI_PATH, "done", "auth.login", "--skip-verify"],
         {
           cwd: tempDir,
           encoding: "utf-8",
@@ -331,14 +331,14 @@ describe("TDD Workflow Integration", () => {
         },
       };
 
-      // Discover test files (simulates what complete command does)
+      // Discover test files (simulates what done command does)
       const testFiles = await discoverFeatureTestFiles(tempDir, feature);
 
       // testFiles should be populated and can be written back to feature
       expect(testFiles.length).toBeGreaterThan(0);
       expect(testFiles).toContain("tests/auth/login.test.ts");
 
-      // Simulate updating feature with testFiles (this is what complete does)
+      // Simulate updating feature with testFiles (this is what done does)
       const updatedFeature = { ...feature, testFiles };
       expect(updatedFeature.testFiles).toEqual(testFiles);
     });

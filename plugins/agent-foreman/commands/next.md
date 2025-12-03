@@ -7,7 +7,7 @@ description: Work on the next priority feature with guided implementation workfl
 Run this command immediately:
 
 ```bash
-agent-foreman step
+agent-foreman next
 ```
 
 Wait for completion. Review the feature shown.
@@ -16,25 +16,25 @@ Wait for completion. Review the feature shown.
 
 | User Says | Execute |
 |-----------|---------|
-| Feature ID provided | `agent-foreman step <feature_id>` |
-| "check" / "test first" | `agent-foreman step --check` |
-| "preview" / "dry-run" | `agent-foreman step --dry-run` |
-| (default) | `agent-foreman step` |
+| Feature ID provided | `agent-foreman next <feature_id>` |
+| "check" / "test first" | `agent-foreman next --check` |
+| "preview" / "dry-run" | `agent-foreman next --dry-run` |
+| (default) | `agent-foreman next` |
 
 ## After Step Command
 
 1. **Read** the acceptance criteria shown
 2. **Implement** the feature to satisfy ALL criteria
-3. **Complete** with: `agent-foreman complete <feature_id>`
+3. **Complete** with: `agent-foreman done <feature_id>`
 
 ## Complete Options
 
 | User Says | Execute |
 |-----------|---------|
-| "full test" / "all tests" | `agent-foreman complete <id> --full` |
-| "skip e2e" | `agent-foreman complete <id> --skip-e2e` |
-| "no commit" / "manual commit" | `agent-foreman complete <id> --no-commit` |
-| (default) | `agent-foreman complete <id>` |
+| "full test" / "all tests" | `agent-foreman done <id> --full` |
+| "skip e2e" | `agent-foreman done <id> --skip-e2e` |
+| "no commit" / "manual commit" | `agent-foreman done <id> --no-commit` |
+| (default) | `agent-foreman done <id>` |
 
 ## Priority Order (Auto-Selected)
 

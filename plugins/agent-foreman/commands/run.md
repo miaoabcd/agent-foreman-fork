@@ -11,13 +11,13 @@ Start immediately. Do not ask for confirmation.
 agent-foreman status
 
 # STEP 2: Get next feature
-agent-foreman step
+agent-foreman next
 
 # STEP 3: Implement feature
 # (satisfy ALL acceptance criteria shown)
 
 # STEP 4: Complete feature
-agent-foreman complete <feature_id>
+agent-foreman done <feature_id>
 
 # STEP 5: Decision
 # - More features remaining? → Go to STEP 1

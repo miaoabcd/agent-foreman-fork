@@ -1452,10 +1452,15 @@ describe("Verifier", () => {
       expect(commands.some(cmd => cmd.includes("test"))).toBe(true);
     });
 
-    it("should use explicit testPattern when provided", async () => {
+    it("should use explicit testRequirements.unit.pattern when provided", async () => {
       const featureWithPattern: Feature = {
         ...mockFeature,
-        testPattern: "tests/specific/**",
+        testRequirements: {
+          unit: {
+            required: false,
+            pattern: "tests/specific/**",
+          },
+        },
       };
 
       await verifyFeature(testDir, featureWithPattern, {

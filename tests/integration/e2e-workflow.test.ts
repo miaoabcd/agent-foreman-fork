@@ -1,8 +1,8 @@
 /**
  * End-to-End workflow tests for CLI commands
- * Tests the full workflow: init → step → complete
+ * Tests the full workflow: init → next → done
  *
- * Note: survey command requires AI agents which are mocked in these tests.
+ * Note: analyze command requires AI agents which are mocked in these tests.
  * These tests focus on file output verification and command flow.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -31,7 +31,7 @@ describe("E2E Workflow Tests", () => {
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
-  describe("Full workflow: setup → step → complete", () => {
+  describe("Full workflow: setup → next → done", () => {
     it("should handle complete workflow with pre-populated feature list", async () => {
       // Step 1: Create a minimal project structure
       await fs.writeFile(path.join(tempDir, "package.json"), JSON.stringify({
@@ -104,8 +104,8 @@ describe("E2E Workflow Tests", () => {
       expect(statusResult.stdout).toContain("Failing: 2");
       expect(statusResult.stdout).toContain("0%"); // 0 of 2 passing
 
-      // Step 4: Run step command to get next feature
-      const stepResult = spawnSync("node", [CLI_PATH, "step", "--json", "--allow-dirty"], {
+      // Step 4: Run next command to get next feature
+      const stepResult = spawnSync("node", [CLI_PATH, "next", "--json", "--allow-dirty"], {
         cwd: tempDir,
         encoding: "utf-8",
       });
@@ -114,7 +114,7 @@ describe("E2E Workflow Tests", () => {
       expect(stepOutput.feature.id).toBe("core.setup");
 
       // Step 5: Complete the first feature
-      const completeResult = spawnSync("node", [CLI_PATH, "complete", "core.setup", "--skip-verify", "--no-commit"], {
+      const completeResult = spawnSync("node", [CLI_PATH, "done", "core.setup", "--skip-verify", "--no-commit"], {
         cwd: tempDir,
         encoding: "utf-8",
         timeout: 10000,
@@ -140,7 +140,7 @@ describe("E2E Workflow Tests", () => {
       expect(statusResult2.stdout).toContain("50%");
 
       // Step 8: Verify next step shows dependent feature
-      const stepResult2 = spawnSync("node", [CLI_PATH, "step", "--json", "--allow-dirty"], {
+      const stepResult2 = spawnSync("node", [CLI_PATH, "next", "--json", "--allow-dirty"], {
         cwd: tempDir,
         encoding: "utf-8",
       });
@@ -149,7 +149,7 @@ describe("E2E Workflow Tests", () => {
       expect(stepOutput2.feature.id).toBe("core.tests");
 
       // Step 9: Complete the second feature
-      const completeResult2 = spawnSync("node", [CLI_PATH, "complete", "core.tests", "--skip-verify", "--no-commit"], {
+      const completeResult2 = spawnSync("node", [CLI_PATH, "done", "core.tests", "--skip-verify", "--no-commit"], {
         cwd: tempDir,
         encoding: "utf-8",
         timeout: 10000,
@@ -158,7 +158,7 @@ describe("E2E Workflow Tests", () => {
       expect(completeResult2.stdout).toContain("Marked 'core.tests' as passing");
 
       // Step 10: Verify all features complete
-      const stepResult3 = spawnSync("node", [CLI_PATH, "step", "--allow-dirty"], {
+      const stepResult3 = spawnSync("node", [CLI_PATH, "next", "--allow-dirty"], {
         cwd: tempDir,
         encoding: "utf-8",
       });
@@ -216,7 +216,7 @@ describe("E2E Workflow Tests", () => {
       execSync('git commit -m "init"', { cwd: tempDir, stdio: "pipe" });
 
       // Complete the feature
-      spawnSync("node", [CLI_PATH, "complete", "test.verify", "--skip-verify", "--no-commit"], {
+      spawnSync("node", [CLI_PATH, "done", "test.verify", "--skip-verify", "--no-commit"], {
         cwd: tempDir,
         encoding: "utf-8",
         timeout: 10000,
@@ -233,7 +233,7 @@ describe("E2E Workflow Tests", () => {
       expect(updated.metadata.version).toBe("1.0.0");
     });
 
-    it("should verify progress.log is updated after complete", async () => {
+    it("should verify progress.log is updated after done", async () => {
       await fs.mkdir(path.join(tempDir, "ai"), { recursive: true });
 
       const featureList = {
@@ -274,7 +274,7 @@ describe("E2E Workflow Tests", () => {
       execSync('git commit -m "init"', { cwd: tempDir, stdio: "pipe" });
 
       // Complete the feature
-      spawnSync("node", [CLI_PATH, "complete", "test.progress", "--skip-verify", "--no-commit"], {
+      spawnSync("node", [CLI_PATH, "done", "test.progress", "--skip-verify", "--no-commit"], {
         cwd: tempDir,
         encoding: "utf-8",
         timeout: 10000,
@@ -360,7 +360,7 @@ describe("E2E Workflow Tests", () => {
     });
   });
 
-  describe("Step command with dependencies", () => {
+  describe("Next command with dependencies", () => {
     it("should select features based on priority and dependency status", async () => {
       await fs.mkdir(path.join(tempDir, "ai"), { recursive: true });
 
@@ -402,8 +402,8 @@ describe("E2E Workflow Tests", () => {
         JSON.stringify(featureList, null, 2)
       );
 
-      // Step returns a feature (implementation determines exact selection logic)
-      const result = spawnSync("node", [CLI_PATH, "step", "--json", "--allow-dirty"], {
+      // Next returns a feature (implementation determines exact selection logic)
+      const result = spawnSync("node", [CLI_PATH, "next", "--json", "--allow-dirty"], {
         cwd: tempDir,
         encoding: "utf-8",
       });
@@ -456,7 +456,7 @@ describe("E2E Workflow Tests", () => {
       );
 
       // Should still return something (best effort)
-      const result = spawnSync("node", [CLI_PATH, "step", "--json", "--allow-dirty"], {
+      const result = spawnSync("node", [CLI_PATH, "next", "--json", "--allow-dirty"], {
         cwd: tempDir,
         encoding: "utf-8",
       });

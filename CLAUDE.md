@@ -30,7 +30,7 @@ Long Task Harness for AI agents - feature-driven development with external memor
 2. **Select** - Pick the highest priority feature (`needs_review` > `failing`)
 3. **Plan** - Review acceptance criteria before coding
 4. **Implement** - Work on ONE feature at a time
-5. **Complete** - Run `agent-foreman complete <feature_id>` (auto-verifies + commits)
+5. **Done** - Run `agent-foreman done <feature_id>` (auto-verifies + commits)
 6. **Log** - Entry automatically added to progress log
 7. **Next** - Move to next feature or celebrate completion
 
@@ -64,26 +64,26 @@ Append entries to `ai/progress.log` using this **single-line format only**:
 agent-foreman status
 
 # Work on next priority feature
-agent-foreman step
+agent-foreman next
 
 # Work on specific feature
-agent-foreman step <feature_id>
+agent-foreman next <feature_id>
 
-# Complete feature (auto-runs verification + auto-commit)
+# Mark feature as done (auto-runs verification + auto-commit)
 # Quick mode is default - runs only related tests based on testPattern
-agent-foreman complete <feature_id>
+agent-foreman done <feature_id>
 
 # Full mode - run all tests (slower, for final verification)
-agent-foreman complete <feature_id> --full
+agent-foreman done <feature_id> --full
 
 # Skip E2E tests (faster iterations)
-agent-foreman complete <feature_id> --skip-e2e
+agent-foreman done <feature_id> --skip-e2e
 
 # Skip auto-commit (manual commit)
-agent-foreman complete <feature_id> --no-commit
+agent-foreman done <feature_id> --no-commit
 
 # Skip verification (not recommended)
-agent-foreman complete <feature_id> --skip-verify
+agent-foreman done <feature_id> --skip-verify
 
 # Analyze impact of changes
 agent-foreman impact <feature_id>

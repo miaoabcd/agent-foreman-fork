@@ -466,50 +466,52 @@ describe("Feature List Operations", () => {
       expect(feature.tags).toEqual(["important"]);
     });
 
-    it("should auto-generate testPattern if not provided", () => {
+    it("should auto-generate testRequirements if not provided", () => {
       const feature = createFeature("auth.login", "Login feature", "auth", ["Login works"]);
 
-      expect(feature.testPattern).toBe("tests/auth/**/*.test.*");
+      expect(feature.testRequirements?.unit?.pattern).toBe("tests/auth/**/*.test.*");
+      expect(feature.testRequirements?.unit?.required).toBe(false);
     });
 
-    it("should use provided testPattern over auto-generated", () => {
+    it("should use provided testRequirements over auto-generated", () => {
       const feature = createFeature("auth.login", "Login feature", "auth", ["Login works"], {
-        testPattern: "custom/path/*.spec.ts",
+        testRequirements: { unit: { required: true, pattern: "custom/path/*.spec.ts" } },
       });
 
-      expect(feature.testPattern).toBe("custom/path/*.spec.ts");
+      expect(feature.testRequirements?.unit?.pattern).toBe("custom/path/*.spec.ts");
+      expect(feature.testRequirements?.unit?.required).toBe(true);
     });
   });
 
   describe("generateTestPattern", () => {
     it("should generate module-based test pattern", () => {
-      const pattern = generateTestPattern("auth", "auth.login");
+      const pattern = generateTestPattern("auth");
       expect(pattern).toBe("tests/auth/**/*.test.*");
     });
 
     it("should sanitize module names with special characters", () => {
-      const pattern = generateTestPattern("my-module", "my-module.feature");
+      const pattern = generateTestPattern("my-module");
       expect(pattern).toBe("tests/my-module/**/*.test.*");
     });
 
     it("should handle modules with underscores", () => {
-      const pattern = generateTestPattern("my_module", "my_module.feature");
+      const pattern = generateTestPattern("my_module");
       expect(pattern).toBe("tests/my_module/**/*.test.*");
     });
 
     it("should remove invalid characters from module name", () => {
-      const pattern = generateTestPattern("module/with/slashes", "bad.feature");
+      const pattern = generateTestPattern("module/with/slashes");
       expect(pattern).toBe("tests/modulewithslashes/**/*.test.*");
     });
 
-    it("should handle complex feature IDs", () => {
-      const pattern = generateTestPattern("verification", "verify.store.migration");
+    it("should handle complex module names", () => {
+      const pattern = generateTestPattern("verification");
       expect(pattern).toBe("tests/verification/**/*.test.*");
     });
   });
 
-  describe("discoveredToFeature with testPattern", () => {
-    it("should auto-generate testPattern for discovered features", () => {
+  describe("discoveredToFeature with testRequirements", () => {
+    it("should auto-generate testRequirements for discovered features", () => {
       const discovered: DiscoveredFeature = {
         id: "api.users",
         description: "Users API",
@@ -519,7 +521,7 @@ describe("Feature List Operations", () => {
       };
       const feature = discoveredToFeature(discovered, 0);
 
-      expect(feature.testPattern).toBe("tests/api/**/*.test.*");
+      expect(feature.testRequirements?.unit?.pattern).toBe("tests/api/**/*.test.*");
     });
 
     it("should generate different patterns for different modules", () => {
@@ -532,8 +534,8 @@ describe("Feature List Operations", () => {
         0
       );
 
-      expect(authFeature.testPattern).toBe("tests/auth/**/*.test.*");
-      expect(userFeature.testPattern).toBe("tests/user/**/*.test.*");
+      expect(authFeature.testRequirements?.unit?.pattern).toBe("tests/auth/**/*.test.*");
+      expect(userFeature.testRequirements?.unit?.pattern).toBe("tests/user/**/*.test.*");
     });
   });
 });

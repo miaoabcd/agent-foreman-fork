@@ -14,13 +14,13 @@ description: Automatically complete all pending features from the feature list i
 agent-foreman status
 
 # STEP 2: Get next priority feature
-agent-foreman step
+agent-foreman next
 
 # STEP 3: Implement (satisfy ALL acceptance criteria)
 # ... write code ...
 
 # STEP 4: Verify + commit
-agent-foreman complete <feature_id>
+agent-foreman done <feature_id>
 
 # STEP 5: Loop or exit
 # - More features? → Go to STEP 1

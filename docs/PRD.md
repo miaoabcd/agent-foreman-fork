@@ -117,24 +117,24 @@ Project-specific instructions for AI agents, including workflow rules and file s
 ```bash
 mkdir my-project && cd my-project
 agent-foreman init "Build a REST API"
-agent-foreman step
+agent-foreman next
 ```
 
 ### Existing Project
 
 ```bash
-agent-foreman survey        # Analyze existing code
+agent-foreman analyze        # Analyze existing code
 agent-foreman init          # Create harness from survey
-agent-foreman step          # Start working
+agent-foreman next          # Start working
 ```
 
 ### Development Loop
 
 ```bash
 agent-foreman status        # 1. Check progress
-agent-foreman step          # 2. Get next feature
+agent-foreman next          # 2. Get next feature
 # ... implement feature ... # 3. Do the work
-agent-foreman complete <id> # 4. Verify + complete + auto-commit
+agent-foreman done <id> # 4. Verify + complete + auto-commit
 ```
 
 ---
@@ -175,11 +175,11 @@ When changing a feature:
 
 | Command | Purpose |
 |---------|---------|
-| `survey` | AI-powered project analysis |
+| `analyze` | AI-powered project analysis |
 | `init` | Initialize or upgrade harness |
-| `step` | Get next priority feature |
+| `next` | Get next priority feature |
 | `status` | Show project progress |
-| `complete` | Verify + mark complete + auto-commit |
+| `done` | Verify + mark complete + auto-commit |
 | `detect-capabilities` | Detect project verification capabilities |
 | `check` | Preview verification |
 | `impact` | Analyze dependencies |

@@ -427,141 +427,47 @@ export function aiResultToSurvey(
 }
 
 /**
- * Options for generating survey markdown
- */
-export interface SurveyMarkdownOptions {
-  /** Include inline Chinese translations (legacy bilingual format) */
-  bilingual?: boolean;
-  /** Generate for a specific language ("en" or "zh-CN") */
-  language?: "en" | "zh-CN";
-}
-
-/**
- * Strip inline Chinese translations from text
- * Removes lines starting with ">" that contain Chinese characters
- */
-function stripChineseTranslations(text: string): string {
-  return text
-    .split("\n")
-    .filter((line) => {
-      // Keep the line if it's not a blockquote with Chinese
-      if (!line.startsWith(">")) return true;
-      // Check if line contains Chinese characters (CJK Unified Ideographs)
-      const hasChinese = /[\u4e00-\u9fff]/.test(line);
-      // Check if it's the "Analyzed by" line which should be kept
-      const isAnalyzedBy = line.includes("Analyzed by:");
-      return !hasChinese || isAnalyzedBy;
-    })
-    .join("\n");
-}
-
-/**
- * Generate Chinese-only version from English text with translations
- * Extracts Chinese translations from blockquotes and replaces English content
- */
-function extractChineseVersion(text: string): string {
-  const lines = text.split("\n");
-  const result: string[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // If this is a blockquote with Chinese, extract it as main content
-    if (line.startsWith(">") && /[\u4e00-\u9fff]/.test(line) && !line.includes("Analyzed by:")) {
-      // Remove the ">" prefix and trim
-      result.push(line.slice(1).trim());
-    } else if (line.startsWith(">") && line.includes("Analyzed by:")) {
-      // Keep "Analyzed by" but translate
-      result.push(`> 由 ${line.match(/Analyzed by: (\w+)/)?.[1] || "AI"} 分析生成`);
-    } else if (!line.startsWith(">")) {
-      // Keep non-blockquote lines (headers, tables, etc.)
-      // But skip if the next line is a Chinese translation (we already added it)
-      const nextLine = lines[i + 1];
-      const nextIsChinese = nextLine?.startsWith(">") && /[\u4e00-\u9fff]/.test(nextLine);
-      if (!nextIsChinese || line.startsWith("#") || line.startsWith("|") || line.startsWith("-") || line.startsWith("```") || line.trim() === "") {
-        result.push(line);
-      }
-    }
-  }
-
-  return result.join("\n");
-}
-
-/**
  * Generate enhanced survey markdown with AI insights
  *
  * @param survey - Project survey data
  * @param aiResult - AI analysis results
- * @param options - Generation options
- *   - bilingual: Include inline Chinese translations (default: false)
- *   - language: Generate for specific language ("en" or "zh-CN")
  */
 export function generateAISurveyMarkdown(
   survey: ProjectSurvey,
-  aiResult: AIAnalysisResult,
-  options: SurveyMarkdownOptions = {}
+  aiResult: AIAnalysisResult
 ): string {
-  const { bilingual = false, language } = options;
-
   const lines: string[] = [];
 
   // Title
-  if (language === "zh-CN") {
-    lines.push("# 项目调查报告 (AI 增强版)\n");
-  } else {
-    lines.push("# Project Survey (AI-Enhanced)\n");
-  }
+  lines.push("# Project Survey (AI-Enhanced)\n");
 
   // Summary
   if (aiResult.summary) {
-    if (language === "zh-CN") {
-      lines.push("## 概述\n");
-    } else {
-      lines.push("## Summary\n");
-    }
+    lines.push("## Summary\n");
     lines.push(aiResult.summary);
     lines.push("");
   }
 
   if (aiResult.agentUsed) {
-    if (language === "zh-CN") {
-      lines.push(`> 由 ${aiResult.agentUsed} 分析生成\n`);
-    } else {
-      lines.push(`> Analyzed by: ${aiResult.agentUsed}\n`);
-    }
+    lines.push(`> Analyzed by: ${aiResult.agentUsed}\n`);
   }
 
   // Tech Stack
-  if (language === "zh-CN") {
-    lines.push("## 技术栈\n");
-    lines.push("| 方面 | 值 |");
-    lines.push("|------|-----|");
-    lines.push(`| 语言 | ${survey.techStack.language} |`);
-    lines.push(`| 框架 | ${survey.techStack.framework} |`);
-    lines.push(`| 构建工具 | ${survey.techStack.buildTool} |`);
-    lines.push(`| 测试框架 | ${survey.techStack.testFramework} |`);
-    lines.push(`| 包管理器 | ${survey.techStack.packageManager} |`);
-  } else {
-    lines.push("## Tech Stack\n");
-    lines.push("| Aspect | Value |");
-    lines.push("|--------|-------|");
-    lines.push(`| Language | ${survey.techStack.language} |`);
-    lines.push(`| Framework | ${survey.techStack.framework} |`);
-    lines.push(`| Build Tool | ${survey.techStack.buildTool} |`);
-    lines.push(`| Test Framework | ${survey.techStack.testFramework} |`);
-    lines.push(`| Package Manager | ${survey.techStack.packageManager} |`);
-  }
+  lines.push("## Tech Stack\n");
+  lines.push("| Aspect | Value |");
+  lines.push("|--------|-------|");
+  lines.push(`| Language | ${survey.techStack.language} |`);
+  lines.push(`| Framework | ${survey.techStack.framework} |`);
+  lines.push(`| Build Tool | ${survey.techStack.buildTool} |`);
+  lines.push(`| Test Framework | ${survey.techStack.testFramework} |`);
+  lines.push(`| Package Manager | ${survey.techStack.packageManager} |`);
   lines.push("");
 
   // Directory Structure
-  if (language === "zh-CN") {
-    lines.push("## 目录结构\n");
-  } else {
-    lines.push("## Directory Structure\n");
-  }
+  lines.push("## Directory Structure\n");
 
   if (survey.structure.entryPoints.length > 0) {
-    lines.push(language === "zh-CN" ? "### 入口点" : "### Entry Points");
+    lines.push("### Entry Points");
     for (const e of survey.structure.entryPoints) {
       lines.push(`- \`${e}\``);
     }
@@ -569,7 +475,7 @@ export function generateAISurveyMarkdown(
   }
 
   if (survey.structure.srcDirs.length > 0) {
-    lines.push(language === "zh-CN" ? "### 源代码目录" : "### Source Directories");
+    lines.push("### Source Directories");
     for (const d of survey.structure.srcDirs) {
       lines.push(`- \`${d}/\``);
     }
@@ -578,15 +484,13 @@ export function generateAISurveyMarkdown(
 
   // Modules with descriptions
   if (survey.modules.length > 0) {
-    lines.push(language === "zh-CN" ? "## 模块\n" : "## Modules\n");
+    lines.push("## Modules\n");
     for (const m of survey.modules) {
       lines.push(`### ${m.name}`);
-      lines.push(language === "zh-CN" ? `- **路径**: \`${m.path}\`` : `- **Path**: \`${m.path}\``);
-      lines.push(language === "zh-CN" ? `- **状态**: ${m.status}` : `- **Status**: ${m.status}`);
+      lines.push(`- **Path**: \`${m.path}\``);
+      lines.push(`- **Status**: ${m.status}`);
       if (m.description) {
-        // Strip Chinese translations if not bilingual mode and language is English
-        const desc = (!bilingual && language !== "zh-CN") ? stripChineseTranslations(m.description) : m.description;
-        lines.push(language === "zh-CN" ? `- **描述**: ${desc}` : `- **Description**: ${desc}`);
+        lines.push(`- **Description**: ${m.description}`);
       }
       lines.push("");
     }
@@ -598,24 +502,16 @@ export function generateAISurveyMarkdown(
     const hasStatus = survey.features.some((f) => f.status);
 
     if (hasStatus) {
-      lines.push(language === "zh-CN" ? "## 功能完成状态\n" : "## Feature Completion Status\n");
-      if (language === "zh-CN") {
-        lines.push("| ID | 描述 | 模块 | 状态 |");
-      } else {
-        lines.push("| ID | Description | Module | Status |");
-      }
+      lines.push("## Feature Completion Status\n");
+      lines.push("| ID | Description | Module | Status |");
       lines.push("|----|-------------|--------|--------|");
       for (const f of survey.features.slice(0, 100)) {
         const statusIcon = f.status === "passing" ? "✅" : f.status === "failing" ? "❌" : "⏸️";
         lines.push(`| ${f.id} | ${f.description} | ${f.module} | ${statusIcon} ${f.status} |`);
       }
     } else {
-      lines.push(language === "zh-CN" ? "## 发现的功能\n" : "## Discovered Features\n");
-      if (language === "zh-CN") {
-        lines.push("| ID | 描述 | 模块 | 来源 | 置信度 |");
-      } else {
-        lines.push("| ID | Description | Module | Source | Confidence |");
-      }
+      lines.push("## Discovered Features\n");
+      lines.push("| ID | Description | Module | Source | Confidence |");
       lines.push("|----|-------------|--------|--------|------------|");
       for (const f of survey.features.slice(0, 100)) {
         const confidence = typeof f.confidence === "number" ? `${Math.round(f.confidence * 100)}%` : "-";
@@ -623,22 +519,17 @@ export function generateAISurveyMarkdown(
       }
     }
     if (survey.features.length > 100) {
-      const moreText = language === "zh-CN"
-        ? `\n*... 还有 ${survey.features.length - 100} 个功能*`
-        : `\n*... and ${survey.features.length - 100} more features*`;
-      lines.push(moreText);
+      lines.push(`\n*... and ${survey.features.length - 100} more features*`);
     }
     lines.push("");
   }
 
   // Completion Assessment
-  lines.push(language === "zh-CN" ? "## 完成度评估\n" : "## Completion Assessment\n");
-  lines.push(language === "zh-CN"
-    ? `**总体完成度: ${survey.completion.overall}%**\n`
-    : `**Overall: ${survey.completion.overall}%**\n`);
+  lines.push("## Completion Assessment\n");
+  lines.push(`**Overall: ${survey.completion.overall}%**\n`);
 
   if (survey.completion.notes && survey.completion.notes.length > 0) {
-    lines.push(language === "zh-CN" ? "**备注:**" : "**Notes:**");
+    lines.push("**Notes:**");
     for (const note of survey.completion.notes) {
       lines.push(`- ${note}`);
     }
@@ -647,7 +538,7 @@ export function generateAISurveyMarkdown(
 
   // Recommendations
   if (aiResult.recommendations && aiResult.recommendations.length > 0) {
-    lines.push(language === "zh-CN" ? "## 建议\n" : "## Recommendations\n");
+    lines.push("## Recommendations\n");
     for (const rec of aiResult.recommendations) {
       lines.push(`- ${rec}`);
     }
@@ -655,31 +546,24 @@ export function generateAISurveyMarkdown(
   }
 
   // Commands
-  lines.push(language === "zh-CN" ? "## 命令\n" : "## Commands\n");
+  lines.push("## Commands\n");
   lines.push("```bash");
   if (survey.commands.install) {
-    const comment = language === "zh-CN" ? "# 安装依赖" : "# Install dependencies";
-    lines.push(`${comment}\n${survey.commands.install}\n`);
+    lines.push(`# Install dependencies\n${survey.commands.install}\n`);
   }
   if (survey.commands.dev) {
-    const comment = language === "zh-CN" ? "# 启动开发服务器" : "# Start development server";
-    lines.push(`${comment}\n${survey.commands.dev}\n`);
+    lines.push(`# Start development server\n${survey.commands.dev}\n`);
   }
   if (survey.commands.build) {
-    const comment = language === "zh-CN" ? "# 构建生产版本" : "# Build for production";
-    lines.push(`${comment}\n${survey.commands.build}\n`);
+    lines.push(`# Build for production\n${survey.commands.build}\n`);
   }
   if (survey.commands.test) {
-    const comment = language === "zh-CN" ? "# 运行测试" : "# Run tests";
-    lines.push(`${comment}\n${survey.commands.test}`);
+    lines.push(`# Run tests\n${survey.commands.test}`);
   }
   lines.push("```\n");
 
   lines.push("---\n");
-  const footer = language === "zh-CN"
-    ? "*由 agent-foreman 和 AI 分析生成*"
-    : "*Generated by agent-foreman with AI analysis*";
-  lines.push(footer);
+  lines.push("*Generated by agent-foreman with AI analysis*");
 
   return lines.join("\n");
 }

@@ -33,7 +33,7 @@ Creates: `ai/feature_list.json`, `ai/progress.log`, `ai/init.sh`, `CLAUDE.md`
 
 For existing projects:
 ```bash
-agent-foreman survey    # First: understand project
+agent-foreman analyze    # First: understand project
 agent-foreman init      # Then: create harness
 ```
 

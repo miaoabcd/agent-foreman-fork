@@ -134,7 +134,7 @@ agent-foreman supports multiple AI CLI tools with automatic failover:
 ## Verification Flow
 
 ```text
-agent-foreman complete <feature_id>
+agent-foreman done <feature_id>
                 │
                 ▼
 ┌─────────────────────────────────┐

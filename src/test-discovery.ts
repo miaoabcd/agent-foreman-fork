@@ -11,6 +11,7 @@ import * as path from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import type { Feature } from "./types.js";
+import { getTestPattern } from "./types.js";
 import type { VerificationCapabilities, TestCapabilityInfo, E2ECapabilityInfo } from "./verification-types.js";
 import { fileExists } from "./file-utils.js";
 
@@ -187,10 +188,11 @@ export async function discoverTestsForFeature(
   feature: Feature,
   changedFiles?: string[]
 ): Promise<TestDiscoveryResult> {
-  // 1. Use explicit pattern if defined
-  if (feature.testPattern) {
+  // 1. Use explicit pattern if defined (from testRequirements.unit.pattern)
+  const explicitPattern = getTestPattern(feature);
+  if (explicitPattern) {
     return {
-      pattern: feature.testPattern,
+      pattern: explicitPattern,
       source: "explicit",
       testFiles: [],
       confidence: 1.0,

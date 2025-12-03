@@ -123,10 +123,6 @@ export const featureListSchema = {
             additionalProperties: false,
             description: "Last verification result",
           },
-          testPattern: {
-            type: "string",
-            description: "Test pattern for selective test execution (e.g., 'tests/auth/**', '--grep login')",
-          },
           e2eTags: {
             type: "array",
             items: { type: "string" },

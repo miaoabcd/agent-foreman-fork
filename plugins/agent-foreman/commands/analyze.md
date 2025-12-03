@@ -12,7 +12,7 @@ agent-foreman analyze
 
 Wait for completion. Do not interrupt.
 
-Output: `docs/PROJECT_SURVEY.md`
+Output: `docs/ARCHITECTURE.md`
 
 ## If User Specifies Path
 
@@ -24,7 +24,7 @@ Output: `docs/PROJECT_SURVEY.md`
 
 ## After Completion
 
-Report the survey location and key findings:
+Report the output location and key findings:
 - Tech stack detected
 - Directory structure
 - Modules discovered

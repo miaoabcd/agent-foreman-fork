@@ -262,8 +262,8 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 │                                                                          │
 │  INITIALIZE                                                              │
 │  ┌─────────┐    ┌─────────────────┐    ┌──────────┐                     │
-│  │ survey  │───▶│ detect-         │───▶│   init   │                     │
-│  │ analyze │    │ capabilities    │    │ generate │                     │
+│  │ analyze │───▶│ detect-         │───▶│   init   │                     │
+│  │         │    │ capabilities    │    │ generate │                     │
 │  └─────────┘    └─────────────────┘    └──────────┘                     │
 │                                              │                           │
 │                                              ▼                           │
@@ -304,7 +304,7 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 │                                   ▼                                     │
 │                  ┌───────────────────────────────┐                     │
 │                  │  All features passing! (100%) │                     │
-│                  │  PROJECT_SURVEY.md updated    │                     │
+│                  │  ARCHITECTURE.md updated      │                     │
 │                  └───────────────────────────────┘                     │
 │                                                                          │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -332,7 +332,7 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 
 | Command | Description |
 |---------|-------------|
-| `analyze` | Generate project survey report |
+| `analyze` | Generate project architecture report |
 | `init <goal>` | Initialize or upgrade the harness |
 | `next` | Show next feature to work on |
 | `status` | Show current project status |
@@ -370,7 +370,7 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 | `ai/feature_list.json` | Feature backlog with status |
 | `ai/progress.log` | Session handoff audit log |
 | `ai/init.sh` | Environment bootstrap script |
-| `docs/PROJECT_SURVEY.md` | AI-generated project survey |
+| `docs/ARCHITECTURE.md` | AI-generated project architecture |
 
 ---
 

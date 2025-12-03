@@ -18,8 +18,8 @@ The command auto-detects and handles:
 
 | Context | Behavior |
 |---------|----------|
-| `docs/PROJECT_SURVEY.md` exists | Use survey for fast init |
-| Source code exists | AI scan + auto-save survey |
+| `docs/ARCHITECTURE.md` exists | Use it for fast init |
+| Source code exists | AI scan + auto-save ARCHITECTURE.md |
 | Empty project | Generate features from goal |
 | `ai/feature_list.json` exists | Merge mode (keep existing + add new) |
 

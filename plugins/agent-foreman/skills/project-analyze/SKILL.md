@@ -13,7 +13,7 @@ description: Analyze existing projects to generate comprehensive survey reports
 agent-foreman analyze
 ```
 
-Output: `docs/PROJECT_SURVEY.md`
+Output: `docs/ARCHITECTURE.md`
 
 ## Options
 

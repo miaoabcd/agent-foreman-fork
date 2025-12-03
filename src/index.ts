@@ -120,7 +120,7 @@ async function main() {
           .positional("output", {
             describe: "Output path for survey markdown",
             type: "string",
-            default: "docs/PROJECT_SURVEY.md",
+            default: "docs/ARCHITECTURE.md",
           })
           .option("verbose", {
             alias: "v",
@@ -1350,7 +1350,7 @@ Feature: ${featureId}
   } else {
     console.log(chalk.green("\n  🎉 All features are now passing!"));
 
-    // Auto-regenerate PROJECT_SURVEY.md when all features complete
+    // Auto-regenerate ARCHITECTURE.md when all features complete
     console.log(chalk.blue("\n📊 Regenerating project survey..."));
     try {
       const aiResult = await aiScanProject(cwd, { verbose: false });
@@ -1384,10 +1384,10 @@ Feature: ${featureId}
           ]
         };
         const markdown = generateAISurveyMarkdown(survey, aiResult);
-        const surveyPath = path.join(cwd, "docs/PROJECT_SURVEY.md");
+        const surveyPath = path.join(cwd, "docs/ARCHITECTURE.md");
         await fs.mkdir(path.dirname(surveyPath), { recursive: true });
         await fs.writeFile(surveyPath, markdown);
-        console.log(chalk.green("✓ Updated docs/PROJECT_SURVEY.md (100% complete)"));
+        console.log(chalk.green("✓ Updated docs/ARCHITECTURE.md (100% complete)"));
       }
     } catch {
       console.log(chalk.yellow("⚠ Could not regenerate survey (AI agent unavailable)"));

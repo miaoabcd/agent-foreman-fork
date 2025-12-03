@@ -25,8 +25,8 @@ Creates: `ai/feature_list.json`, `ai/progress.log`, `ai/init.sh`, `CLAUDE.md`
 
 ## Auto-Detection
 
-1. `PROJECT_SURVEY.md` exists → use survey (fast)
-2. Source code exists → AI scan + auto-save survey
+1. `ARCHITECTURE.md` exists → use it (fast)
+2. Source code exists → AI scan + auto-save ARCHITECTURE.md
 3. Empty project → generate from goal
 
 ## Pre-Init (Recommended)
@@ -46,5 +46,5 @@ ai/
 ├── init.sh             # Bootstrap script
 └── capabilities.json   # Detected test/lint/build
 CLAUDE.md               # AI agent instructions
-docs/PROJECT_SURVEY.md  # Auto-generated survey
+docs/ARCHITECTURE.md    # Auto-generated architecture doc
 ```

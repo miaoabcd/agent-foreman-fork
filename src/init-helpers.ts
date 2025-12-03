@@ -32,7 +32,7 @@ export interface AnalysisResult {
 /**
  * Step 1: Detect project type and analyze with AI
  * Determines feature source based on project state:
- * - If PROJECT_SURVEY.md exists, use it
+ * - If ARCHITECTURE.md exists, use it
  * - If project is empty, generate features from goal
  * - Otherwise, run AI scan to analyze existing code
  */
@@ -41,12 +41,12 @@ export async function detectAndAnalyzeProject(
   goal: string,
   verbose: boolean
 ): Promise<AnalysisResult> {
-  const surveyPath = path.join(cwd, "docs/PROJECT_SURVEY.md");
+  const surveyPath = path.join(cwd, "docs/ARCHITECTURE.md");
 
   try {
     // Check for existing survey
     const surveyContent = await fs.readFile(surveyPath, "utf-8");
-    console.log(chalk.green(`✓ Found PROJECT_SURVEY.md`));
+    console.log(chalk.green(`✓ Found ARCHITECTURE.md`));
 
     const aiResult = await generateFeaturesFromSurvey(surveyContent, goal);
     if (!aiResult.success) {
@@ -62,7 +62,7 @@ export async function detectAndAnalyzeProject(
       agentUsed: aiResult.agentUsed,
     };
   } catch {
-    debugInit("No PROJECT_SURVEY.md found, checking project state...");
+    debugInit("No ARCHITECTURE.md found, checking project state...");
   }
 
   // No survey file - check if project has source code
@@ -91,7 +91,7 @@ export async function detectAndAnalyzeProject(
   }
 
   // Has source code: auto-run survey first, then use it
-  console.log(chalk.gray("  No PROJECT_SURVEY.md found, auto-generating survey..."));
+  console.log(chalk.gray("  No ARCHITECTURE.md found, auto-generating..."));
   if (verbose) {
     printAgentStatus();
   }
@@ -109,7 +109,7 @@ export async function detectAndAnalyzeProject(
 
   await fs.mkdir(path.dirname(surveyPath), { recursive: true });
   await fs.writeFile(surveyPath, surveyMarkdown);
-  console.log(chalk.green(`✓ Auto-generated docs/PROJECT_SURVEY.md`));
+  console.log(chalk.green(`✓ Auto-generated docs/ARCHITECTURE.md`));
 
   const structure = await scanDirectoryStructure(cwd);
   const survey = aiResultToSurvey(aiResult, structure);

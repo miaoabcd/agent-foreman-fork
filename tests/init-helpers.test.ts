@@ -490,10 +490,10 @@ Some existing content.
       vi.restoreAllMocks();
     });
 
-    it("should use existing PROJECT_SURVEY.md when available", async () => {
-      // Create PROJECT_SURVEY.md
+    it("should use existing ARCHITECTURE.md when available", async () => {
+      // Create ARCHITECTURE.md
       await fs.mkdir(path.join(testDir, "docs"), { recursive: true });
-      await fs.writeFile(path.join(testDir, "docs/PROJECT_SURVEY.md"), "# Project Survey\nTest content");
+      await fs.writeFile(path.join(testDir, "docs/ARCHITECTURE.md"), "# Project Survey\nTest content");
 
       mockGenerateFeaturesFromSurvey.mockResolvedValue({
         success: true,
@@ -512,7 +512,7 @@ Some existing content.
 
     it("should return error when survey analysis fails", async () => {
       await fs.mkdir(path.join(testDir, "docs"), { recursive: true });
-      await fs.writeFile(path.join(testDir, "docs/PROJECT_SURVEY.md"), "# Survey");
+      await fs.writeFile(path.join(testDir, "docs/ARCHITECTURE.md"), "# Survey");
 
       mockGenerateFeaturesFromSurvey.mockResolvedValue({
         success: false,
@@ -570,7 +570,7 @@ Some existing content.
       expect(mockAiScanProject).toHaveBeenCalled();
 
       // Should auto-save survey
-      const surveyFile = await fs.readFile(path.join(testDir, "docs/PROJECT_SURVEY.md"), "utf-8");
+      const surveyFile = await fs.readFile(path.join(testDir, "docs/ARCHITECTURE.md"), "utf-8");
       expect(surveyFile).toContain("Generated Survey");
     });
 

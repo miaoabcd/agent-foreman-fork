@@ -222,7 +222,7 @@ export async function aiScanProject(
 }
 
 /**
- * Generate features from existing PROJECT_SURVEY.md + goal
+ * Generate features from existing ARCHITECTURE.md + goal
  * Much faster than full scan since it reuses existing survey
  */
 export async function generateFeaturesFromSurvey(

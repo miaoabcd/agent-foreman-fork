@@ -129,7 +129,7 @@ The `done` command auto-commits, so just continue:
 agent-foreman next      # See next task
 ```
 
-### Step 6: (Optional) Generate Survey After Development
+### Step 6: (Optional) Generate Architecture Doc After Development
 
 Once you have substantial code written, generate documentation:
 
@@ -141,7 +141,7 @@ agent-foreman analyze
 
 **Output:**
 
-- `docs/PROJECT_SURVEY.md` - AI-generated project documentation
+- `docs/ARCHITECTURE.md` - AI-generated project documentation
 
 ---
 
@@ -157,7 +157,7 @@ When adding agent-foreman to an existing codebase.
 cd /path/to/existing-project
 ```
 
-### Step 2: Generate Project Survey (Recommended)
+### Step 2: Analyze Project (Recommended)
 
 AI will analyze your existing codebase:
 
@@ -177,7 +177,7 @@ This scans:
 > - 源代码文件
 > - 测试文件
 
-**Review the output:** `docs/PROJECT_SURVEY.md`
+**Review the output:** `docs/ARCHITECTURE.md`
 
 ### Step 3: Initialize the Harness
 
@@ -193,16 +193,16 @@ agent-foreman init
 
 | Condition | Action |
 |-----------|--------|
-| `PROJECT_SURVEY.md` exists | Uses survey to generate features (fast) |
-| Has source code, no survey | Scans codebase + **auto-generates survey** |
+| `ARCHITECTURE.md` exists | Uses it to generate features (fast) |
+| Has source code, no arch doc | Scans codebase + **auto-generates ARCHITECTURE.md** |
 | Empty project | Generates features from goal |
 
 > **Init 自动选择最佳方式：**
 >
 > | 条件 | 操作 |
 > |------|------|
-> | 有 `PROJECT_SURVEY.md` | 使用 survey 生成功能（快） |
-> | 有源代码，无 survey | 扫描代码库 + **自动生成 survey** |
+> | 有 `ARCHITECTURE.md` | 使用它生成功能（快） |
+> | 有源代码，无架构文档 | 扫描代码库 + **自动生成 ARCHITECTURE.md** |
 > | 空项目 | 从目标生成功能 |
 
 **Mode options:**
@@ -254,12 +254,12 @@ agent-foreman next auth.login
 
 ## Command Reference (命令参考)
 
-### `survey [output]`
+### `analyze [output]`
 
 Generate AI-powered project documentation.
 
 ```bash
-agent-foreman analyze                    # Default: docs/PROJECT_SURVEY.md
+agent-foreman analyze                    # Default: docs/ARCHITECTURE.md
 agent-foreman analyze docs/ANALYSIS.md   # Custom output path
 agent-foreman analyze -v                 # Verbose mode
 ```
@@ -392,7 +392,7 @@ agent-foreman agents
 │                               + git commit (auto)            │
 │           ↓                                                  │
 │  (after coding)                                              │
-│  agent-foreman analyze      →  docs/PROJECT_SURVEY.md        │
+│  agent-foreman analyze      →  docs/ARCHITECTURE.md          │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -401,9 +401,9 @@ agent-foreman agents
 │  cd existing-project                                         │
 │           ↓                                                  │
 │  agent-foreman analyze     →  Analyzes existing code         │
-│                              docs/PROJECT_SURVEY.md          │
+│                              docs/ARCHITECTURE.md            │
 │           ↓                                                  │
-│  agent-foreman init       →  Reads survey + generates       │
+│  agent-foreman init       →  Reads ARCHITECTURE.md +        │
 │                              ai/feature_list.json            │
 │                              + git commit (suggested)        │
 └─────────────────────────────────────────────────────────────┘
@@ -444,7 +444,7 @@ agent-foreman init "goal"
         │
         ▼
 ┌───────────────────┐
-│ PROJECT_SURVEY.md │
+│ ARCHITECTURE.md   │
 │     exists?       │
 └─────────┬─────────┘
           │
@@ -455,7 +455,7 @@ agent-foreman init "goal"
     ▼           ▼
 ┌─────────┐  ┌───────────────┐
 │ Use     │  │ Has source    │
-│ survey  │  │ code files?   │
+│ arch.md │  │ code files?   │
 │ (fast)  │  └───────┬───────┘
 └─────────┘          │
               ┌──────┴──────┐
@@ -466,7 +466,7 @@ agent-foreman init "goal"
         ┌─────────────┐  ┌─────────────┐
         │ AI scan     │  │ Generate    │
         │ + auto-save │  │ from goal   │
-        │ survey      │  │ (10-20 feat)│
+        │ arch.md     │  │ (10-20 feat)│
         └─────────────┘  └─────────────┘
 ```
 
@@ -483,7 +483,7 @@ your-project/
 │   ├── progress.log        # Immutable audit log
 │   └── init.sh             # Bootstrap script
 ├── docs/
-│   └── PROJECT_SURVEY.md   # AI-generated documentation (optional)
+│   └── ARCHITECTURE.md     # AI-generated documentation (optional)
 ├── CLAUDE.md               # Instructions for AI agents
 └── ... (your project files)
 ```
@@ -497,7 +497,7 @@ your-project/
 > │   ├── progress.log        # 不可变审计日志
 > │   └── init.sh             # 启动脚本
 > ├── docs/
-> │   └── PROJECT_SURVEY.md   # AI 生成的文档 (可选)
+> │   └── ARCHITECTURE.md     # AI 生成的文档 (可选)
 > ├── CLAUDE.md               # AI agent 指令
 > └── ... (你的项目文件)
 > ```
@@ -522,7 +522,7 @@ agent-foreman init "Build a user authentication system"
 
 ```bash
 agent-foreman analyze   # ~45s AI scan of existing code
-agent-foreman init     # Fast, reuses survey results
+agent-foreman init     # Fast, reuses analyze results
 ```
 
 ### 2. Automatic Commits
@@ -595,7 +595,7 @@ agent-foreman done auth.login --full
 agent-foreman status
 ```
 
-### 6. Update Survey When Structure Changes
+### 6. Re-analyze When Structure Changes
 
 If you significantly change the project structure:
 

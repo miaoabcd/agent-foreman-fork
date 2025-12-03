@@ -5,7 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/agent-foreman.svg)](https://www.npmjs.com/package/agent-foreman)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[English](./README.md)
+[English](./README.md) | [详细使用指南](./docs/USAGE.md)
 
 ## 痛点
 
@@ -23,6 +23,70 @@ AI 编程助手在处理复杂项目时，常常会掉进这三个坑：
 - **专注单一功能**，配合清晰的验收标准
 - 通过进度日志实现**无缝交接**，换个 Agent 接着干
 - **追踪变更影响**，改一处知全局
+
+---
+
+## 快速开始：Claude Code 插件
+
+agent-foreman 设计为 **Claude Code 插件**，这是推荐的使用方式。
+
+### 1. 安装插件
+
+```
+/plugin marketplace add mylukin/agent-foreman
+/plugin install agent-foreman
+```
+
+### 2. 斜杠命令
+
+| 命令 | 说明 |
+|------|------|
+| `/agent-foreman:status` | 查看项目状态和进度 |
+| `/agent-foreman:init` | 用项目目标初始化框架 |
+| `/agent-foreman:analyze` | 分析现有项目结构 |
+| `/agent-foreman:next` | 获取下一个优先任务 |
+| `/agent-foreman:run` | 自动完成所有待办任务 |
+
+### 3. 使用示例
+
+**初始化新项目：**
+```
+/agent-foreman:init Build a REST API for user management
+```
+
+**用中文目标初始化：**
+```
+/agent-foreman:init 搭建一个电商后端 API
+```
+
+**查看状态并开始工作：**
+```
+/agent-foreman:status
+/agent-foreman:next
+```
+
+**自动完成所有任务：**
+```
+/agent-foreman:run
+```
+
+**处理指定任务：**
+```
+/agent-foreman:run auth.login
+```
+
+### 4. 命令参数
+
+命令支持自然语言和标志参数：
+
+```
+/agent-foreman:init --mode new        # 全新开始，替换现有
+/agent-foreman:init --mode scan       # 仅预览，不保存
+/agent-foreman:next --check           # 显示任务前先运行测试
+/agent-foreman:analyze --verbose      # 详细输出
+```
+
+---
 
 ## 为什么管用
 
@@ -54,199 +118,9 @@ Anthropic 的研究发现：
 - 能精准更新状态
 - 严格遵守数据结构
 
-这就是「项目稳定推进」和「功能莫名消失」的分水岭。
-
-## 安装
-
-```bash
-# 全局安装
-npm install -g agent-foreman
-
-# 或者用 npx 直接运行
-npx agent-foreman --help
-```
-
-## Claude Code 插件
-
-agent-foreman 也可以作为 Claude Code 插件使用：
-
-```bash
-# 安装插件
-/plugin marketplace add mylukin/agent-foreman
-/plugin install agent-foreman
-```
-
 ---
 
-## 配合 Claude Code 使用
-
-### 项目初始化
-
-#### 从零开始
-
-创建一个全新项目：
-
-```bash
-mkdir my-project && cd my-project
-agent-foreman init "搭建一个任务管理 REST API" --mode new
-```
-
-**给 Claude Code 的提示词：**
-
-```text
-用 foreman 初始化这个项目。
-目标：搭建一个任务管理 REST API
-```
-
-#### 已有项目
-
-给现有项目加上 foreman 管理：
-
-```bash
-agent-foreman analyze
-agent-foreman init "你的项目目标"
-```
-
-**给 Claude Code 的提示词：**
-
-```text
-用 foreman 初始化这个项目。
-```
-
----
-
-### 任务循环
-
-#### 单任务模式
-
-```text
-用 foreman 获取下一个任务，实现它，然后标记完成。
-```
-
-#### 连续作战模式
-
-**一键自动化提示词：**
-
-```text
-用 foreman 检查项目状态，然后循环完成所有任务。每个任务：
-1. 执行 `agent-foreman next` 获取任务
-2. 按验收标准实现功能
-3. 执行 `agent-foreman done <feature_id>` 验证并完成（自动提交）
-4. 循环直到全部通过
-```
-
-#### 状态速览
-
-```text
-用 foreman 看一下项目当前进度。
-```
-
-#### 全面分析
-
-```text
-用 foreman 分析这个项目，给我一份完整的状态报告。
-```
-
----
-
-### 任务管理
-
-#### 添加新任务
-
-直接编辑 `ai/feature_list.json`，或者让 Claude Code 帮忙：
-
-```text
-添加一个新功能：
-- ID: auth.oauth
-- 描述：接入 Google OAuth2 登录
-- 模块：auth
-- 优先级：5
-- 验收标准：用户能用 Google 账号登录
-```
-
-**功能 JSON 结构：**
-
-```json
-{
-  "id": "auth.oauth",
-  "description": "接入 Google OAuth2 登录",
-  "module": "auth",
-  "priority": 5,
-  "status": "failing",
-  "acceptance": [
-    "页面显示「使用 Google 登录」按钮",
-    "点击后跳转到 Google 授权页",
-    "授权完成后跳回应用并完成登录"
-  ],
-  "dependsOn": ["auth.login"],
-  "tags": ["oauth", "google"],
-  "version": 1,
-  "origin": "manual",
-  "notes": ""
-}
-```
-
-#### 调整项目目标
-
-```text
-把项目目标改成：「搭建一个带 React 前端的全栈任务管理应用」
-顺便更新一下相关功能。
-```
-
-#### 修改已有任务
-
-```text
-更新 'api.users.create' 功能：
-- 描述改成：「创建用户并发送验证邮件」
-- 新增验收标准：「注册后发送验证邮件」
-- 优先级调成 3
-```
-
-#### 标记为阻塞
-
-```text
-把 'payment.stripe' 标记为阻塞，备注：「等 Stripe API 密钥」
-```
-
----
-
-### 全自动模式
-
-#### 方式一：循环执行提示词
-
-最靠谱的全自动提示词：
-
-```text
-作为自主开发者，用 agent-foreman 持续完成所有待办任务：
-
-1. `agent-foreman status` 检查状态
-2. `agent-foreman next` 获取任务
-3. 完整实现功能
-4. `agent-foreman done <id>` 验证完成（自动测试+提交）
-5. 回到步骤 2，直到全部通过
-
-除非遇到必须我介入的问题，否则不要停。
-```
-
-#### 方式二：使用 Foreman Agent
-
-```text
-用 foreman agent 自动完成这个项目的所有待办任务，
-逐个推进直到 100% 完成。
-```
-
-#### 方式三：批量标记（功能已实现的情况）
-
-如果功能已经做好了，只是没标记：
-
-```text
-这个项目的功能都已经实现并测试过了。
-用 foreman 逐个标记为完成。
-```
-
----
-
-### 工作流程图
+## 工作流程
 
 agent-foreman 采用 **TDD (测试驱动开发)** 理念：先定义验收标准，再实现功能，最后验证通过。
 
@@ -274,7 +148,7 @@ agent-foreman 采用 **TDD (测试驱动开发)** 理念：先定义验收标准
 │      │                          循环                        │           │
 │      ▼                                                      │           │
 │  ┌──────────┐    ┌──────────────────────────────────────┐  │           │
-│  │  step    │───▶│  RED: 查看验收标准 (预期行为)         │  │           │
+│  │  next    │───▶│  RED: 查看验收标准 (预期行为)         │  │           │
 │  │ 获取任务 │    │  验收标准 = 失败的测试用例             │  │           │
 │  └──────────┘    └──────────────────────────────────────┘  │           │
 │                                   │                         │           │
@@ -311,51 +185,21 @@ agent-foreman 采用 **TDD (测试驱动开发)** 理念：先定义验收标准
 - **GREEN** — 编写最少代码让标准通过
 - **REFACTOR** — 在测试保护下重构优化
 
-**核心命令：**
-| 阶段 | 命令 | 用途 |
-|------|------|------|
-| 初始化 | `analyze` | 分析现有项目结构 |
-| 初始化 | `detect-capabilities` | 自动检测构建/测试/检查工具 |
-| 初始化 | `init <goal>` | 生成框架和功能列表 |
-| 开发 | `status` | 查看当前进度 |
-| 开发 | `next` | 获取下一个优先任务 (RED) |
-| 开发 | `done <id>` | 验证 + 提交 (GREEN → REFACTOR) |
-| 调试 | `impact <id>` | 检查可能受影响的功能 |
-
 ---
 
-## 命令速查
+## CLI 安装
 
-| 命令 | 说明 |
-|------|------|
-| `analyze` | 生成项目分析报告 |
-| `init <goal>` | 初始化或升级框架 |
-| `next` | 显示下一个要做的任务 |
-| `status` | 查看项目进度 |
-| `impact <feature_id>` | 分析改动的影响范围 |
-| `done <feature_id>` | 验证 + 标记完成 + 自动提交 |
-| `check <feature_id>` | 只验证不完成 |
-| `agents` | 查看可用的 AI 代理 |
-| `detect-capabilities` | 检测项目的验证能力 |
+如果不使用 Claude Code，agent-foreman 也可以作为独立 CLI 使用：
 
-### done 命令选项
+```bash
+# 全局安装
+npm install -g agent-foreman
 
-| 参数 | 说明 |
-|------|------|
-| `--quick` | 只跑相关测试（默认模式） |
-| `--full` | 跑完整测试套件 |
-| `--skip-e2e` | 跳过 E2E 测试 |
-| `--skip-verify` | 跳过 AI 验证 |
-| `--no-commit` | 不自动提交 |
-| `--test-pattern <pattern>` | 指定测试文件匹配模式 |
+# 或者用 npx 直接运行
+npx agent-foreman --help
+```
 
-### init 模式
-
-| 模式 | 说明 |
-|------|------|
-| `--mode merge` | 合并到现有配置（默认） |
-| `--mode new` | 全新创建，已存在则报错 |
-| `--mode scan` | 只扫描，不写入 |
+详见 [详细使用指南](./docs/USAGE.md) 了解 CLI 命令参考。
 
 ---
 
@@ -367,8 +211,6 @@ agent-foreman 采用 **TDD (测试驱动开发)** 理念：先定义验收标准
 | `ai/progress.log` | 进度日志，用于会话交接 |
 | `ai/init.sh` | 环境启动脚本 |
 | `docs/ARCHITECTURE.md` | AI 生成的项目架构文档 |
-
----
 
 ## 功能状态
 
@@ -382,26 +224,6 @@ agent-foreman 采用 **TDD (测试驱动开发)** 理念：先定义验收标准
 
 ---
 
-## 支持的技术栈
-
-**通用支持** — agent-foreman 使用 AI 驱动的自动检测来分析任何项目，并自动确定合适的验证方法。
-
-```bash
-# 检测项目能力
-agent-foreman detect-capabilities
-```
-
-检测系统会自动识别：
-- **构建系统** (npm, yarn, pnpm, go, cargo, pip 等)
-- **测试框架** (Jest, Vitest, pytest, go test 等)
-- **代码检查** (ESLint, Prettier, golint 等)
-- **E2E 测试** (Playwright, Cypress 等)
-- **类型检查** (TypeScript, mypy 等)
-
-无需配置 — 只需运行 `detect-capabilities`，框架会自动适配你的项目。
-
----
-
 ## 最佳实践
 
 1. **一次只做一件事** — 完成当前任务再切换
@@ -411,22 +233,6 @@ agent-foreman detect-capabilities
 5. **先看再动手** — 开工前先读功能列表和进度日志
 
 ---
-
-## 本地开发
-
-```bash
-# 安装依赖
-npm install
-
-# 开发模式
-npm run dev
-
-# 构建
-npm run build
-
-# 跑测试
-npm test
-```
 
 ## 开源协议
 

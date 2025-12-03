@@ -1,382 +1,270 @@
 # Agent Foreman Usage Guide
 
-This guide explains how to use agent-foreman to manage long-running AI agent tasks with external memory.
+This guide provides detailed usage instructions for agent-foreman.
 
-> 本指南介绍如何使用 agent-foreman 管理具有外部记忆的长时间运行 AI agent 任务。
-
----
-
-## Quick Start
-
-```bash
-# Install globally
-npm install -g agent-foreman
-
-# Or run directly with npx
-npx agent-foreman <command>
-```
+> 本指南提供 agent-foreman 的详细使用说明。
 
 ---
 
-## Scenario 1: New Project (从零开始新项目)
+## Claude Code Plugin (Recommended)
 
-When starting a completely new project from scratch.
+agent-foreman is designed as a Claude Code plugin. This is the recommended way to use it.
 
-> 从零开始创建全新项目时使用。
+> agent-foreman 设计为 Claude Code 插件，这是推荐的使用方式。
 
-### Step 1: Create Project Directory
-
-```bash
-mkdir my-new-project
-cd my-new-project
-
-# Initialize git (required for commit tracking)
-git init
-```
-
-### Step 2: Initialize the Harness
-
-For a new project, start directly with `init` and provide your goal:
-
-> 对于新项目，直接使用 `init` 并提供你的目标：
-
-```bash
-agent-foreman init "Build a REST API for user management"
-```
-
-The AI will automatically detect this is an empty project and generate 10-20 initial features based on your goal description.
-
-> AI 会自动检测到这是一个空项目，并根据你的目标描述生成 10-20 个初始功能。
-
-**What happens:**
-
-1. AI generates feature list from your goal
-2. Creates harness files (`ai/`, `CLAUDE.md`)
-3. **Automatically creates first git commit**
-
-> **执行流程：**
->
-> 1. AI 根据你的目标生成功能清单
-> 2. 创建 harness 文件 (`ai/`, `CLAUDE.md`)
-> 3. **自动创建第一次 git 提交**
-
-**Output:**
+### Installation
 
 ```
-✓ Feature list saved with 15 features
-✓ Generated ai/init.sh
-✓ Generated CLAUDE.md
-✓ Updated ai/progress.log
-✓ Created initial git commit
-
-🎉 Harness initialized successfully!
+/plugin marketplace add mylukin/agent-foreman
+/plugin install agent-foreman
 ```
 
-### Step 3: Start Working on Features
+### Slash Commands Reference
 
-```bash
-agent-foreman next
-```
-
-This shows external memory sync:
-
-1. Current directory (`pwd`)
-2. Recent git commits
-3. Progress log entries
-4. Feature status summary
-5. Next task to work on
-
-> 这会显示外部记忆同步：
-> 1. 当前目录
-> 2. 最近的 git 提交
-> 3. 进度日志条目
-> 4. 功能状态摘要
-> 5. 下一个要做的任务
-
-### Step 4: Complete Features
-
-After implementing a feature:
-
-```bash
-agent-foreman done <feature_id>
-
-# Example
-agent-foreman done api.users.create
-```
-
-**Output (auto-commits by default):**
-
-```
-✓ Marked 'api.users.create' as passing
-✓ Changes committed: feat(api): Create user endpoint
-
-  Next up: api.users.list
-```
-
-> 输出（默认自动提交）
-
-**Note:** Use `--no-commit` flag to skip auto-commit if you want to commit manually.
-
-> **注意：** 使用 `--no-commit` 标志跳过自动提交，如果你想手动提交。
-
-### Step 5: Continue to Next Task
-
-The `done` command auto-commits, so just continue:
-
-> `done` 命令会自动提交，直接继续即可：
-
-```bash
-agent-foreman next      # See next task
-```
-
-### Step 6: (Optional) Generate Architecture Doc After Development
-
-Once you have substantial code written, generate documentation:
-
-> 当你写了大量代码后，生成文档：
-
-```bash
-agent-foreman analyze
-```
-
-**Output:**
-
-- `docs/ARCHITECTURE.md` - AI-generated project documentation
+| Command | Description |
+|---------|-------------|
+| `/agent-foreman:status` | View project status and progress |
+| `/agent-foreman:init` | Initialize harness with project goal |
+| `/agent-foreman:analyze` | Analyze existing project structure |
+| `/agent-foreman:next` | Get next priority feature to work on |
+| `/agent-foreman:run` | Auto-complete all pending features |
 
 ---
 
-## Scenario 2: Existing Project (已有项目)
+### `/agent-foreman:init`
 
-When adding agent-foreman to an existing codebase.
+Initialize or upgrade the long-task harness.
 
-> 在已有代码库上添加 agent-foreman 时使用。
+> 初始化或升级长任务框架。
 
-### Step 1: Navigate to Project
-
-```bash
-cd /path/to/existing-project
+**Usage:**
+```
+/agent-foreman:init <goal>
+/agent-foreman:init <goal> --mode new
+/agent-foreman:init <goal> --mode scan
 ```
 
-### Step 2: Analyze Project (Recommended)
+**Parameters:**
+- `<goal>` - Project goal in natural language (supports English and Chinese)
+- `--mode merge` - (default) Merge new features with existing list
+- `--mode new` - Replace existing feature list entirely
+- `--mode scan` - Preview only, don't save
 
-AI will analyze your existing codebase:
-
-```bash
-agent-foreman analyze
+**Examples:**
+```
+/agent-foreman:init Build a REST API for user management
+/agent-foreman:init 搭建一个电商后端 API
+/agent-foreman:init Add authentication --mode new
 ```
 
-This scans:
-- Directory structure
-- Config files (package.json, tsconfig.json, Cargo.toml, etc.)
-- Source code files
-- Test files
-
-> 这会扫描：
-> - 目录结构
-> - 配置文件 (package.json, tsconfig.json, Cargo.toml 等)
-> - 源代码文件
-> - 测试文件
-
-**Review the output:** `docs/ARCHITECTURE.md`
-
-### Step 3: Initialize the Harness
-
-```bash
-# With explicit goal
-agent-foreman init "Add user authentication feature"
-
-# Or auto-detect from existing docs
-agent-foreman init
-```
-
-**Init automatically chooses the best approach:**
-
+**Auto-detection behavior:**
 | Condition | Action |
 |-----------|--------|
 | `ARCHITECTURE.md` exists | Uses it to generate features (fast) |
-| Has source code, no arch doc | Scans codebase + **auto-generates ARCHITECTURE.md** |
+| Has source code, no arch doc | Scans codebase + auto-generates ARCHITECTURE.md |
 | Empty project | Generates features from goal |
 
-> **Init 自动选择最佳方式：**
->
-> | 条件 | 操作 |
-> |------|------|
-> | 有 `ARCHITECTURE.md` | 使用它生成功能（快） |
-> | 有源代码，无架构文档 | 扫描代码库 + **自动生成 ARCHITECTURE.md** |
-> | 空项目 | 从目标生成功能 |
+---
 
-**Mode options:**
+### `/agent-foreman:next`
 
-| Mode | Description |
-|------|-------------|
-| `--mode merge` | (default) Merge new features with existing list |
-| `--mode new` | Replace existing feature list entirely |
-| `--mode scan` | Only show discovered features, don't save |
+Get the next priority feature to work on.
 
-Example:
+> 获取下一个优先任务。
 
-```bash
-# Just scan to see what AI discovers
-agent-foreman init --mode scan
-
-# Replace everything with fresh scan
-agent-foreman init --mode new "Refactor the entire codebase"
+**Usage:**
+```
+/agent-foreman:next
+/agent-foreman:next <feature_id>
+/agent-foreman:next --check
 ```
 
-### Step 4: Review Feature List
+**Parameters:**
+- `<feature_id>` - (optional) Work on specific feature
+- `--check` - Run tests before showing task
+- `--dry-run` - Preview only
 
-Check the generated features:
+**Priority Order:**
+1. `needs_review` status (highest priority)
+2. `failing` status
+3. Lower priority number
 
-```bash
-agent-foreman status
+**Examples:**
 ```
-
-Or directly view the JSON:
-
-```bash
-cat ai/feature_list.json
-```
-
-### Step 5: Start the Workflow
-
-```bash
-# See next task with full context
-agent-foreman next
-
-# Run tests before showing task
-agent-foreman next --check
-
-# Work on specific feature
-agent-foreman next auth.login
+/agent-foreman:next
+/agent-foreman:next auth.login
+/agent-foreman:next --check
 ```
 
 ---
 
-## Command Reference (命令参考)
+### `/agent-foreman:status`
 
-### `analyze [output]`
+View project status and progress.
 
-Generate AI-powered project documentation.
+> 查看项目状态和进度。
 
-```bash
-agent-foreman analyze                    # Default: docs/ARCHITECTURE.md
-agent-foreman analyze docs/ANALYSIS.md   # Custom output path
-agent-foreman analyze -v                 # Verbose mode
+**Usage:**
+```
+/agent-foreman:status
+/agent-foreman:status --json
+/agent-foreman:status --quiet
 ```
 
-### `init [goal]`
+**Output includes:**
+- Project goal
+- Feature counts by status
+- Completion percentage with progress bar
+- Recent activity from progress log
 
-Initialize or update the long-task harness.
+---
 
-```bash
-agent-foreman init                      # Auto-detect goal
-agent-foreman init "My project goal"    # Explicit goal
-agent-foreman init --mode new           # Fresh start
-agent-foreman init --mode scan          # Preview only
-agent-foreman init -v                   # Verbose mode
+### `/agent-foreman:analyze`
+
+Analyze existing project structure and generate documentation.
+
+> 分析现有项目结构并生成文档。
+
+**Usage:**
+```
+/agent-foreman:analyze
+/agent-foreman:analyze <output_path>
+/agent-foreman:analyze --verbose
 ```
 
-**Auto git commit:** Creates `chore: initialize agent-foreman harness` commit.
+**Output:** `docs/ARCHITECTURE.md` containing:
+- Tech stack detected
+- Directory structure
+- Modules discovered
+- Completion assessment
 
-> **自动 git 提交：** 创建 `chore: initialize agent-foreman harness` 提交。
+---
 
-### `step [feature_id]`
+### `/agent-foreman:run`
 
-Show external memory and next task.
+Work on features - either all pending features or a specific one.
 
-```bash
-agent-foreman next                      # Next highest priority
-agent-foreman next cli.init             # Specific feature
-agent-foreman next --check              # Run tests first
-agent-foreman next -d                   # Dry run
+> 处理任务 - 可以处理所有待办任务或指定任务。
+
+**Usage:**
+```
+/agent-foreman:run                  # Auto-complete all features
+/agent-foreman:run auth.login       # Work on specific feature
 ```
 
-### `done <feature_id>`
-
-Mark a feature as complete with AI verification.
-
-```bash
-agent-foreman done cli.survey
-agent-foreman done cli.survey --notes "Added error handling"
-```
-
-**Test mode options:**
-
-| Flag | Description |
-|------|-------------|
-| `--quick` / `-q` | Run only tests related to the changed feature (default mode) |
-| `--full` | Run the complete test suite (for final verification) |
-| `--test-pattern <pattern>` | Use explicit test pattern (e.g., `tests/auth/**`) |
-| `--skip-e2e` | Skip E2E tests (useful for faster iterations) |
-| `--skip-verify` | Skip AI verification (not recommended) |
-| `--no-commit` | Skip auto-commit after completion |
-
-> **测试模式选项：**
->
-> | 标志 | 描述 |
-> |------|------|
-> | `--quick` / `-q` | 仅运行与更改功能相关的测试（默认模式） |
-> | `--full` | 运行完整测试套件（用于最终验证） |
-> | `--test-pattern <pattern>` | 使用显式测试模式（如 `tests/auth/**`） |
-> | `--skip-e2e` | 跳过 E2E 测试（加快迭代速度） |
-> | `--skip-verify` | 跳过 AI 验证（不推荐） |
-> | `--no-commit` | 跳过完成后的自动提交 |
+**Parameters:**
+- No argument: Auto-complete all pending features in priority order
+- `<feature_id>`: Work on the specified feature only
 
 **Examples:**
+```
+/agent-foreman:run                  # Complete all pending tasks
+/agent-foreman:run api.users.create # Work on specific feature
+```
+
+**Execution loop (when no feature_id):**
+1. Check status
+2. Get next feature (auto-selected by priority)
+3. Implement feature (satisfy ALL acceptance criteria)
+4. Complete feature with verification
+5. Repeat until all done
+
+**Exit conditions:**
+- All features `passing`/`deprecated` → Success
+- Verification fails → Stop and report
+- User interrupts → Stop with clean state
+
+---
+
+## Feature Completion
+
+After implementing a feature, mark it complete using the CLI:
 
 ```bash
-# Quick mode - runs only related tests (default, faster for large test suites)
+agent-foreman done <feature_id>
+```
+
+**Options:**
+| Flag | Description |
+|------|-------------|
+| `--quick` / `-q` | Run only related tests (default) |
+| `--full` | Run complete test suite |
+| `--test-pattern <pattern>` | Use explicit test pattern |
+| `--skip-e2e` | Skip E2E tests |
+| `--skip-verify` | Skip AI verification |
+| `--no-commit` | Skip auto-commit |
+
+**Examples:**
+```bash
+# Quick mode (default) - runs only related tests
 agent-foreman done auth.login
 
-# Full mode - runs all tests (for final verification)
+# Full mode - runs all tests
 agent-foreman done auth.login --full
 
-# Explicit pattern - specify exact test files to run
+# Explicit pattern
 agent-foreman done auth.login --test-pattern "tests/auth/*.test.ts"
 ```
 
-**Auto-commits changes** with conventional commit message. Use `--no-commit` to disable.
+---
 
-> **自动提交更改**，使用规范的提交消息。使用 `--no-commit` 禁用。
+## CLI Reference
 
-### `status`
+For users not using Claude Code, agent-foreman is available as a standalone CLI.
 
-Show project status and progress.
+### Installation
 
 ```bash
-agent-foreman status
+# Global installation
+npm install -g agent-foreman
+
+# Or use with npx
+npx agent-foreman <command>
 ```
 
-### `check <feature_id>` (optional)
+### Commands
 
-Preview verification without completing. Useful for debugging - normally you can just use `done` which auto-runs verification.
+| Command | Description |
+|---------|-------------|
+| `analyze [output]` | Generate project architecture report |
+| `init [goal]` | Initialize or upgrade the harness |
+| `next [feature_id]` | Show next feature to work on |
+| `status` | Show current project status |
+| `done <feature_id>` | Verify, mark complete, and auto-commit |
+| `check <feature_id>` | Preview verification without completing |
+| `impact <feature_id>` | Analyze impact of changes |
+| `agents` | Show available AI agents |
+| `detect-capabilities` | Detect project verification capabilities |
 
-> 预览验证结果，不执行完成操作。用于调试 - 通常直接使用 `done` 即可，它会自动运行验证。
+### CLI Examples
 
+**New project:**
 ```bash
-agent-foreman check cli.survey
-agent-foreman check cli.survey --quick
+mkdir my-project && cd my-project
+git init
+agent-foreman init "Build a REST API for user management"
 ```
 
-### `impact <feature_id>`
-
-Analyze dependencies of a feature.
-
+**Existing project:**
 ```bash
-agent-foreman impact auth.login
+cd existing-project
+agent-foreman analyze
+agent-foreman init "Add authentication feature"
 ```
 
-### `agents`
-
-Show available AI agents.
-
+**Development loop:**
 ```bash
-agent-foreman agents
+agent-foreman next           # Get next task
+# ... implement feature ...
+agent-foreman done cli.init  # Verify + mark complete + commit
+agent-foreman next           # Continue
 ```
 
 ---
 
-## Workflow Diagram (工作流程图)
+## Workflow Diagrams
+
+### New Project Flow
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -385,36 +273,44 @@ agent-foreman agents
 │  mkdir project && cd project                                │
 │  git init                                                    │
 │           ↓                                                  │
-│  agent-foreman init "goal" →  ai/feature_list.json          │
-│                               ai/progress.log                │
-│                               ai/init.sh                     │
-│                               CLAUDE.md                      │
-│                               + git commit (auto)            │
+│  /agent-foreman:init "goal" →  ai/feature_list.json         │
+│                                ai/progress.log               │
+│                                ai/init.sh                    │
+│                                CLAUDE.md                     │
+│                                + git commit (auto)           │
 │           ↓                                                  │
 │  (after coding)                                              │
-│  agent-foreman analyze      →  docs/ARCHITECTURE.md          │
+│  /agent-foreman:analyze     →  docs/ARCHITECTURE.md          │
 └─────────────────────────────────────────────────────────────┘
+```
 
+### Existing Project Flow
+
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                  EXISTING PROJECT                            │
 ├─────────────────────────────────────────────────────────────┤
 │  cd existing-project                                         │
 │           ↓                                                  │
-│  agent-foreman analyze     →  Analyzes existing code         │
-│                              docs/ARCHITECTURE.md            │
+│  /agent-foreman:analyze    →  Analyzes existing code         │
+│                               docs/ARCHITECTURE.md           │
 │           ↓                                                  │
-│  agent-foreman init       →  Reads ARCHITECTURE.md +        │
-│                              ai/feature_list.json            │
-│                              + git commit (suggested)        │
+│  /agent-foreman:init       →  Reads ARCHITECTURE.md +        │
+│                               ai/feature_list.json           │
+│                               + git commit (suggested)       │
 └─────────────────────────────────────────────────────────────┘
+```
 
+### Development Loop
+
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                   DEVELOPMENT LOOP                           │
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │    ┌──────────────────┐                                     │
-│    │ agent-foreman    │                                     │
-│    │     step         │  ← External memory sync             │
+│    │ /agent-foreman:  │                                     │
+│    │     next         │  ← External memory sync             │
 │    └────────┬─────────┘    - pwd                            │
 │             │              - git log                         │
 │             │              - progress.log                    │
@@ -430,49 +326,14 @@ agent-foreman agents
 │    │   done <id>      │  ← Verify + update status + commit  │
 │    └────────┬─────────┘                                     │
 │             │                                                │
-│             └──────────→ Loop back to step                  │
+│             └──────────→ Loop back to next                  │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Init Detection Flow (初始化检测流程)
-
-```text
-agent-foreman init "goal"
-        │
-        ▼
-┌───────────────────┐
-│ ARCHITECTURE.md   │
-│     exists?       │
-└─────────┬─────────┘
-          │
-    ┌─────┴─────┐
-    │           │
-   YES          NO
-    │           │
-    ▼           ▼
-┌─────────┐  ┌───────────────┐
-│ Use     │  │ Has source    │
-│ arch.md │  │ code files?   │
-│ (fast)  │  └───────┬───────┘
-└─────────┘          │
-              ┌──────┴──────┐
-              │             │
-             YES            NO
-              │             │
-              ▼             ▼
-        ┌─────────────┐  ┌─────────────┐
-        │ AI scan     │  │ Generate    │
-        │ + auto-save │  │ from goal   │
-        │ arch.md     │  │ (10-20 feat)│
-        └─────────────┘  └─────────────┘
-```
-
----
-
-## File Structure (文件结构)
+## File Structure
 
 After initialization, your project will have:
 
@@ -488,127 +349,37 @@ your-project/
 └── ... (your project files)
 ```
 
-> 初始化后，你的项目结构：
->
-> ```
-> your-project/
-> ├── ai/
-> │   ├── feature_list.json   # 功能清单 (JSON 格式供 AI 使用)
-> │   ├── progress.log        # 不可变审计日志
-> │   └── init.sh             # 启动脚本
-> ├── docs/
-> │   └── ARCHITECTURE.md     # AI 生成的文档 (可选)
-> ├── CLAUDE.md               # AI agent 指令
-> └── ... (你的项目文件)
-> ```
-
 ---
 
-## Best Practices (最佳实践)
-
-### 1. Choose the Right Starting Command
-
-**New project:** Start with `init` and a clear goal description.
-
-> **新项目：** 用 `init` 和清晰的目标描述开始。
-
-```bash
-agent-foreman init "Build a user authentication system"
-```
-
-**Existing project:** Start with `analyze` to analyze existing code, then `init`.
-
-> **已有项目：** 先用 `analyze` 分析现有代码，再用 `init`。
-
-```bash
-agent-foreman analyze   # ~45s AI scan of existing code
-agent-foreman init     # Fast, reuses analyze results
-```
-
-### 2. Automatic Commits
-
-The `done` command auto-commits after successful verification:
-
-> `done` 命令在验证成功后自动提交：
-
-```bash
-agent-foreman done api.users.create
-# Output: ✓ Changes committed: feat(api): Create user endpoint
-```
-
-This keeps clean git history for the next agent session. Use `--no-commit` if you need manual control.
-
-> 这样可以保持干净的 git 历史，方便下一个 agent 会话。如需手动控制，使用 `--no-commit`。
-
-### 3. Use --check for Verification
-
-Before starting new work, verify the environment is healthy.
-
-> 开始新工作前，验证环境是否健康。
-
-```bash
-agent-foreman next --check
-```
-
-### 4. Use Quick Mode for Faster Iterations
-
-When working on features with large E2E test suites, use `--quick` mode to run only related tests during development.
-
-> 当处理具有大型 E2E 测试套件的功能时，使用 `--quick` 模式仅运行相关测试以加快开发速度。
-
-```bash
-# During development - run only related tests
-agent-foreman done auth.login --quick
-
-# Before release - run full test suite
-agent-foreman done auth.login --full
-```
-
-**How selective testing works:**
-
-1. **Explicit pattern** - If `testPattern` is defined in feature_list.json, it uses that pattern
-2. **Auto-detect** - Otherwise, it analyzes git changes to find related test files
-3. **Module-based** - Falls back to module-based test discovery
-4. **Full suite** - If no pattern can be determined, runs all tests
-
-> **选择性测试的工作原理：**
->
-> 1. **显式模式** - 如果在 feature_list.json 中定义了 `testPattern`，则使用该模式
-> 2. **自动检测** - 否则，分析 git 更改以查找相关测试文件
-> 3. **基于模块** - 回退到基于模块的测试发现
-> 4. **完整套件** - 如果无法确定模式，则运行所有测试
-
-**Define testPattern in feature_list.json:**
+## Feature JSON Schema
 
 ```json
 {
-  "id": "auth.login",
-  "description": "User authentication flow",
-  "testPattern": "tests/auth/**/*.test.ts",
-  ...
+  "id": "module.feature.action",
+  "description": "Human-readable description",
+  "module": "parent-module-name",
+  "priority": 1,
+  "status": "failing",
+  "acceptance": [
+    "First acceptance criterion",
+    "Second acceptance criterion"
+  ],
+  "dependsOn": ["other.feature.id"],
+  "tags": ["optional-tag"],
+  "version": 1,
+  "origin": "manual",
+  "notes": "",
+  "testPattern": "tests/module/**/*.test.ts"
 }
 ```
 
-### 5. Review Feature List Regularly
+**Status values:** `failing` | `passing` | `blocked` | `needs_review` | `deprecated`
 
-```bash
-agent-foreman status
-```
-
-### 6. Re-analyze When Structure Changes
-
-If you significantly change the project structure:
-
-> 如果显著改变了项目结构：
-
-```bash
-agent-foreman analyze        # Re-scan
-agent-foreman init --mode merge  # Merge new features
-```
+**Origin values:** `init-auto` | `init-from-routes` | `init-from-tests` | `manual` | `replan`
 
 ---
 
-## Troubleshooting (故障排除)
+## Troubleshooting
 
 ### "No AI agents available"
 
@@ -633,20 +404,18 @@ Run init first:
 agent-foreman init "Your project goal"
 ```
 
+Or with slash command:
+
+```
+/agent-foreman:init Your project goal
+```
+
 ### "AI analysis failed"
 
 Check that your AI CLI is working:
 
 ```bash
 agent-foreman agents
-```
-
-### Git commit after init
-
-After initialization, run the suggested git commit command:
-
-```bash
-git add ai/ CLAUDE.md docs/ && git commit -m "chore: initialize agent-foreman harness"
 ```
 
 ---

@@ -5,14 +5,14 @@
 [![npm version](https://img.shields.io/npm/v/agent-foreman.svg)](https://www.npmjs.com/package/agent-foreman)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[中文文档](./README_zh.md)
+[中文文档](./README_zh.md) | [Detailed Usage Guide](./docs/USAGE.md)
 
 ## Problem
 
-AI coding agents face three common failure modes when working on long-running tasks:
+AI coding agents face three common failure modes:
 
-1. **Doing too much at once** - Trying to complete everything in one session, resulting in messy, incomplete code
-2. **Premature completion** - Declaring victory before all features actually work
+1. **Doing too much at once** - Trying to complete everything in one session
+2. **Premature completion** - Declaring victory before features actually work
 3. **Superficial testing** - Not thoroughly validating implementations
 
 ## Solution
@@ -24,9 +24,73 @@ AI coding agents face three common failure modes when working on long-running ta
 - **Hand off cleanly** between sessions via progress logs
 - **Track impact** of changes on other features
 
+---
+
+## Quick Start with Claude Code
+
+agent-foreman is designed as a **Claude Code plugin**. This is the recommended way to use it.
+
+### 1. Install Plugin
+
+```
+/plugin marketplace add mylukin/agent-foreman
+/plugin install agent-foreman
+```
+
+### 2. Slash Commands
+
+| Command | Description |
+|---------|-------------|
+| `/agent-foreman:status` | View project status and progress |
+| `/agent-foreman:init` | Initialize harness with project goal |
+| `/agent-foreman:analyze` | Analyze existing project structure |
+| `/agent-foreman:next` | Get next priority feature to work on |
+| `/agent-foreman:run` | Auto-complete all pending features |
+
+### 3. Usage Examples
+
+**Initialize a new project:**
+```
+/agent-foreman:init Build a REST API for user management
+```
+
+**Initialize with Chinese goal:**
+```
+/agent-foreman:init 搭建一个电商后端 API
+```
+
+**Check status and work on features:**
+```
+/agent-foreman:status
+/agent-foreman:next
+```
+
+**Auto-complete all tasks:**
+```
+/agent-foreman:run
+```
+
+**Work on specific feature:**
+```
+/agent-foreman:run auth.login
+```
+
+### 4. Command Options
+
+Commands accept natural language and flags:
+
+```
+/agent-foreman:init --mode new        # Fresh start, replace existing
+/agent-foreman:init --mode scan       # Preview only, don't save
+/agent-foreman:next --check           # Run tests before showing task
+/agent-foreman:analyze --verbose      # Detailed output
+```
+
+---
+
 ## Why It Works
 
-The core insight is simple: **AI agents need the same tooling that makes human engineering teams effective**.
+The core insight: **AI agents need the same tooling that makes human engineering teams effective**.
 
 Human engineers don't rely on memory either. We use:
 - Git for version history
@@ -54,203 +118,9 @@ When features are stored as JSON with explicit `status` fields, AI agents:
 - Update status correctly
 - Respect the schema
 
-This is the difference between projects that work and projects that mysteriously lose features between sessions.
-
-## Installation
-
-```bash
-# Global installation
-npm install -g agent-foreman
-
-# Or use with npx
-npx agent-foreman --help
-```
-
-## Claude Code Plugin
-
-agent-foreman is available as a Claude Code plugin:
-
-```bash
-# Install plugin
-/plugin marketplace add mylukin/agent-foreman
-/plugin install agent-foreman
-```
-
 ---
 
-## Using with Claude Code
-
-### Initializing Projects
-
-#### Empty Project
-
-For a brand new project with no existing code:
-
-```bash
-mkdir my-project && cd my-project
-agent-foreman init "Build a REST API for task management" --mode new
-```
-
-**Prompt for Claude Code:**
-
-```text
-Use foreman to initialize this project.
-Goal: Build a REST API for task management
-```
-
-#### Existing Project
-
-For projects with existing code:
-
-```bash
-agent-foreman analyze
-agent-foreman init "Your project goal"
-```
-
-**Prompt for Claude Code:**
-
-```text
-Use foreman to initialize this project.
-```
-
----
-
-### Task Loop Prompts
-
-#### Single Task Completion
-
-```text
-Use foreman to get the next task, implement it, and mark it complete.
-```
-
-#### Continuous Task Loop
-
-**The Magic Prompt - Auto-complete all tasks:**
-
-```text
-Use foreman to check the project status, then continuously work through
-all tasks one by one until everything is complete. For each task:
-1. Run `agent-foreman next` to get the next task
-2. Implement the feature according to acceptance criteria
-3. Run `agent-foreman done <feature_id>` to verify + mark done + auto-commit
-4. Repeat until all tasks are passing
-```
-
-#### Quick Status Check
-
-```text
-Use foreman to check the current project status.
-```
-
-#### Analyze and Plan
-
-```text
-Use foreman to analyze this project and give me a comprehensive status report.
-```
-
----
-
-### Managing Tasks
-
-#### Adding New Tasks
-
-Edit `ai/feature_list.json` directly or use Claude Code:
-
-```text
-Add a new feature to the task list:
-- ID: auth.oauth
-- Description: Implement OAuth2 authentication with Google
-- Module: auth
-- Priority: 5
-- Acceptance criteria: User can login with Google account
-```
-
-**Feature JSON Structure:**
-
-```json
-{
-  "id": "auth.oauth",
-  "description": "Implement OAuth2 authentication with Google",
-  "module": "auth",
-  "priority": 5,
-  "status": "failing",
-  "acceptance": [
-    "User can click 'Login with Google' button",
-    "System redirects to Google OAuth flow",
-    "User is authenticated and redirected back"
-  ],
-  "dependsOn": ["auth.login"],
-  "tags": ["oauth", "google"],
-  "version": 1,
-  "origin": "manual",
-  "notes": ""
-}
-```
-
-#### Changing Task Goals
-
-```text
-Update the project goal to: "Build a full-stack task management app with React frontend"
-Also update relevant features to align with the new goal.
-```
-
-#### Modifying Existing Tasks
-
-```text
-Update feature 'api.users.create':
-- Change description to: "Create user with email verification"
-- Add acceptance criteria: "Send verification email after registration"
-- Set priority to 3
-```
-
-#### Marking Tasks as Blocked
-
-```text
-Mark feature 'payment.stripe' as blocked with note: "Waiting for Stripe API keys"
-```
-
----
-
-### Auto-Complete All Tasks
-
-#### Method 1: Continuous Loop Prompt
-
-The most effective prompt for fully automated task completion:
-
-```text
-I want you to act as an autonomous developer. Use the agent-foreman
-harness to continuously complete all remaining tasks:
-
-1. Check status with `agent-foreman status`
-2. Get next task with `agent-foreman next`
-3. Implement the feature completely
-4. Run `agent-foreman done <id>` (auto-verifies + auto-commits)
-5. Loop back to step 2 until all tasks pass
-
-Do not stop until all features are passing. Ask me only if you
-encounter a blocker that requires my input.
-```
-
-#### Method 2: Using the Foreman Agent
-
-```text
-Use the foreman agent to automatically complete all pending tasks
-in this project. Work through them one by one until 100% complete.
-```
-
-#### Method 3: Batch Completion (for implemented features)
-
-If features are already implemented but not marked:
-
-```text
-All features in this project are already implemented and tested.
-Use foreman to mark each one as complete, going through them
-one by one until all are passing.
-```
-
----
-
-### Workflow Summary
+## Workflow
 
 agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acceptance criteria first, implement features second, verify at the end.
 
@@ -278,7 +148,7 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 │      │                         LOOP                         │           │
 │      ▼                                                      │           │
 │  ┌──────────┐    ┌──────────────────────────────────────┐  │           │
-│  │  step    │───▶│  RED: View acceptance criteria        │  │           │
+│  │  next    │───▶│  RED: View acceptance criteria        │  │           │
 │  │ get task │    │  Criteria = failing test cases        │  │           │
 │  └──────────┘    └──────────────────────────────────────┘  │           │
 │                                   │                         │           │
@@ -315,51 +185,21 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 - **GREEN** — Write minimum code to make criteria pass
 - **REFACTOR** — Optimize under test protection
 
-**Key Commands:**
-| Phase | Command | Purpose |
-|-------|---------|---------|
-| Setup | `analyze` | Analyze existing project structure |
-| Setup | `detect-capabilities` | Auto-detect build/test/lint tools |
-| Setup | `init <goal>` | Generate harness with features |
-| Work | `status` | View current progress |
-| Work | `next` | Get next priority feature (RED) |
-| Work | `done <id>` | Verify + commit (GREEN → REFACTOR) |
-| Debug | `impact <id>` | Check what might be affected |
-
 ---
 
-## Commands Reference
+## CLI Installation
 
-| Command | Description |
-|---------|-------------|
-| `analyze` | Generate project architecture report |
-| `init <goal>` | Initialize or upgrade the harness |
-| `next` | Show next feature to work on |
-| `status` | Show current project status |
-| `impact <feature_id>` | Analyze impact of changes |
-| `done <feature_id>` | Verify, mark complete, and auto-commit |
-| `check <feature_id>` | Preview verification without completing |
-| `agents` | Show available AI agents |
-| `detect-capabilities` | Detect project verification capabilities |
+For users not using Claude Code, agent-foreman is also available as a standalone CLI:
 
-### Done Command Options
+```bash
+# Global installation
+npm install -g agent-foreman
 
-| Flag | Description |
-|------|-------------|
-| `--quick` | Run only related tests (default mode) |
-| `--full` | Run complete test suite |
-| `--skip-e2e` | Skip E2E tests |
-| `--skip-verify` | Skip AI verification |
-| `--no-commit` | Skip auto-commit |
-| `--test-pattern <pattern>` | Use explicit test pattern |
+# Or use with npx
+npx agent-foreman --help
+```
 
-### Init Modes
-
-| Mode | Description |
-|------|-------------|
-| `--mode merge` | Merge with existing (default) |
-| `--mode new` | Create new, fail if exists |
-| `--mode scan` | Scan only, no AI features |
+See [Detailed Usage Guide](./docs/USAGE.md) for CLI command reference.
 
 ---
 
@@ -371,8 +211,6 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 | `ai/progress.log` | Session handoff audit log |
 | `ai/init.sh` | Environment bootstrap script |
 | `docs/ARCHITECTURE.md` | AI-generated project architecture |
-
----
 
 ## Feature Status Values
 
@@ -386,26 +224,6 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 
 ---
 
-## Supported Tech Stacks
-
-**Universal Support** - agent-foreman uses AI-powered auto-detection to analyze any project and determine appropriate verification methods automatically.
-
-```bash
-# Detect project capabilities
-agent-foreman detect-capabilities
-```
-
-The detection system automatically identifies:
-- **Build systems** (npm, yarn, pnpm, go, cargo, pip, etc.)
-- **Test frameworks** (Jest, Vitest, pytest, go test, etc.)
-- **Linting tools** (ESLint, Prettier, golint, etc.)
-- **E2E testing** (Playwright, Cypress, etc.)
-- **Type checking** (TypeScript, mypy, etc.)
-
-No configuration required - just run `detect-capabilities` and the harness adapts to your project.
-
----
-
 ## Best Practices
 
 1. **One feature at a time** - Complete before switching
@@ -415,22 +233,6 @@ No configuration required - just run `detect-capabilities` and the harness adapt
 5. **Read first** - Always check feature list and progress log
 
 ---
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Run in development mode
-npm run dev
-
-# Build
-npm run build
-
-# Run tests
-npm test
-```
 
 ## License
 

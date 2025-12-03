@@ -1,10 +1,43 @@
 ---
-description: Automatically complete all pending features from the feature list in priority order
+description: Work on features - auto-complete all pending features or work on a specific one
 ---
 
-# EXECUTE THIS LOOP
+# EXECUTE FEATURE WORKFLOW
 
 Start immediately. Do not ask for confirmation.
+
+## Mode Detection
+
+**If a feature_id is provided** (e.g., `/agent-foreman:run auth.login`):
+- Work on that specific feature only
+- Complete it and stop
+
+**If no feature_id** (e.g., `/agent-foreman:run`):
+- Auto-complete all pending features in priority order
+- Loop until all done
+
+---
+
+## Single Feature Mode
+
+When feature_id is provided:
+
+```bash
+# STEP 1: Get the specified feature
+agent-foreman next <feature_id>
+
+# STEP 2: Implement feature
+# (satisfy ALL acceptance criteria shown)
+
+# STEP 3: Complete feature
+agent-foreman done <feature_id>
+```
+
+---
+
+## All Features Mode
+
+When no feature_id:
 
 ```bash
 # STEP 1: Check status
@@ -25,11 +58,13 @@ agent-foreman done <feature_id>
 # - Verification failed? → STOP, report failure
 ```
 
+---
+
 ## Rules (MUST Follow)
 
 | Rule | Action |
 |------|--------|
-| No skipping | Always: status → step → implement → complete |
+| No skipping | Always: status → next → implement → done |
 | One at a time | Complete current before next |
 | No editing criteria | Implement exactly as specified |
 | Never kill processes | Let commands finish naturally |
@@ -41,6 +76,7 @@ agent-foreman done <feature_id>
 | All features `passing`/`deprecated` | ✅ STOP - Success |
 | Verification fails | ❌ STOP - Report failure |
 | User interrupts | ⏹️ STOP - Clean state |
+| Single feature completed | ✅ STOP - Feature done |
 
 ## Priority Order (Auto-Selected)
 

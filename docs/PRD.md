@@ -55,8 +55,14 @@ From Anthropic's research:
       "status": "failing",
       "acceptance": ["Criterion 1", "Criterion 2"],
       "dependsOn": ["other.feature.id"],
+      "supersedes": [],
+      "tags": [],
       "version": 1,
-      "origin": "manual"
+      "origin": "manual",
+      "notes": "",
+      "testRequirements": {
+        "unit": { "required": false, "pattern": "tests/module/**/*.test.ts" }
+      }
     }
   ],
   "metadata": {
@@ -67,6 +73,8 @@ From Anthropic's research:
   }
 }
 ```
+
+**Optional fields:** `testRequirements`, `e2eTags`, `testFiles`, `verification`
 
 ### 2. `ai/progress.log` - Session Audit Log
 

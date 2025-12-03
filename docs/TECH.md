@@ -13,7 +13,7 @@ agent-foreman is a TypeScript CLI tool that manages long-running AI agent tasks 
 ```text
 ┌─────────────────────────────────────────────────────────┐
 │                     CLI Layer                            │
-│  Commands: survey, init, step, status, complete, etc.   │
+│  Commands: analyze, init, next, status, done, etc.      │
 └───────────────────────┬─────────────────────────────────┘
                         │
 ┌───────────────────────▼─────────────────────────────────┐
@@ -92,9 +92,9 @@ agent-foreman supports multiple AI CLI tools with automatic failover:
 
 | Agent | Priority | Command |
 |-------|----------|---------|
-| Codex | 1 (highest) | `codex exec --full-auto -` |
-| Gemini | 2 | `gemini --yolo` |
-| Claude | 3 | `claude --print --dangerously-skip-permissions` |
+| Codex | 1 (highest) | `codex exec --skip-git-repo-check --full-auto -` |
+| Gemini | 2 | `gemini --output-format text --yolo` |
+| Claude | 3 | `claude --print --output-format text --dangerously-skip-permissions` |
 
 **Selection Logic:**
 
@@ -268,15 +268,16 @@ agent-foreman integrates with Claude Code as a plugin:
 plugins/agent-foreman/
 ├── agents/foreman.md      # Agent definition
 ├── skills/                 # 4 skills
-│   ├── project-survey/
+│   ├── project-analyze/
 │   ├── init-harness/
-│   ├── feature-step/
+│   ├── feature-next/
 │   └── feature-run/
-└── commands/               # 4 slash commands
-    ├── survey.md
+└── commands/               # 5 slash commands
+    ├── analyze.md
     ├── init.md
-    ├── step.md
-    └── run.md
+    ├── next.md
+    ├── run.md
+    └── status.md
 ```
 
 ---

@@ -63,10 +63,10 @@ agent-foreman 设计为 **Claude Code 插件**，这是推荐的使用方式。
 
 **初始化新项目：**
 ```
-/agent-foreman:init Build a REST API for user management
+/agent-foreman:init 搭建一个用户管理 REST API
 ```
 
-**用中文目标初始化：**
+**另一个示例：**
 ```
 /agent-foreman:init 搭建一个电商后端 API
 ```

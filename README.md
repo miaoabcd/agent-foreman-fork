@@ -5,7 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/agent-foreman.svg)](https://www.npmjs.com/package/agent-foreman)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[中文文档](./README_zh.md) | [Detailed Usage Guide](./docs/USAGE.md)
+[Chinese](./README_zh.md) | [Detailed Usage Guide](./docs/USAGE.md)
 
 ## Problem
 
@@ -66,9 +66,9 @@ agent-foreman is designed as a **Claude Code plugin**. This is the recommended w
 /agent-foreman:init Build a REST API for user management
 ```
 
-**Initialize with Chinese goal:**
+**Another example:**
 ```
-/agent-foreman:init 搭建一个电商后端 API
+/agent-foreman:init Create an e-commerce backend API
 ```
 
 **Check status and work on features:**

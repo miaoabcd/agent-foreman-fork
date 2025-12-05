@@ -57,7 +57,8 @@ export function formatRunNumber(num: number): string {
 }
 
 /**
- * Convert VerificationResult to compact VerificationMetadata
+ * Convert VerificationResult to full VerificationMetadata
+ * Stores all fields for programmatic access (no longer compact)
  */
 export function toMetadata(result: VerificationResult, runNumber: number): VerificationMetadata {
   return {
@@ -72,22 +73,28 @@ export function toMetadata(result: VerificationResult, runNumber: number): Verif
       success: c.success,
       duration: c.duration,
       errorCount: c.errorCount,
-      // Note: output excluded
+      output: c.output,
     })),
     criteriaResults: result.criteriaResults.map((c) => ({
       criterion: c.criterion,
       index: c.index,
       satisfied: c.satisfied,
       confidence: c.confidence,
-      // Note: reasoning and evidence excluded
+      reasoning: c.reasoning,
+      evidence: c.evidence,
     })),
     verdict: result.verdict,
     verifiedBy: result.verifiedBy,
+    overallReasoning: result.overallReasoning,
+    suggestions: result.suggestions,
+    codeQualityNotes: result.codeQualityNotes,
+    relatedFilesAnalyzed: result.relatedFilesAnalyzed,
   };
 }
 
 /**
  * Update the feature summary in the index
+ * Includes enhanced fields for fast queries (v3.0.0)
  */
 export function updateFeatureSummary(
   index: VerificationIndex,
@@ -95,6 +102,14 @@ export function updateFeatureSummary(
   runNumber: number
 ): void {
   const existing = index.features[result.featureId];
+
+  // Calculate enhanced fields
+  const automatedChecksPassed = result.automatedChecks.every((c) => c.success);
+  const criteriaCount = result.criteriaResults.length;
+  const criteriaSatisfied = result.criteriaResults.filter((c) => c.satisfied).length;
+  const hasWarnings =
+    (result.suggestions && result.suggestions.length > 0) ||
+    (result.codeQualityNotes && result.codeQualityNotes.length > 0);
 
   if (existing) {
     // Update existing summary
@@ -107,6 +122,12 @@ export function updateFeatureSummary(
     } else if (result.verdict === "fail") {
       existing.failCount++;
     }
+    // Enhanced fields
+    existing.latestCommitHash = result.commitHash;
+    existing.automatedChecksPassed = automatedChecksPassed;
+    existing.criteriaCount = criteriaCount;
+    existing.criteriaSatisfied = criteriaSatisfied;
+    existing.hasWarnings = hasWarnings;
   } else {
     // Create new summary
     index.features[result.featureId] = {
@@ -117,6 +138,12 @@ export function updateFeatureSummary(
       totalRuns: 1,
       passCount: result.verdict === "pass" ? 1 : 0,
       failCount: result.verdict === "fail" ? 1 : 0,
+      // Enhanced fields
+      latestCommitHash: result.commitHash,
+      automatedChecksPassed,
+      criteriaCount,
+      criteriaSatisfied,
+      hasWarnings,
     };
   }
 
@@ -126,6 +153,7 @@ export function updateFeatureSummary(
 /**
  * Internal auto-migration helper (called during loadVerificationIndex)
  * Performs migration if old results.json exists and index.json doesn't
+ * Migrates to v3.0.0 format with full data in individual files and enhanced index
  */
 async function performAutoMigration(cwd: string): Promise<void> {
   const storePath = path.join(cwd, VERIFICATION_STORE_DIR, "results.json");
@@ -155,29 +183,8 @@ async function performAutoMigration(cwd: string): Promise<void> {
         const runNumber = 1;
         const runStr = String(runNumber).padStart(3, "0");
 
-        // Write metadata JSON
-        const metadata = {
-          featureId: result.featureId,
-          runNumber,
-          timestamp: result.timestamp,
-          commitHash: result.commitHash,
-          changedFiles: result.changedFiles,
-          diffSummary: result.diffSummary,
-          automatedChecks: result.automatedChecks.map((c) => ({
-            type: c.type,
-            success: c.success,
-            duration: c.duration,
-            errorCount: c.errorCount,
-          })),
-          criteriaResults: result.criteriaResults.map((c) => ({
-            criterion: c.criterion,
-            index: c.index,
-            satisfied: c.satisfied,
-            confidence: c.confidence,
-          })),
-          verdict: result.verdict,
-          verifiedBy: result.verifiedBy,
-        };
+        // Write FULL metadata JSON (v3.0.0 - includes all fields)
+        const metadata = toMetadata(result, runNumber);
         const jsonPath = path.join(featureDir, `${runStr}.json`);
         await fs.writeFile(jsonPath, JSON.stringify(metadata, null, 2), "utf-8");
 
@@ -186,7 +193,15 @@ async function performAutoMigration(cwd: string): Promise<void> {
         const mdPath = path.join(featureDir, `${runStr}.md`);
         await fs.writeFile(mdPath, report, "utf-8");
 
-        // Update index
+        // Calculate enhanced fields for index
+        const automatedChecksPassed = result.automatedChecks.every((c) => c.success);
+        const criteriaCount = result.criteriaResults.length;
+        const criteriaSatisfied = result.criteriaResults.filter((c) => c.satisfied).length;
+        const hasWarnings =
+          (result.suggestions && result.suggestions.length > 0) ||
+          (result.codeQualityNotes && result.codeQualityNotes.length > 0);
+
+        // Update index with enhanced fields
         index.features[featureId] = {
           featureId,
           latestRun: runNumber,
@@ -195,6 +210,12 @@ async function performAutoMigration(cwd: string): Promise<void> {
           totalRuns: 1,
           passCount: result.verdict === "pass" ? 1 : 0,
           failCount: result.verdict === "fail" ? 1 : 0,
+          // Enhanced fields (v3.0.0)
+          latestCommitHash: result.commitHash,
+          automatedChecksPassed,
+          criteriaCount,
+          criteriaSatisfied,
+          hasWarnings,
         };
 
         migratedCount++;
@@ -210,17 +231,19 @@ async function performAutoMigration(cwd: string): Promise<void> {
     const indexPath = path.join(cwd, VERIFICATION_INDEX_PATH);
     await fs.writeFile(indexPath, JSON.stringify(index, null, 2), "utf-8");
 
-    // Backup old results.json
+    // Backup old results.json (no longer needed after migration)
     const backupPath = path.join(cwd, VERIFICATION_STORE_DIR, "results.json.bak");
     try {
       await fs.copyFile(storePath, backupPath);
+      // Remove original results.json after successful backup
+      await fs.unlink(storePath);
     } catch {
-      // Ignore backup errors
+      // Ignore backup/delete errors
     }
 
     if (migratedCount > 0) {
       console.log(
-        `[verification-store] Auto-migrated ${migratedCount} verification results to new format`
+        `[verification-store] Auto-migrated ${migratedCount} verification results to v3.0.0 format`
       );
     }
   } catch {

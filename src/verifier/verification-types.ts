@@ -175,6 +175,17 @@ export interface FeatureSummary {
   passCount: number;
   /** Count of failing verifications */
   failCount: number;
+  // Enhanced fields for fast queries (added in v3.0.0)
+  /** Git commit hash at latest verification */
+  latestCommitHash?: string;
+  /** Whether all automated checks passed in latest run */
+  automatedChecksPassed?: boolean;
+  /** Total number of acceptance criteria */
+  criteriaCount?: number;
+  /** Number of criteria satisfied in latest run */
+  criteriaSatisfied?: number;
+  /** Whether there are suggestions or warnings */
+  hasWarnings?: boolean;
 }
 
 /**
@@ -191,8 +202,9 @@ export interface VerificationIndex {
 }
 
 /**
- * Compact metadata for a single verification run
- * Stored in {featureId}/NNN.json - excludes verbose output and reasoning
+ * Full metadata for a single verification run
+ * Stored in {featureId}/NNN.json - includes all fields for programmatic access
+ * Note: Markdown report ({featureId}/NNN.md) provides human-readable format
  */
 export interface VerificationMetadata {
   /** Feature ID that was verified */
@@ -208,28 +220,40 @@ export interface VerificationMetadata {
   /** Summary of the git diff */
   diffSummary: string;
 
-  /** Results of automated checks (without verbose output) */
+  /** Results of automated checks (full data including output) */
   automatedChecks: Array<{
     type: AutomatedCheckType;
     success: boolean;
     duration?: number;
     errorCount?: number;
-    // Note: output field is excluded - stored in markdown
+    /** Command output (stdout/stderr) */
+    output?: string;
   }>;
 
-  /** Per-criterion results (without verbose reasoning) */
+  /** Per-criterion results (full data including reasoning) */
   criteriaResults: Array<{
     criterion: string;
     index: number;
     satisfied: boolean;
     confidence: number;
-    // Note: reasoning and evidence excluded - stored in markdown
+    /** AI's reasoning for the verdict */
+    reasoning?: string;
+    /** Evidence from code/diff (file:line references) */
+    evidence?: string[];
   }>;
 
   /** Overall verification verdict */
   verdict: VerificationVerdict;
   /** AI agent used for verification */
   verifiedBy: string;
+  /** Overall reasoning for the verdict */
+  overallReasoning?: string;
+  /** Suggestions for improvement */
+  suggestions?: string[];
+  /** Code quality notes */
+  codeQualityNotes?: string[];
+  /** List of related files analyzed for context */
+  relatedFilesAnalyzed?: string[];
 }
 
 // ============================================================================

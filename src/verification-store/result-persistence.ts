@@ -13,8 +13,6 @@ import { VERIFICATION_STORE_DIR, VERIFICATION_STORE_PATH } from "./constants.js"
 import {
   ensureVerificationDir,
   loadVerificationStore,
-  createEmptyStore,
-  saveLegacyResult,
 } from "./legacy-store.js";
 import {
   createEmptyIndex,
@@ -61,13 +59,14 @@ export async function saveVerificationResult(
   updateFeatureSummary(index, result, runNumber);
   await saveIndex(cwd, index);
 
-  // Also save to legacy results.json for backward compatibility
-  await saveLegacyResult(cwd, result);
+  // Note: Legacy results.json is no longer written (removed in v3.0.0)
+  // Individual JSON files now store full data
 }
 
 /**
  * Get the last verification result for a feature
- * Tries new index first, falls back to legacy store
+ * Reads from individual JSON files (full data since v3.0.0)
+ * Falls back to legacy store for old data only
  */
 export async function getLastVerification(
   cwd: string,
@@ -89,14 +88,7 @@ export async function getLastVerification(
       const content = await fs.readFile(jsonPath, "utf-8");
       const metadata = JSON.parse(content) as VerificationMetadata;
 
-      // For full result, we need to read from legacy store or reconstruct
-      // For now, return from legacy store which has full data
-      const store = await loadVerificationStore(cwd);
-      if (store && store.results[featureId]) {
-        return store.results[featureId];
-      }
-
-      // If legacy doesn't have it, return minimal result from metadata
+      // Individual JSON files now store full data (v3.0.0+)
       return {
         featureId: metadata.featureId,
         timestamp: metadata.timestamp,
@@ -108,24 +100,29 @@ export async function getLastVerification(
           success: c.success,
           duration: c.duration,
           errorCount: c.errorCount,
+          output: c.output,
         })),
         criteriaResults: metadata.criteriaResults.map((c) => ({
           criterion: c.criterion,
           index: c.index,
           satisfied: c.satisfied,
           confidence: c.confidence,
-          reasoning: "", // Not stored in metadata
+          reasoning: c.reasoning || "",
+          evidence: c.evidence,
         })),
         verdict: metadata.verdict,
         verifiedBy: metadata.verifiedBy,
-        overallReasoning: "", // Not stored in metadata
+        overallReasoning: metadata.overallReasoning || "",
+        suggestions: metadata.suggestions,
+        codeQualityNotes: metadata.codeQualityNotes,
+        relatedFilesAnalyzed: metadata.relatedFilesAnalyzed,
       };
     } catch {
-      // Fall back to legacy store
+      // Fall back to legacy store for old data
     }
   }
 
-  // Fall back to legacy store
+  // Fall back to legacy store (for data created before v3.0.0)
   const store = await loadVerificationStore(cwd);
   if (!store) {
     return null;
@@ -165,21 +162,12 @@ export async function getVerificationHistory(
 
 /**
  * Clear a verification result from the store
+ * Removes from index but preserves history in feature subdirectory
  */
 export async function clearVerificationResult(
   cwd: string,
   featureId: string
 ): Promise<void> {
-  // Clear from legacy store
-  const store = await loadVerificationStore(cwd);
-  if (store && store.results[featureId]) {
-    delete store.results[featureId];
-    store.updatedAt = new Date().toISOString();
-    await ensureVerificationDir(cwd);
-    const storePath = path.join(cwd, VERIFICATION_STORE_PATH);
-    await fs.writeFile(storePath, JSON.stringify(store, null, 2), "utf-8");
-  }
-
   // Clear from index
   const index = await loadVerificationIndex(cwd);
   if (index && index.features[featureId]) {
@@ -189,17 +177,35 @@ export async function clearVerificationResult(
   }
 
   // Note: We don't delete the feature subdirectory to preserve history
+  // Legacy results.json is no longer maintained (v3.0.0)
 }
 
 /**
- * Get all verification results (summaries from index)
+ * Get all verification results (aggregated from individual files)
+ * Uses index to find features, then loads each result
  */
 export async function getAllVerificationResults(
   cwd: string
 ): Promise<Record<string, VerificationResult>> {
-  // Return from legacy store for full results
-  const store = await loadVerificationStore(cwd);
-  return store?.results || {};
+  const results: Record<string, VerificationResult> = {};
+
+  // Get list of features from index
+  const index = await loadVerificationIndex(cwd);
+  if (!index || Object.keys(index.features).length === 0) {
+    // Fall back to legacy store for old data
+    const store = await loadVerificationStore(cwd);
+    return store?.results || {};
+  }
+
+  // Load each feature's latest result
+  for (const featureId of Object.keys(index.features)) {
+    const result = await getLastVerification(cwd, featureId);
+    if (result) {
+      results[featureId] = result;
+    }
+  }
+
+  return results;
 }
 
 /**

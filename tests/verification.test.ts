@@ -16,7 +16,8 @@ import {
   hasVerification,
   getVerificationStats,
   STORE_VERSION,
-} from "../src/verification-store.js";
+  loadVerificationIndex,
+} from "../src/verification-store/index.js";
 
 import {
   buildVerificationPrompt,
@@ -24,13 +25,13 @@ import {
   parseVerificationResponse,
   truncateDiffIntelligently,
   DEFAULT_MAX_DIFF_SIZE,
-} from "../src/verification-prompts.js";
+} from "../src/verifier/prompts.js";
 
 import type {
   VerificationResult,
   AutomatedCheckResult,
   CriterionResult,
-} from "../src/verification-types.js";
+} from "../src/verifier/verification-types.js";
 
 import type { Feature } from "../src/types.js";
 
@@ -152,34 +153,55 @@ describe("Verification Store", () => {
   });
 
   describe("saveVerificationResult", () => {
-    it("should save result and create directory if needed", async () => {
+    it("should save result to individual JSON file (v3.0.0 format)", async () => {
       const result = createTestVerificationResult();
 
       await saveVerificationResult(tempDir, result);
 
-      const storePath = path.join(
+      // Verify individual JSON file is created (not results.json)
+      const jsonPath = path.join(
+        tempDir,
+        "ai",
+        "verification",
+        "test.feature",
+        "001.json"
+      );
+      const content = await fs.readFile(jsonPath, "utf-8");
+      const metadata = JSON.parse(content);
+
+      expect(metadata.featureId).toBe("test.feature");
+      expect(metadata.verdict).toBe("pass");
+      expect(metadata.runNumber).toBe(1);
+      // Verify full data is stored (v3.0.0)
+      expect(metadata.overallReasoning).toBe("All criteria met");
+    });
+
+    it("should NOT create legacy results.json (v3.0.0)", async () => {
+      const result = createTestVerificationResult();
+
+      await saveVerificationResult(tempDir, result);
+
+      // Legacy results.json should NOT be created
+      const legacyPath = path.join(
         tempDir,
         "ai",
         "verification",
         "results.json"
       );
-      const content = await fs.readFile(storePath, "utf-8");
-      const store = JSON.parse(content);
-
-      expect(store.results["test.feature"]).toBeDefined();
-      expect(store.results["test.feature"].verdict).toBe("pass");
+      await expect(fs.stat(legacyPath)).rejects.toThrow();
     });
 
-    it("should update existing result", async () => {
+    it("should update index on subsequent saves", async () => {
       const result1 = createTestVerificationResult({ verdict: "fail" });
       const result2 = createTestVerificationResult({ verdict: "pass" });
 
       await saveVerificationResult(tempDir, result1);
       await saveVerificationResult(tempDir, result2);
 
-      const store = await loadVerificationStore(tempDir);
+      const index = await loadVerificationIndex(tempDir);
 
-      expect(store?.results["test.feature"].verdict).toBe("pass");
+      expect(index?.features["test.feature"].latestVerdict).toBe("pass");
+      expect(index?.features["test.feature"].latestRun).toBe(2);
     });
   });
 
@@ -764,7 +786,6 @@ ${"content line\n".repeat(2000)}`;
 // ============================================================================
 
 import {
-  loadVerificationIndex,
   createEmptyIndex,
   getVerificationHistory,
   getFeatureSummary,
@@ -772,9 +793,9 @@ import {
   needsMigration,
   migrateResultsJson,
   autoMigrateIfNeeded,
-} from "../src/verification-store.js";
+} from "../src/verification-store/index.js";
 
-import { generateVerificationReport, generateVerificationSummary } from "../src/verification-report.js";
+import { generateVerificationReport, generateVerificationSummary } from "../src/verifier/report.js";
 
 describe("Per-Feature Verification Storage", () => {
   let tempDir: string;
@@ -942,6 +963,32 @@ describe("Per-Feature Verification Storage", () => {
       expect(index?.features["test.feature"].passCount).toBe(1);
       expect(index?.features["test.feature"].failCount).toBe(1);
       expect(index?.features["test.feature"].latestVerdict).toBe("pass");
+    });
+
+    it("should include enhanced fields in index summary (v3.0.0)", async () => {
+      const result = createTestVerificationResult({
+        commitHash: "abc123def",
+        automatedChecks: [
+          { type: "test", success: true, duration: 1000 },
+          { type: "lint", success: true, duration: 500 },
+        ],
+        criteriaResults: [
+          { criterion: "A", index: 0, satisfied: true, reasoning: "OK", confidence: 0.9 },
+          { criterion: "B", index: 1, satisfied: false, reasoning: "Missing", confidence: 0.8 },
+        ],
+        suggestions: ["Consider adding more tests"],
+      });
+      await saveVerificationResult(tempDir, result);
+
+      const index = await loadVerificationIndex(tempDir);
+      const summary = index?.features["test.feature"];
+
+      // Enhanced fields (v3.0.0)
+      expect(summary?.latestCommitHash).toBe("abc123def");
+      expect(summary?.automatedChecksPassed).toBe(true);
+      expect(summary?.criteriaCount).toBe(2);
+      expect(summary?.criteriaSatisfied).toBe(1);
+      expect(summary?.hasWarnings).toBe(true);
     });
   });
 

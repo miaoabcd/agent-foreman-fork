@@ -11,7 +11,15 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json-summary", "html"],
       include: ["src/**/*.ts"],
-      exclude: ["src/index.ts"],
+      exclude: [
+        "src/index.ts",
+        // Type-only files (no executable code)
+        "src/types.ts",
+        "src/verification-types.ts",
+        "src/verifier.ts",
+        "src/verifier/index.ts",
+        "src/verifier/types.ts",
+      ],
       reportsDirectory: "./coverage",
     },
     testTimeout: 30000,

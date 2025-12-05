@@ -21,11 +21,11 @@ import {
   parseCapabilityResponse,
   discoverCapabilitiesWithAI,
   clearCapabilitiesCache,
-} from "../src/project-capabilities.js";
+} from "../src/capabilities/index.js";
 
 import * as agents from "../src/agents.js";
 
-import type { ExtendedCapabilities, CapabilityCache } from "../src/verification-types.js";
+import type { ExtendedCapabilities, CapabilityCache } from "../src/verifier/verification-types.js";
 
 // ============================================================================
 // Test Helpers

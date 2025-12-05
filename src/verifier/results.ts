@@ -4,7 +4,7 @@
 
 import chalk from "chalk";
 
-import type { VerificationResult, FeatureVerificationSummary } from "../verification-types.js";
+import type { VerificationResult, FeatureVerificationSummary } from "./verification-types.js";
 
 /**
  * Create a verification summary for embedding in feature

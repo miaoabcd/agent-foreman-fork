@@ -16,7 +16,7 @@ import {
   verifyFeatureAutonomous,
   createVerificationSummary,
   formatVerificationResult,
-} from "../verifier.js";
+} from "../verifier/index.js";
 
 /**
  * Run the check command

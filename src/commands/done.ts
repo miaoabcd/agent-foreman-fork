@@ -24,7 +24,7 @@ import {
   verifyFeatureAutonomous,
   createVerificationSummary,
   formatVerificationResult,
-} from "../verifier.js";
+} from "../verifier/index.js";
 import { isGitRepo, gitAdd, gitCommit } from "../git-utils.js";
 import { verifyTestFilesExist, discoverFeatureTestFiles } from "../test-gate.js";
 import { aiScanProject, aiResultToSurvey, generateAISurveyMarkdown } from "../ai-scanner.js";

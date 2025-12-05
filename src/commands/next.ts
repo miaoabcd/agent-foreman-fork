@@ -18,9 +18,9 @@ import {
 } from "../feature-list.js";
 import { getRecentEntries } from "../progress-log.js";
 import { generateFeatureGuidance } from "../prompts.js";
-import { detectCapabilities } from "../project-capabilities.js";
+import { detectCapabilities } from "../capabilities/index.js";
 import { isGitRepo, hasUncommittedChanges } from "../git-utils.js";
-import { generateTDDGuidance, type TDDGuidance } from "../tdd-guidance.js";
+import { generateTDDGuidance, type TDDGuidance } from "../tdd-guidance/index.js";
 import { generateTDDGuidanceWithAI } from "../tdd-ai-generator.js";
 
 /**

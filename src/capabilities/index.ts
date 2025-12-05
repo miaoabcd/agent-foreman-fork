@@ -16,7 +16,7 @@
  * - formatters: Display formatting
  */
 
-import type { VerificationCapabilities, ExtendedCapabilities } from "../verification-types.js";
+import type { VerificationCapabilities, ExtendedCapabilities } from "../verifier/verification-types.js";
 
 // Re-export memory cache functions
 export {

@@ -2,7 +2,7 @@
  * Display formatting functions for capabilities
  */
 
-import type { VerificationCapabilities, ExtendedCapabilities } from "../verification-types.js";
+import type { VerificationCapabilities, ExtendedCapabilities } from "../verifier/verification-types.js";
 
 /**
  * Format capabilities for display (legacy format)

@@ -11,9 +11,9 @@ import {
   generateE2ETestSkeleton,
   type TDDGuidance,
   type TestFramework,
-} from "../src/tdd-guidance.js";
+} from "../src/tdd-guidance/index.js";
 import type { Feature } from "../src/types.js";
-import type { ExtendedCapabilities } from "../src/verification-types.js";
+import type { ExtendedCapabilities } from "../src/verifier/verification-types.js";
 
 describe("criterionToTestCase", () => {
   it("should handle 'X can Y' pattern", () => {

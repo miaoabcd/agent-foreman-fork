@@ -2,8 +2,8 @@
  * Tests for parallel automated checks optimization
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { runChecksInParallel, runAutomatedChecks, AutomatedCheckOptions } from "../../src/verifier.js";
-import type { VerificationCapabilities, AutomatedCheckResult } from "../../src/verification-types.js";
+import { runChecksInParallel, runAutomatedChecks, AutomatedCheckOptions } from "../../src/verifier/index.js";
+import type { VerificationCapabilities, AutomatedCheckResult } from "../../src/verifier/verification-types.js";
 
 // Mock child_process exec
 const mockExec = vi.fn();

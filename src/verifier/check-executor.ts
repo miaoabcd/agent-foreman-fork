@@ -7,7 +7,7 @@ import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import chalk from "chalk";
 
-import type { AutomatedCheckResult, VerificationCapabilities } from "../verification-types.js";
+import type { AutomatedCheckResult, VerificationCapabilities } from "./verification-types.js";
 import type { TestDiscoveryResult } from "../test-discovery.js";
 import type { AutomatedCheckOptions, CheckDefinition } from "./types.js";
 import { buildE2ECommand, determineE2EMode, type E2EMode } from "../test-discovery.js";

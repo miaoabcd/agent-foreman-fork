@@ -22,8 +22,8 @@ import {
   MEMORY_CACHE_TTL,
   loadCachedCapabilities,
   saveCapabilities,
-} from "../../src/project-capabilities.js";
-import type { ExtendedCapabilities } from "../../src/verification-types.js";
+} from "../../src/capabilities/index.js";
+import type { ExtendedCapabilities } from "../../src/verifier/verification-types.js";
 
 describe("Memory Cache Optimization", () => {
   let testDir: string;

@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 
-import type { CapabilityCache } from "../verification-types.js";
+import type { CapabilityCache } from "../verifier/verification-types.js";
 import { debugCache } from "../debug.js";
 import { CACHE_FILE } from "./disk-cache.js";
 

@@ -8,7 +8,7 @@ import type {
   VerificationResult,
   VerificationMetadata,
   FeatureSummary,
-} from "../verification-types.js";
+} from "../verifier/verification-types.js";
 import { VERIFICATION_STORE_DIR, VERIFICATION_STORE_PATH } from "./constants.js";
 import {
   ensureVerificationDir,
@@ -26,7 +26,7 @@ import {
   updateFeatureSummary,
   getNextRunNumber,
 } from "./index-operations.js";
-import { generateVerificationReport } from "../verification-report.js";
+import { generateVerificationReport } from "../verifier/report.js";
 
 /**
  * Save a verification result to the store

@@ -8,7 +8,7 @@ import type {
   VerificationIndex,
   VerificationResult,
   VerificationMetadata,
-} from "../verification-types.js";
+} from "../verifier/verification-types.js";
 import {
   VERIFICATION_STORE_DIR,
   VERIFICATION_INDEX_PATH,
@@ -17,7 +17,7 @@ import {
 import { ensureVerificationDir, loadVerificationStore } from "./legacy-store.js";
 import {
   generateVerificationReport,
-} from "../verification-report.js";
+} from "../verifier/report.js";
 
 /**
  * Create an empty verification index

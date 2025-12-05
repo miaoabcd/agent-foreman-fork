@@ -12,7 +12,7 @@ import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import type { Feature } from "./types.js";
 import { getTestPattern } from "./types.js";
-import type { VerificationCapabilities, TestCapabilityInfo, E2ECapabilityInfo } from "./verification-types.js";
+import type { VerificationCapabilities, TestCapabilityInfo, E2ECapabilityInfo } from "./verifier/verification-types.js";
 import { fileExists } from "./file-utils.js";
 
 const execAsync = promisify(exec);

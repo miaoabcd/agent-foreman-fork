@@ -5,9 +5,9 @@
 import chalk from "chalk";
 
 import type { Feature } from "../types.js";
-import type { AutomatedCheckResult, VerifyOptions, CriterionResult, VerificationVerdict } from "../verification-types.js";
+import type { AutomatedCheckResult, VerifyOptions, CriterionResult, VerificationVerdict } from "./verification-types.js";
 import { isPathWithinRoot, safeReadFile } from "../file-utils.js";
-import { buildVerificationPrompt, parseVerificationResponse } from "../verification-prompts.js";
+import { buildVerificationPrompt, parseVerificationResponse } from "./prompts.js";
 import { callAnyAvailableAgent } from "../agents.js";
 import { getTimeout } from "../timeout-config.js";
 import { createSpinner } from "../progress.js";

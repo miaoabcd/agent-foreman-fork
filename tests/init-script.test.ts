@@ -4,7 +4,7 @@
 import { describe, it, expect } from "vitest";
 import { generateInitScript, generateMinimalInitScript, generateInitScriptFromCapabilities, generateInitScriptWithTypeCheck } from "../src/init-script.js";
 import type { ProjectCommands } from "../src/types.js";
-import type { ExtendedCapabilities } from "../src/verification-types.js";
+import type { ExtendedCapabilities } from "../src/verifier/verification-types.js";
 
 describe("Init Script", () => {
   describe("generateInitScript", () => {

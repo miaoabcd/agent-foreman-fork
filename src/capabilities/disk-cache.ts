@@ -5,7 +5,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-import type { ExtendedCapabilities, CapabilityCache } from "../verification-types.js";
+import type { ExtendedCapabilities, CapabilityCache } from "../verifier/verification-types.js";
 import { debugCache } from "../debug.js";
 import { getGitCommitHash } from "./git-invalidation.js";
 

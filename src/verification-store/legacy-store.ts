@@ -4,7 +4,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { VerificationStore, VerificationResult } from "../verification-types.js";
+import type { VerificationStore, VerificationResult } from "../verifier/verification-types.js";
 import {
   VERIFICATION_STORE_PATH,
   VERIFICATION_STORE_DIR,

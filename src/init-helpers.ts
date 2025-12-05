@@ -11,8 +11,8 @@ import { loadFeatureList, createEmptyFeatureList, saveFeatureList, mergeFeatures
 import { scanDirectoryStructure, isProjectEmpty } from "./project-scanner.js";
 import { aiScanProject, generateFeaturesFromGoal, generateFeaturesFromSurvey, aiResultToSurvey, generateAISurveyMarkdown } from "./ai-scanner.js";
 import { generateInitScript, generateMinimalInitScript, generateInitScriptFromCapabilities } from "./init-script.js";
-import { detectCapabilities } from "./project-capabilities.js";
-import type { ExtendedCapabilities } from "./verification-types.js";
+import { detectCapabilities } from "./capabilities/index.js";
+import type { ExtendedCapabilities } from "./verifier/verification-types.js";
 import { generateClaudeMd, generateHarnessSection } from "./prompts.js";
 import { callAnyAvailableAgent, printAgentStatus } from "./agents.js";
 import { appendProgressLog, createInitEntry } from "./progress-log.js";

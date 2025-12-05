@@ -2,7 +2,7 @@
  * Shared types for verifier module
  */
 
-import type { AutomatedCheckResult, E2ETestMode, E2ECapabilityInfo } from "../verification-types.js";
+import type { AutomatedCheckResult, E2ETestMode, E2ECapabilityInfo } from "./verification-types.js";
 import type { TestDiscoveryResult } from "../test-discovery.js";
 
 /**

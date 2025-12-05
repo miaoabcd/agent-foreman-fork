@@ -49,29 +49,29 @@ vi.mock("../src/agents.js", () => ({
 }));
 
 // Mock verification-store
-vi.mock("../src/verification-store.js", () => ({
+vi.mock("../src/verification-store/index.js", () => ({
   saveVerificationResult: vi.fn(),
 }));
 
 // Mock project-capabilities
-vi.mock("../src/project-capabilities.js", () => ({
+vi.mock("../src/capabilities/index.js", () => ({
   detectVerificationCapabilities: vi.fn(),
   detectCapabilities: vi.fn(),
 }));
 
 // Mock verification-prompts
-vi.mock("../src/verification-prompts.js", () => ({
+vi.mock("../src/verifier/prompts.js", () => ({
   buildVerificationPrompt: vi.fn(),
   parseVerificationResponse: vi.fn(),
 }));
 
 import { callAnyAvailableAgent } from "../src/agents.js";
-import { saveVerificationResult } from "../src/verification-store.js";
-import { detectCapabilities } from "../src/project-capabilities.js";
+import { saveVerificationResult } from "../src/verification-store/index.js";
+import { detectCapabilities } from "../src/capabilities/index.js";
 import {
   buildVerificationPrompt,
   parseVerificationResponse,
-} from "../src/verification-prompts.js";
+} from "../src/verifier/prompts.js";
 import {
   getGitDiffForFeature,
   runAutomatedChecks,
@@ -89,14 +89,14 @@ import {
   RETRY_CONFIG,
   type AutomatedCheckOptions,
   type TDDVerifyOptions,
-} from "../src/verifier.js";
+} from "../src/verifier/index.js";
 import type { Feature } from "../src/types.js";
 import type {
   VerificationCapabilities,
   VerificationResult,
   AutomatedCheckResult,
   TestMode,
-} from "../src/verification-types.js";
+} from "../src/verifier/verification-types.js";
 
 const mockCallAgent = callAnyAvailableAgent as ReturnType<typeof vi.fn>;
 const mockSaveResult = saveVerificationResult as ReturnType<typeof vi.fn>;

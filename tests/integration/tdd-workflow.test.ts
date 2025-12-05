@@ -346,7 +346,7 @@ describe("TDD Workflow Integration", () => {
 
   describe("TDD verification mode selection", () => {
     it("should return 'tdd' for features with unit.required=true", async () => {
-      const { determineVerificationMode } = await import("../../src/verifier.js");
+      const { determineVerificationMode } = await import("../../src/verifier/index.js");
 
       const feature = {
         id: "test.feature",
@@ -370,7 +370,7 @@ describe("TDD Workflow Integration", () => {
     });
 
     it("should return 'ai' for features without testRequirements", async () => {
-      const { determineVerificationMode } = await import("../../src/verifier.js");
+      const { determineVerificationMode } = await import("../../src/verifier/index.js");
 
       const feature = {
         id: "test.feature",

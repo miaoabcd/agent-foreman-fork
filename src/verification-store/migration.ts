@@ -20,7 +20,7 @@ import {
   formatRunNumber,
   toMetadata,
 } from "./index-operations.js";
-import { generateVerificationReport } from "../verification-report.js";
+import { generateVerificationReport } from "../verifier/report.js";
 
 /**
  * Check if migration is needed

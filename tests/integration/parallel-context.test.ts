@@ -7,7 +7,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";
 
-import { readRelatedFiles } from "../../src/verifier.js";
+import { readRelatedFiles } from "../../src/verifier/index.js";
 
 describe("Parallel Context Integration", () => {
   let testDir: string;

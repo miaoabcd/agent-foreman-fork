@@ -13,10 +13,10 @@ import type {
   CriterionResult,
   VerificationVerdict,
   AutomatedCheckResult,
-} from "../verification-types.js";
+} from "./verification-types.js";
 import type { TestDiscoveryResult } from "../test-discovery.js";
-import { detectCapabilities } from "../project-capabilities.js";
-import { saveVerificationResult } from "../verification-store.js";
+import { detectCapabilities } from "../capabilities/index.js";
+import { saveVerificationResult } from "../verification-store/index.js";
 import {
   buildSelectiveTestCommand,
   buildE2ECommand,

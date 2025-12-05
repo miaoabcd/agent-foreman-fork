@@ -4,7 +4,7 @@
  */
 
 import type { Feature, CachedTDDGuidance } from "./types.js";
-import type { ExtendedCapabilities } from "./verification-types.js";
+import type { ExtendedCapabilities } from "./verifier/verification-types.js";
 import { callAnyAvailableAgent } from "./agents.js";
 
 /**

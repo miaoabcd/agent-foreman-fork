@@ -2,7 +2,7 @@
  * Generate ai/init.sh bootstrap script
  */
 import type { ProjectCommands } from "./types.js";
-import type { ExtendedCapabilities } from "./verification-types.js";
+import type { ExtendedCapabilities } from "./verifier/verification-types.js";
 
 /**
  * Get install command based on package manager

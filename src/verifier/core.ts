@@ -13,13 +13,13 @@ import type {
   VerifyOptions,
   VerificationMode,
   ExtendedCapabilities,
-} from "../verification-types.js";
+} from "./verification-types.js";
 import {
   getSelectiveTestCommand,
   getE2ETagsForFeature,
 } from "../test-discovery.js";
-import { detectCapabilities } from "../project-capabilities.js";
-import { saveVerificationResult } from "../verification-store.js";
+import { detectCapabilities } from "../capabilities/index.js";
+import { saveVerificationResult } from "../verification-store/index.js";
 import { createStepProgress } from "../progress.js";
 import { getGitDiffForFeature } from "./git-operations.js";
 import { runAutomatedChecks } from "./check-executor.js";

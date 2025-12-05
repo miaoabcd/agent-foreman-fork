@@ -9,7 +9,7 @@ import type {
   E2ECapabilityInfo,
   CustomRule,
   CustomRuleType,
-} from "../verification-types.js";
+} from "../verifier/verification-types.js";
 import { callAnyAvailableAgent } from "../agents.js";
 import { getTimeout } from "../timeout-config.js";
 import { checkGitAvailable } from "./git-invalidation.js";

@@ -3,7 +3,7 @@
  * Builds prompts and parses AI responses for verification
  */
 
-import type { Feature } from "./types.js";
+import type { Feature } from "../types.js";
 import type {
   AutomatedCheckResult,
   AIVerificationResponse,

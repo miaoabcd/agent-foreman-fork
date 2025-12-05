@@ -3,6 +3,9 @@
  * Orchestrates automated checks and AI analysis for feature verification
  *
  * This module is split into focused submodules:
+ * - verification-types: All verification-related type definitions
+ * - prompts: AI prompt templates and response parsing
+ * - report: Markdown report generation
  * - git-operations: Git diff and commit hash operations
  * - check-executor: Run automated checks (tests, lint, typecheck, build)
  * - ai-analysis: AI analysis with retry logic
@@ -10,10 +13,29 @@
  * - tdd: TDD verification mode
  * - core: Main verification orchestration
  * - results: Result formatting utilities
- * - types: Shared types
+ * - types: Shared types for this module
  */
 
-// Re-export types
+// Re-export all verification types
+export * from "./verification-types.js";
+
+// Re-export prompts
+export {
+  DEFAULT_MAX_DIFF_SIZE,
+  truncateDiffIntelligently,
+  buildVerificationPrompt,
+  parseVerificationResponse,
+  buildQuickCheckPrompt,
+  type DiffTruncationOptions,
+} from "./prompts.js";
+
+// Re-export report generation
+export {
+  generateVerificationReport,
+  generateVerificationSummary,
+} from "./report.js";
+
+// Re-export local types
 export type {
   AutomatedCheckOptions,
   CheckDefinition,

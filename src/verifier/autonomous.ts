@@ -16,9 +16,9 @@ import type {
   VerifyOptions,
   CriterionResult,
   VerificationVerdict,
-} from "../verification-types.js";
-import { detectCapabilities } from "../project-capabilities.js";
-import { saveVerificationResult } from "../verification-store.js";
+} from "./verification-types.js";
+import { detectCapabilities } from "../capabilities/index.js";
+import { saveVerificationResult } from "../verification-store/index.js";
 import { callAnyAvailableAgent } from "../agents.js";
 import { getE2ETagsForFeature } from "../test-discovery.js";
 import { createSpinner, createStepProgress } from "../progress.js";

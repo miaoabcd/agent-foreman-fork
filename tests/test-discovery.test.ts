@@ -20,7 +20,7 @@ import {
   type E2EMode,
 } from "../src/test-discovery.js";
 import type { Feature } from "../src/types.js";
-import type { VerificationCapabilities, E2ECapabilityInfo } from "../src/verification-types.js";
+import type { VerificationCapabilities, E2ECapabilityInfo } from "../src/verifier/verification-types.js";
 
 // Mock child_process exec
 vi.mock("node:child_process", () => ({

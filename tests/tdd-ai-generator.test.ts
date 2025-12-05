@@ -8,7 +8,7 @@ import {
   generateTDDGuidanceWithAI,
 } from "../src/tdd-ai-generator.js";
 import type { Feature, CachedTDDGuidance } from "../src/types.js";
-import type { ExtendedCapabilities } from "../src/verification-types.js";
+import type { ExtendedCapabilities } from "../src/verifier/verification-types.js";
 
 // Mock the agents module
 vi.mock("../src/agents.js", () => ({

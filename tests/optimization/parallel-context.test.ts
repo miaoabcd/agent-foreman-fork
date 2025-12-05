@@ -2,7 +2,7 @@
  * Tests for parallel context gathering optimization
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { readRelatedFiles } from "../../src/verifier.js";
+import { readRelatedFiles } from "../../src/verifier/index.js";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { tmpdir } from "node:os";

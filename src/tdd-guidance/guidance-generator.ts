@@ -3,7 +3,7 @@
  */
 
 import type { Feature } from "../types.js";
-import type { ExtendedCapabilities } from "../verification-types.js";
+import type { ExtendedCapabilities } from "../verifier/verification-types.js";
 import type { TDDGuidance, AcceptanceTestMapping } from "./types.js";
 import { criterionToTestCase, criterionToE2EScenario } from "./criterion-mapper.js";
 import { uiKeywords } from "./patterns.js";

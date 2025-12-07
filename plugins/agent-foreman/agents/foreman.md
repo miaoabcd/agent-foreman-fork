@@ -32,18 +32,27 @@ agent-foreman status
 # Get next feature to work on
 agent-foreman next
 
-# Complete feature (auto-verifies + auto-commits)
-# Uses quick mode by default - runs only related tests based on testRequirements.unit.pattern
+# Verify feature (without marking complete)
+agent-foreman check <feature_id>
+
+# Complete feature (marks complete + auto-commits)
+# By default skips verification - use after check command
 agent-foreman done <feature_id>
 
+# Complete with verification (runs tests + AI analysis)
+agent-foreman done <feature_id> --no-skip-check
+
 # Full mode - run all tests (slower, for final verification)
-agent-foreman done <feature_id> --full
+agent-foreman done <feature_id> --full --no-skip-check
 
 # Initialize new project
 agent-foreman init "Your project goal"
 
 # Analyze existing project
 agent-foreman analyze
+
+# Scan project capabilities
+agent-foreman scan
 
 # Analyze feature dependencies
 agent-foreman impact <feature_id>
@@ -70,7 +79,8 @@ agent-foreman next
 agent-foreman status           # 1. Check status
 agent-foreman next             # 2. Get next feature
 # ... implement feature ...    # 3. Do the work
-agent-foreman done <id>    # 4. Verify + complete + commit
+agent-foreman check <id>       # 4. Optional: verify implementation
+agent-foreman done <id>        # 5. Mark complete + commit
 ```
 
 ## Feature Status Values

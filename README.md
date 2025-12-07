@@ -137,14 +137,14 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  INITIALIZE                                                              │
-│  ┌─────────┐    ┌─────────────────┐    ┌──────────┐                     │
-│  │ analyze │───▶│ detect-         │───▶│   init   │                     │
-│  │         │    │ capabilities    │    │ generate │                     │
-│  └─────────┘    └─────────────────┘    └──────────┘                     │
-│                                              │                           │
-│                                              ▼                           │
-│                                    Define acceptance criteria (RED)      │
-│                                    feature_list.json                     │
+│  ┌─────────┐    ┌──────────┐    ┌──────────┐                            │
+│  │ analyze │───▶│   scan   │───▶│   init   │                            │
+│  │         │    │          │    │ generate │                            │
+│  └─────────┘    └──────────┘    └──────────┘                            │
+│                                       │                                  │
+│                                       ▼                                  │
+│                             Define acceptance criteria (RED)             │
+│                             feature_list.json                            │
 │                                                                          │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
@@ -166,9 +166,15 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 │                                   │                         │           │
 │                                   ▼                         │           │
 │                  ┌──────────────────────────────────────┐  │           │
+│                  │  check <id> (optional)                │  │           │
+│                  │  - Run tests to verify implementation │  │           │
+│                  │  - AI validates acceptance criteria   │  │           │
+│                  └──────────────────────────────────────┘  │           │
+│                                   │                         │           │
+│                                   ▼                         │           │
+│                  ┌──────────────────────────────────────┐  │           │
 │                  │  done <id>                            │  │           │
-│                  │  - Run tests (verify GREEN)           │  │           │
-│                  │  - AI validates acceptance            │  │           │
+│                  │  - Mark feature complete              │  │           │
 │                  │  - Auto-commit (REFACTOR optional)    │  │           │
 │                  └──────────────────────────────────────┘  │           │
 │                                   │                         │           │

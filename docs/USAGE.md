@@ -320,7 +320,13 @@ agent-foreman next           # Continue
 │             ↓                                                │
 │    ┌──────────────────┐                                     │
 │    │ agent-foreman    │                                     │
-│    │   done <id>      │  ← Verify + update status + commit  │
+│    │   check <id>     │  ← Optional: verify before done     │
+│    └────────┬─────────┘                                     │
+│             │                                                │
+│             ↓                                                │
+│    ┌──────────────────┐                                     │
+│    │ agent-foreman    │                                     │
+│    │   done <id>      │  ← Mark complete + auto-commit      │
 │    └────────┬─────────┘                                     │
 │             │                                                │
 │             └──────────→ Loop back to next                  │

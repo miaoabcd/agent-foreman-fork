@@ -40,6 +40,7 @@ describe("Prompts", () => {
       expect(section).toContain("`passing`");
       expect(section).toContain("`blocked`");
       expect(section).toContain("`needs_review`");
+      expect(section).toContain("`failed`");
       expect(section).toContain("`deprecated`");
     });
 
@@ -51,9 +52,10 @@ describe("Prompts", () => {
       expect(section).toContain("2. **Select**");
       expect(section).toContain("3. **Plan**");
       expect(section).toContain("4. **Implement**");
-      expect(section).toContain("5. **Done**");
-      expect(section).toContain("6. **Log**");
-      expect(section).toContain("7. **Next**");
+      expect(section).toContain("5. **Check**");
+      expect(section).toContain("6. **Done**");
+      expect(section).toContain("7. **Log**");
+      expect(section).toContain("8. **Next**");
     });
 
     it("should include rules section", () => {

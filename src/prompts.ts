@@ -28,6 +28,7 @@ ${goal}
 - \`passing\` - Acceptance criteria met
 - \`blocked\` - External dependency blocking
 - \`needs_review\` - Potentially affected by recent changes
+- \`failed\` - Implementation attempted but verification failed
 - \`deprecated\` - No longer needed
 
 ### Workflow for Each Session
@@ -36,9 +37,10 @@ ${goal}
 2. **Select** - Pick the highest priority feature (\`needs_review\` > \`failing\`)
 3. **Plan** - Review acceptance criteria before coding
 4. **Implement** - Work on ONE feature at a time
-5. **Done** - Run \`agent-foreman done <feature_id>\` (auto-verifies + commits)
-6. **Log** - Entry automatically added to progress log
-7. **Next** - Move to next feature or celebrate completion
+5. **Check** - Run \`agent-foreman check <feature_id>\` to verify implementation
+6. **Done** - Run \`agent-foreman done <feature_id> --skip-check\` to mark complete + commit
+7. **Log** - Entry automatically added to progress log
+8. **Next** - Move to next feature or celebrate completion
 
 ### Rules
 
@@ -76,12 +78,17 @@ agent-foreman next
 # Work on specific feature
 agent-foreman next <feature_id>
 
-# Mark feature as done (auto-runs verification + auto-commit)
-# Quick mode is default - runs only related tests based on testRequirements.unit.pattern
+# Verify feature implementation (without marking complete)
+agent-foreman check <feature_id>
+
+# Mark feature as done (skips verification by default, use after check)
 agent-foreman done <feature_id>
 
+# Mark feature as done (with verification, for manual use)
+agent-foreman done <feature_id> --no-skip-check
+
 # Full mode - run all tests (slower, for final verification)
-agent-foreman done <feature_id> --full
+agent-foreman done <feature_id> --full --no-skip-check
 
 # Skip E2E tests (faster iterations)
 agent-foreman done <feature_id> --skip-e2e
@@ -89,8 +96,8 @@ agent-foreman done <feature_id> --skip-e2e
 # Skip auto-commit (manual commit)
 agent-foreman done <feature_id> --no-commit
 
-# Skip verification (use after running 'check' command)
-agent-foreman done <feature_id> --skip-check
+# Disable loop mode (no continuation reminder)
+agent-foreman done <feature_id> --no-loop
 
 # Analyze impact of changes
 agent-foreman impact <feature_id>
@@ -186,7 +193,7 @@ Write criteria as testable statements:
 - \`pattern\` → Glob pattern for selective test execution in quick mode
 - \`cases\`/\`scenarios\` → Expected test names (optional, for documentation)
 
-**Status values**: \`failing\` | \`passing\` | \`blocked\` | \`needs_review\` | \`deprecated\`
+**Status values**: \`failing\` | \`passing\` | \`blocked\` | \`needs_review\` | \`failed\` | \`deprecated\`
 
 **Origin values**: \`init-auto\` | \`init-from-routes\` | \`init-from-tests\` | \`manual\` | \`replan\`
 

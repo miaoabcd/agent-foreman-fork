@@ -89,8 +89,8 @@ agent-foreman done <feature_id> --skip-e2e
 # Skip auto-commit (manual commit)
 agent-foreman done <feature_id> --no-commit
 
-# Skip verification (not recommended)
-agent-foreman done <feature_id> --skip-verify
+# Skip verification (use after running 'check' command)
+agent-foreman done <feature_id> --skip-check
 
 # Analyze impact of changes
 agent-foreman impact <feature_id>

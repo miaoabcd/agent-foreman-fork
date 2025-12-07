@@ -115,7 +115,7 @@ describe("E2E Workflow Tests", () => {
       expect(stepOutput.feature.id).toBe("core.setup");
 
       // Step 5: Complete the first feature
-      const completeResult = spawnSync("node", [CLI_PATH, "done", "core.setup", "--skip-verify", "--no-commit"], {
+      const completeResult = spawnSync("node", [CLI_PATH, "done", "core.setup", "--skip-check", "--no-commit"], {
         cwd: tempDir,
         encoding: "utf-8",
         timeout: 10000,
@@ -151,7 +151,7 @@ describe("E2E Workflow Tests", () => {
       expect(stepOutput2.feature.id).toBe("core.tests");
 
       // Step 9: Complete the second feature
-      const completeResult2 = spawnSync("node", [CLI_PATH, "done", "core.tests", "--skip-verify", "--no-commit"], {
+      const completeResult2 = spawnSync("node", [CLI_PATH, "done", "core.tests", "--skip-check", "--no-commit"], {
         cwd: tempDir,
         encoding: "utf-8",
         timeout: 10000,
@@ -218,7 +218,7 @@ describe("E2E Workflow Tests", () => {
       execSync('git commit -m "init"', { cwd: tempDir, stdio: "pipe" });
 
       // Complete the feature
-      spawnSync("node", [CLI_PATH, "done", "test.verify", "--skip-verify", "--no-commit"], {
+      spawnSync("node", [CLI_PATH, "done", "test.verify", "--skip-check", "--no-commit"], {
         cwd: tempDir,
         encoding: "utf-8",
         timeout: 10000,
@@ -276,7 +276,7 @@ describe("E2E Workflow Tests", () => {
       execSync('git commit -m "init"', { cwd: tempDir, stdio: "pipe" });
 
       // Complete the feature
-      spawnSync("node", [CLI_PATH, "done", "test.progress", "--skip-verify", "--no-commit"], {
+      spawnSync("node", [CLI_PATH, "done", "test.progress", "--skip-check", "--no-commit"], {
         cwd: tempDir,
         encoding: "utf-8",
         timeout: 10000,

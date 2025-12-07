@@ -17,13 +17,14 @@ agent-foreman next auth.login  # Specific feature
 ## Workflow
 
 ```
-next → implement → done
+next → implement → check → done --skip-check
 ```
 
 ```bash
 agent-foreman next              # 1. Get task + acceptance criteria
 # ... implement the feature ... # 2. Write code
-agent-foreman done <id>     # 3. Verify + commit
+agent-foreman check <id>        # 3. Verify implementation
+agent-foreman done <id> --skip-check  # 4. Mark complete + commit
 ```
 
 ## Priority Order
@@ -42,8 +43,9 @@ agent-foreman done <id>     # 3. Verify + commit
 ## Complete Options
 
 ```bash
-agent-foreman done <id>             # Quick mode (related tests only)
-agent-foreman done <id> --full      # All tests
+agent-foreman done <id>             # Auto-verify + commit (for manual use)
+agent-foreman done <id> --skip-check  # Skip verification (use after check)
+agent-foreman done <id> --full      # Run all tests
 agent-foreman done <id> --skip-e2e  # Skip E2E tests
 agent-foreman done <id> --no-commit # Manual commit
 ```

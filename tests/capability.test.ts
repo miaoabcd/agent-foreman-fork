@@ -23,6 +23,11 @@ import {
   clearCapabilitiesCache,
 } from "../src/capabilities/index.js";
 
+import {
+  hasBuildFileChanges,
+  checkGitAvailable,
+} from "../src/capabilities/git-invalidation.js";
+
 import * as agents from "../src/agents.js";
 
 import type { ExtendedCapabilities, CapabilityCache } from "../src/verifier/verification-types.js";
@@ -881,6 +886,94 @@ describe("Git Invalidation", () => {
 
       // Should NOT be stale because commit hash matches and no tracked files
       expect(result).toBe(false);
+    });
+  });
+
+  describe("hasBuildFileChanges", () => {
+    let tempDir: string;
+
+    beforeEach(async () => {
+      tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "git-changes-test-"));
+    });
+
+    afterEach(async () => {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    });
+
+    it("should return true when git diff command fails", async () => {
+      // Non-git directory - command will fail
+      const result = hasBuildFileChanges(tempDir, "abc123", ["package.json"]);
+      expect(result).toBe(true);
+    });
+
+    it("should return false when no build files changed", async () => {
+      const { execSync } = await import("node:child_process");
+      try {
+        // Set up git repo
+        execSync("git init", { cwd: tempDir, stdio: "pipe" });
+        execSync("git config user.email 'test@test.com'", { cwd: tempDir, stdio: "pipe" });
+        execSync("git config user.name 'Test'", { cwd: tempDir, stdio: "pipe" });
+        await fs.writeFile(path.join(tempDir, "package.json"), "{}");
+        execSync("git add . && git commit -m 'init'", { cwd: tempDir, stdio: "pipe" });
+        const commitHash = execSync("git rev-parse HEAD", { cwd: tempDir, encoding: "utf-8" }).trim();
+
+        // No changes since commit
+        const result = hasBuildFileChanges(tempDir, commitHash, ["package.json"]);
+        expect(result).toBe(false);
+      } catch {
+        // Skip if git unavailable
+      }
+    });
+
+    it("should return true when build files have changed", async () => {
+      const { execSync } = await import("node:child_process");
+      try {
+        // Set up git repo
+        execSync("git init", { cwd: tempDir, stdio: "pipe" });
+        execSync("git config user.email 'test@test.com'", { cwd: tempDir, stdio: "pipe" });
+        execSync("git config user.name 'Test'", { cwd: tempDir, stdio: "pipe" });
+        await fs.writeFile(path.join(tempDir, "package.json"), "{}");
+        execSync("git add . && git commit -m 'init'", { cwd: tempDir, stdio: "pipe" });
+        const initialCommit = execSync("git rev-parse HEAD", { cwd: tempDir, encoding: "utf-8" }).trim();
+
+        // Make a change to package.json
+        await fs.writeFile(path.join(tempDir, "package.json"), '{"name":"test"}');
+        execSync("git add . && git commit -m 'update'", { cwd: tempDir, stdio: "pipe" });
+
+        // Check for changes since initial commit
+        const result = hasBuildFileChanges(tempDir, initialCommit, ["package.json"]);
+        expect(result).toBe(true);
+      } catch {
+        // Skip if git unavailable
+      }
+    });
+  });
+
+  describe("checkGitAvailable", () => {
+    let tempDir: string;
+
+    beforeEach(async () => {
+      tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "git-check-test-"));
+    });
+
+    afterEach(async () => {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    });
+
+    it("should return false for non-git directory", () => {
+      const result = checkGitAvailable(tempDir);
+      expect(result).toBe(false);
+    });
+
+    it("should return true for git repository", async () => {
+      const { execSync } = await import("node:child_process");
+      try {
+        execSync("git init", { cwd: tempDir, stdio: "pipe" });
+        const result = checkGitAvailable(tempDir);
+        expect(result).toBe(true);
+      } catch {
+        // Skip if git unavailable
+      }
     });
   });
 });

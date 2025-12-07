@@ -40,7 +40,7 @@ export async function runDone(
   featureId: string,
   notes?: string,
   autoCommit: boolean = true,
-  skipVerify: boolean = false,
+  skipCheck: boolean = false,
   verbose: boolean = false,
   autonomous: boolean = false,
   testMode: "full" | "quick" | "skip" = "full",
@@ -110,9 +110,9 @@ export async function runDone(
   }
 
   // Step 1: Run verification (unless skipped)
-  if (skipVerify) {
-    console.log(chalk.yellow("⚠ Skipping verification (--skip-verify flag)"));
-    console.log(chalk.gray("  Note: It's recommended to run verification before marking complete"));
+  if (skipCheck) {
+    console.log(chalk.yellow("⚠ Skipping verification (--skip-check flag)"));
+    console.log(chalk.gray("  Tip: Run 'agent-foreman check <id>' before using --skip-check"));
   } else {
     console.log(chalk.bold.blue("\n═══════════════════════════════════════════════════════════════"));
     console.log(chalk.bold.blue("                    FEATURE VERIFICATION"));

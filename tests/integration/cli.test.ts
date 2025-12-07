@@ -373,14 +373,14 @@ describe("CLI Integration", () => {
       execSync("git add .", { cwd: tempDir, stdio: "pipe" });
       execSync('git commit -m "init"', { cwd: tempDir, stdio: "pipe" });
 
-      // Use --skip-verify --no-commit to avoid verification and git commit (for fast testing)
-      const result = spawnSync("node", [CLI_PATH, "done", "test.feature1", "--skip-verify", "--no-commit"], {
+      // Use --skip-check --no-commit to avoid verification and git commit (for fast testing)
+      const result = spawnSync("node", [CLI_PATH, "done", "test.feature1", "--skip-check", "--no-commit"], {
         cwd: tempDir,
         encoding: "utf-8",
         timeout: 10000,
       });
 
-      expect(result.stdout).toContain("Skipping verification");
+      expect(result.stdout).toContain("Skipping verification (--skip-check flag)");
       expect(result.stdout).toContain("Marked 'test.feature1' as passing");
 
       // Verify the file was updated

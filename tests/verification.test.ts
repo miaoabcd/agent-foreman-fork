@@ -20,6 +20,10 @@ import {
 } from "../src/verification-store/index.js";
 
 import {
+  saveLegacyResult,
+} from "../src/verification-store/legacy-store.js";
+
+import {
   buildVerificationPrompt,
   buildQuickCheckPrompt,
   parseVerificationResponse,
@@ -1717,6 +1721,129 @@ describe("verification-prompts additional coverage", () => {
       const prompt = buildVerificationPrompt(feature, "diff", [], []);
 
       expect(prompt).toContain("No automated checks were run");
+    });
+  });
+});
+
+// ============================================================================
+// Legacy Store Tests
+// ============================================================================
+
+describe("Legacy Store Operations", () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "legacy-store-test-"));
+  });
+
+  afterEach(async () => {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  describe("saveLegacyResult", () => {
+    it("should create new store when none exists", async () => {
+      const result: VerificationResult = {
+        featureId: "test.feature",
+        timestamp: new Date().toISOString(),
+        commitHash: "abc123",
+        changedFiles: ["src/test.ts"],
+        diffSummary: "1 file changed",
+        automatedChecks: [],
+        criteriaResults: [],
+        verdict: "pass",
+        verifiedBy: "claude",
+        overallReasoning: "Test passed",
+      };
+
+      await saveLegacyResult(tempDir, result);
+
+      // Verify the legacy results.json file was created
+      const storePath = path.join(tempDir, "ai", "verification", "results.json");
+      const content = await fs.readFile(storePath, "utf-8");
+      const store = JSON.parse(content);
+
+      expect(store.results["test.feature"]).toBeDefined();
+      expect(store.results["test.feature"].verdict).toBe("pass");
+    });
+
+    it("should update existing store with new result", async () => {
+      // First save
+      const result1: VerificationResult = {
+        featureId: "feature.one",
+        timestamp: new Date().toISOString(),
+        commitHash: "abc123",
+        changedFiles: [],
+        diffSummary: "",
+        automatedChecks: [],
+        criteriaResults: [],
+        verdict: "pass",
+        verifiedBy: "claude",
+        overallReasoning: "",
+      };
+      await saveLegacyResult(tempDir, result1);
+
+      // Second save with different feature
+      const result2: VerificationResult = {
+        featureId: "feature.two",
+        timestamp: new Date().toISOString(),
+        commitHash: "def456",
+        changedFiles: [],
+        diffSummary: "",
+        automatedChecks: [],
+        criteriaResults: [],
+        verdict: "fail",
+        verifiedBy: "claude",
+        overallReasoning: "",
+      };
+      await saveLegacyResult(tempDir, result2);
+
+      // Verify both features are in the store
+      const storePath = path.join(tempDir, "ai", "verification", "results.json");
+      const content = await fs.readFile(storePath, "utf-8");
+      const store = JSON.parse(content);
+
+      expect(Object.keys(store.results)).toHaveLength(2);
+      expect(store.results["feature.one"].verdict).toBe("pass");
+      expect(store.results["feature.two"].verdict).toBe("fail");
+    });
+
+    it("should overwrite existing feature result", async () => {
+      const result1: VerificationResult = {
+        featureId: "test.feature",
+        timestamp: "2024-01-01T00:00:00Z",
+        commitHash: "abc123",
+        changedFiles: [],
+        diffSummary: "",
+        automatedChecks: [],
+        criteriaResults: [],
+        verdict: "fail",
+        verifiedBy: "claude",
+        overallReasoning: "First run",
+      };
+      await saveLegacyResult(tempDir, result1);
+
+      const result2: VerificationResult = {
+        featureId: "test.feature",
+        timestamp: "2024-01-02T00:00:00Z",
+        commitHash: "def456",
+        changedFiles: [],
+        diffSummary: "",
+        automatedChecks: [],
+        criteriaResults: [],
+        verdict: "pass",
+        verifiedBy: "claude",
+        overallReasoning: "Second run",
+      };
+      await saveLegacyResult(tempDir, result2);
+
+      const storePath = path.join(tempDir, "ai", "verification", "results.json");
+      const content = await fs.readFile(storePath, "utf-8");
+      const store = JSON.parse(content);
+
+      // Should have only one entry, with updated values
+      expect(Object.keys(store.results)).toHaveLength(1);
+      expect(store.results["test.feature"].verdict).toBe("pass");
+      expect(store.results["test.feature"].overallReasoning).toBe("Second run");
     });
   });
 });

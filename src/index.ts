@@ -177,10 +177,10 @@ async function main() {
             default: false,
             describe: "Skip automatic git commit",
           })
-          .option("skip-verify", {
+          .option("skip-check", {
             type: "boolean",
             default: false,
-            describe: "Skip AI verification (not recommended)",
+            describe: "Skip verification (use after running 'check' command)",
           })
           .option("verbose", {
             alias: "v",
@@ -235,7 +235,7 @@ async function main() {
           argv.feature_id!,
           argv.notes,
           !argv.noCommit,
-          argv.skipVerify,
+          argv.skipCheck,
           argv.verbose,
           !argv.noAutonomous,
           testMode,

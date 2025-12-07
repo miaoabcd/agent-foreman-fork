@@ -4,6 +4,10 @@
  *
  * Note: analyze command requires AI agents which are mocked in these tests.
  * These tests focus on file output verification and command flow.
+ *
+ * IMPORTANT: These tests spawn child processes that can be resource-intensive.
+ * They are configured to run sequentially (not in parallel with other test files)
+ * to prevent flaky failures from resource contention.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { execSync, spawnSync } from "node:child_process";
@@ -13,6 +17,39 @@ import * as os from "node:os";
 
 // Path to the built CLI
 const CLI_PATH = path.resolve(process.cwd(), "dist/index.js");
+
+/**
+ * Safely parse JSON from command output with detailed error reporting
+ */
+function parseJsonOutput(result: { stdout: string; stderr: string; status: number | null }, context: string): unknown {
+  if (result.status !== 0) {
+    throw new Error(
+      `Command failed with status ${result.status} (${context})\n` +
+      `stdout: ${result.stdout || "(empty)"}\n` +
+      `stderr: ${result.stderr || "(empty)"}`
+    );
+  }
+
+  const stdout = result.stdout.trim();
+  if (!stdout) {
+    throw new Error(
+      `Empty stdout from command (${context})\n` +
+      `status: ${result.status}\n` +
+      `stderr: ${result.stderr || "(empty)"}`
+    );
+  }
+
+  try {
+    return JSON.parse(stdout);
+  } catch (e) {
+    throw new Error(
+      `Failed to parse JSON output (${context})\n` +
+      `stdout: ${stdout}\n` +
+      `stderr: ${result.stderr || "(empty)"}\n` +
+      `parse error: ${e instanceof Error ? e.message : String(e)}`
+    );
+  }
+}
 
 describe("E2E Workflow Tests", () => {
   let tempDir: string;
@@ -111,7 +148,7 @@ describe("E2E Workflow Tests", () => {
         timeout: 180000, // 3 minutes for AI TDD guidance generation
       });
 
-      const stepOutput = JSON.parse(stepResult.stdout);
+      const stepOutput = parseJsonOutput(stepResult, "next --json core.setup") as { feature: { id: string } };
       expect(stepOutput.feature.id).toBe("core.setup");
 
       // Step 5: Complete the first feature
@@ -147,7 +184,7 @@ describe("E2E Workflow Tests", () => {
         timeout: 180000, // 3 minutes for AI TDD guidance generation
       });
 
-      const stepOutput2 = JSON.parse(stepResult2.stdout);
+      const stepOutput2 = parseJsonOutput(stepResult2, "next --json core.tests") as { feature: { id: string } };
       expect(stepOutput2.feature.id).toBe("core.tests");
 
       // Step 9: Complete the second feature
@@ -352,7 +389,11 @@ describe("E2E Workflow Tests", () => {
         encoding: "utf-8",
       });
 
-      const output = JSON.parse(result.stdout);
+      const output = parseJsonOutput(result, "status --json") as {
+        stats: { passing: number; failing: number; total: number };
+        completion: number;
+        goal: string;
+      };
       expect(output.stats.passing).toBe(1);
       expect(output.stats.failing).toBe(1);
       expect(output.stats.total).toBe(2);
@@ -411,7 +452,7 @@ describe("E2E Workflow Tests", () => {
         timeout: 180000, // 3 minutes for AI TDD guidance generation
       });
 
-      const output = JSON.parse(result.stdout);
+      const output = parseJsonOutput(result, "next --json dependency test") as { feature: { id: string } };
       // Should return a valid feature (either one based on the selection algorithm)
       expect(["base.setup", "advanced.feature"]).toContain(output.feature.id);
     }, 200000); // 3.5 minute test timeout
@@ -467,7 +508,7 @@ describe("E2E Workflow Tests", () => {
 
       // Should not crash
       expect(result.status).toBe(0);
-      const output = JSON.parse(result.stdout);
+      const output = parseJsonOutput(result, "next --json circular dependency") as { feature: unknown };
       expect(output.feature).toBeDefined();
     }, 200000); // 3.5 minute test timeout
   });

@@ -43,9 +43,10 @@ agent-foreman done <id> --skip-check  # 4. Mark complete + commit
 ## Complete Options
 
 ```bash
-agent-foreman done <id>             # Auto-verify + commit (for manual use)
-agent-foreman done <id> --skip-check  # Skip verification (use after check)
-agent-foreman done <id> --full      # Run all tests
+agent-foreman done <id>             # Skip verification + commit (default)
+agent-foreman done <id> --no-skip-check  # Run verification before marking complete
+agent-foreman done <id> --full --no-skip-check  # Run all tests + verification
 agent-foreman done <id> --skip-e2e  # Skip E2E tests
 agent-foreman done <id> --no-commit # Manual commit
+agent-foreman done <id> --no-loop   # Disable continuation reminder
 ```

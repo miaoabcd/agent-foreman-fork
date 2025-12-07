@@ -41,6 +41,7 @@ export async function runStatus(outputJson: boolean = false, quiet: boolean = fa
       stats: {
         passing: stats.passing,
         failing: stats.failing,
+        failed: stats.failed,
         needsReview: stats.needs_review,
         blocked: stats.blocked,
         deprecated: stats.deprecated,
@@ -80,6 +81,7 @@ export async function runStatus(outputJson: boolean = false, quiet: boolean = fa
   console.log(chalk.green(`   ✓ Passing: ${stats.passing}`));
   console.log(chalk.yellow(`   ⚠ Needs Review: ${stats.needs_review}`));
   console.log(chalk.red(`   ✗ Failing: ${stats.failing}`));
+  console.log(chalk.red(`   ⚡ Failed: ${stats.failed}`));
   console.log(chalk.gray(`   ⏸ Blocked: ${stats.blocked}`));
   console.log(chalk.gray(`   ⊘ Deprecated: ${stats.deprecated}`));
   console.log("");

@@ -56,8 +56,8 @@ agent-foreman next
 # STEP 4: Verify implementation
 agent-foreman check <feature_id>
 
-# STEP 5: Mark complete + commit (--loop flag maintains context across compaction)
-agent-foreman done <feature_id> --skip-check --loop
+# STEP 5: Mark complete + commit (--skip-check and --loop are now defaults)
+agent-foreman done <feature_id>
 
 # STEP 6: Handle result
 # - Verification passed? → Continue to STEP 1

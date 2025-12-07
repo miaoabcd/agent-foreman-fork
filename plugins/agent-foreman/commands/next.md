@@ -26,17 +26,18 @@ Wait for completion. Review the feature shown.
 1. **Read** the acceptance criteria shown
 2. **Implement** the feature to satisfy ALL criteria
 3. **Verify** with: `agent-foreman check <feature_id>`
-4. **Complete** with: `agent-foreman done <feature_id> --skip-check`
+4. **Complete** with: `agent-foreman done <feature_id>`
 
 ## Complete Options
 
 | User Says | Execute |
 |-----------|---------|
-| "skip verification" | `agent-foreman done <id> --skip-check` |
-| "full test" / "all tests" | `agent-foreman done <id> --full` |
+| (default, skip verification) | `agent-foreman done <id>` |
+| "verify first" / "run tests" | `agent-foreman done <id> --no-skip-check` |
+| "full test" / "all tests" | `agent-foreman done <id> --full --no-skip-check` |
 | "skip e2e" | `agent-foreman done <id> --skip-e2e` |
 | "no commit" / "manual commit" | `agent-foreman done <id> --no-commit` |
-| (default, auto-verify) | `agent-foreman done <id>` |
+| "no loop" / "single feature" | `agent-foreman done <id> --no-loop` |
 
 ## Priority Order (Auto-Selected)
 

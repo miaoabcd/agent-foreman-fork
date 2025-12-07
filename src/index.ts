@@ -179,8 +179,8 @@ async function main() {
           })
           .option("skip-check", {
             type: "boolean",
-            default: false,
-            describe: "Skip verification (use after running 'check' command)",
+            default: true,
+            describe: "Skip verification (default: true, use --no-skip-check to verify)",
           })
           .option("verbose", {
             alias: "v",
@@ -215,8 +215,8 @@ async function main() {
           })
           .option("loop", {
             type: "boolean",
-            default: false,
-            describe: "Enable loop mode (outputs continuation reminder for all-features workflow)",
+            default: true,
+            describe: "Enable loop mode (default: true, outputs continuation reminder for all-features workflow)",
           }),
       async (argv) => {
         // Determine test mode: --full > --quick (default)

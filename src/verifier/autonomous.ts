@@ -104,16 +104,20 @@ After your exploration, return ONLY a JSON object (no markdown, no explanation):
       "confidence": 0.95
     }
   ],
-  "verdict": "pass|fail|needs_review",
+  "verdict": "<VERDICT>",
   "overallReasoning": "Summary of verification findings",
   "suggestions": ["Improvement suggestions if any"],
   "codeQualityNotes": ["Quality observations if any"]
 }
 
-**Verdict Rules**:
-- "pass": ALL criteria satisfied with confidence > 0.7
-- "fail": ANY criterion clearly NOT satisfied
-- "needs_review": Evidence insufficient or confidence too low
+**CRITICAL - Verdict Field Requirements**:
+
+The "verdict" field MUST be EXACTLY ONE of these three string values (choose only one):
+- \`"pass"\` - Use this if ALL criteria are satisfied with confidence > 0.7
+- \`"fail"\` - Use this if ANY criterion is clearly NOT satisfied
+- \`"needs_review"\` - Use this if evidence is insufficient or confidence too low
+
+Replace \`<VERDICT>\` with your chosen value. Do NOT output the literal string "pass|fail|needs_review".
 
 Begin exploration now. Read files, search code, and verify each criterion.`;
 }
@@ -149,6 +153,21 @@ function parseAutonomousVerificationResponse(
 
     const parsed = JSON.parse(jsonStr);
 
+    // Normalize and validate verdict value
+    // Handle edge cases where model outputs literal "pass|fail|needs_review" or other invalid values
+    let verdict: VerificationVerdict = "needs_review";
+    if (parsed.verdict) {
+      const v = String(parsed.verdict).toLowerCase().trim();
+      if (v === "pass") {
+        verdict = "pass";
+      } else if (v === "fail") {
+        verdict = "fail";
+      } else if (v === "needs_review") {
+        verdict = "needs_review";
+      }
+      // Invalid values like "pass|fail|needs_review" or "<VERDICT>" will default to "needs_review"
+    }
+
     // Map criteria results
     const criteriaResults: CriterionResult[] = acceptance.map((criterion, index) => {
       const result = parsed.criteriaResults?.find((r: { index: number }) => r.index === index);
@@ -174,7 +193,7 @@ function parseAutonomousVerificationResponse(
 
     return {
       criteriaResults,
-      verdict: parsed.verdict ?? "needs_review",
+      verdict,
       overallReasoning: parsed.overallReasoning ?? "",
       suggestions: parsed.suggestions ?? [],
       codeQualityNotes: parsed.codeQualityNotes ?? [],

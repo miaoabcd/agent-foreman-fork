@@ -29,10 +29,10 @@ agent-foreman next <feature_id>
 # STEP 2: Implement feature
 # (satisfy ALL acceptance criteria shown)
 
-# STEP 3: Verify implementation
+# STEP 3: Verify implementation (required)
 agent-foreman check <feature_id>
 
-# STEP 4: Complete feature
+# STEP 4: Complete feature (skips re-verification since we just checked)
 agent-foreman done <feature_id>
 ```
 
@@ -52,10 +52,10 @@ agent-foreman next
 # STEP 3: Implement feature
 # (satisfy ALL acceptance criteria shown)
 
-# STEP 4: Verify implementation
+# STEP 4: Verify implementation (required)
 agent-foreman check <feature_id>
 
-# STEP 5: Complete feature (skips verification since we just checked)
+# STEP 5: Complete feature (skips re-verification since we just checked)
 agent-foreman done <feature_id>
 
 # STEP 6: Handle result

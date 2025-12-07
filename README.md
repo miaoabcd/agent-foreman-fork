@@ -166,7 +166,7 @@ agent-foreman embraces **TDD (Test-Driven Development)** philosophy: define acce
 │                                   │                         │           │
 │                                   ▼                         │           │
 │                  ┌──────────────────────────────────────┐  │           │
-│                  │  check <id> (optional)                │  │           │
+│                  │  check <id>                           │  │           │
 │                  │  - Run tests to verify implementation │  │           │
 │                  │  - AI validates acceptance criteria   │  │           │
 │                  └──────────────────────────────────────┘  │           │

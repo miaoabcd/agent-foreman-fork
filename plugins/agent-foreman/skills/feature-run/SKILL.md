@@ -30,11 +30,11 @@ agent-foreman next <feature_id>
 # STEP 2: Implement (satisfy ALL acceptance criteria)
 # ... write code ...
 
-# STEP 3: Verify implementation
+# STEP 3: Verify implementation (required)
 agent-foreman check <feature_id>
 
-# STEP 4: Mark complete + commit (skip verification since we just checked)
-agent-foreman done <feature_id> --skip-check
+# STEP 4: Mark complete + commit (skips re-verification since we just checked)
+agent-foreman done <feature_id>
 ```
 
 ---
@@ -53,10 +53,10 @@ agent-foreman next
 # STEP 3: Implement (satisfy ALL acceptance criteria)
 # ... write code ...
 
-# STEP 4: Verify implementation
+# STEP 4: Verify implementation (required)
 agent-foreman check <feature_id>
 
-# STEP 5: Mark complete + commit (--skip-check and --loop are now defaults)
+# STEP 5: Mark complete + commit (skips re-verification since we just checked)
 agent-foreman done <feature_id>
 
 # STEP 6: Handle result

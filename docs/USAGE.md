@@ -320,7 +320,7 @@ agent-foreman next           # Continue
 │             ↓                                                │
 │    ┌──────────────────┐                                     │
 │    │ agent-foreman    │                                     │
-│    │   check <id>     │  ← Optional: verify before done     │
+│    │   check <id>     │  ← Required: verify before done      │
 │    └────────┬─────────┘                                     │
 │             │                                                │
 │             ↓                                                │

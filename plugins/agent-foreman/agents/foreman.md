@@ -79,7 +79,7 @@ agent-foreman next
 agent-foreman status           # 1. Check status
 agent-foreman next             # 2. Get next feature
 # ... implement feature ...    # 3. Do the work
-agent-foreman check <id>       # 4. Optional: verify implementation
+agent-foreman check <id>       # 4. Verify implementation
 agent-foreman done <id>        # 5. Mark complete + commit
 ```
 

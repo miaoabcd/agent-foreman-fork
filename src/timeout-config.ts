@@ -100,7 +100,7 @@ export const AGENT_ENV_VAR = "AGENT_FOREMAN_AGENTS";
  * Default agent priority order
  * First agent has highest priority, agents are tried in order until one succeeds
  */
-export const DEFAULT_AGENT_PRIORITY = ["codex", "gemini", "claude"] as const;
+export const DEFAULT_AGENT_PRIORITY = ["claude", "codex", "gemini"] as const;
 
 /**
  * Valid agent names that can be configured

@@ -295,7 +295,7 @@ describe("Timeout Configuration", () => {
   describe("Agent Priority Configuration", () => {
     describe("DEFAULT_AGENT_PRIORITY", () => {
       it("should have default priority order", () => {
-        expect(DEFAULT_AGENT_PRIORITY).toEqual(["codex", "gemini", "claude"]);
+        expect(DEFAULT_AGENT_PRIORITY).toEqual(["claude", "codex", "gemini"]);
       });
 
       it("should be a readonly array type", () => {
@@ -321,19 +321,19 @@ describe("Timeout Configuration", () => {
     describe("getAgentPriority", () => {
       it("should return default priority when env var not set", () => {
         const priority = getAgentPriority();
-        expect(priority).toEqual(["codex", "gemini", "claude"]);
+        expect(priority).toEqual(["claude", "codex", "gemini"]);
       });
 
       it("should return default priority when env var is empty", () => {
         process.env[AGENT_ENV_VAR] = "";
         const priority = getAgentPriority();
-        expect(priority).toEqual(["codex", "gemini", "claude"]);
+        expect(priority).toEqual(["claude", "codex", "gemini"]);
       });
 
       it("should return default priority when env var is whitespace only", () => {
         process.env[AGENT_ENV_VAR] = "   ";
         const priority = getAgentPriority();
-        expect(priority).toEqual(["codex", "gemini", "claude"]);
+        expect(priority).toEqual(["claude", "codex", "gemini"]);
       });
 
       it("should parse comma-separated agent names", () => {
@@ -400,7 +400,7 @@ describe("Timeout Configuration", () => {
 
         process.env[AGENT_ENV_VAR] = "invalid,unknown,bad";
         const priority = getAgentPriority();
-        expect(priority).toEqual(["codex", "gemini", "claude"]);
+        expect(priority).toEqual(["claude", "codex", "gemini"]);
 
         // Should warn about using defaults
         expect(warnSpy).toHaveBeenCalledWith(

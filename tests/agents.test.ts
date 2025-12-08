@@ -33,10 +33,11 @@ describe("Agents", () => {
       expect(agentNames).toContain("codex");
     });
 
-    it("should have claude configured with --dangerously-skip-permissions", () => {
+    it("should have claude configured with --permission-mode bypassPermissions", () => {
       const claude = DEFAULT_AGENTS.find((a) => a.name === "claude");
       expect(claude).toBeDefined();
-      expect(claude!.command).toContain("--dangerously-skip-permissions");
+      expect(claude!.command).toContain("--permission-mode");
+      expect(claude!.command).toContain("bypassPermissions");
       expect(claude!.command).toContain("--print");
       expect(claude!.command).toContain("--output-format");
     });
@@ -155,9 +156,9 @@ describe("Agents", () => {
         return { status: 1 } as any;
       });
 
-      // Explicit default order: codex > gemini > claude (avoids env var interference)
-      const agent1 = getAvailableAgent(["codex", "gemini", "claude"]);
-      expect(agent1?.name).toBe("codex"); // First in specified order that's available
+      // Explicit default order: claude > codex > gemini (avoids env var interference)
+      const agent1 = getAvailableAgent(["claude", "codex", "gemini"]);
+      expect(agent1?.name).toBe("claude"); // First in specified order that's available
 
       // When gemini is preferred first
       const agent2 = getAvailableAgent(["gemini", "codex", "claude"]);

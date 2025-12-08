@@ -29,16 +29,17 @@ async function promptTDDMode(): Promise<TDDMode | undefined> {
     console.log(chalk.gray("   The 'check' and 'done' commands will fail without tests.\n"));
 
     rl.question(
-      chalk.yellow("   Enable strict TDD mode? (tests required for all features) [y/N]: "),
+      chalk.yellow("   Enable strict TDD mode? (tests required for all features) [Y/n]: "),
       (answer) => {
         rl.close();
         const normalized = answer.toLowerCase().trim();
-        if (normalized === "y" || normalized === "yes") {
-          console.log(chalk.green("   ✓ Strict TDD mode enabled\n"));
-          resolve("strict");
-        } else {
+        if (normalized === "n" || normalized === "no") {
           console.log(chalk.gray("   → Using recommended mode (tests suggested but not required)\n"));
           resolve("recommended");
+        } else {
+          // Default is strict (empty or "y" or "yes")
+          console.log(chalk.green("   ✓ Strict TDD mode enabled\n"));
+          resolve("strict");
         }
       }
     );

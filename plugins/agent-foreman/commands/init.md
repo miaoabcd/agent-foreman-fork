@@ -12,6 +12,20 @@ agent-foreman init
 
 Wait for completion. Do not interrupt.
 
+**TDD Mode Prompt**: During init, you will be asked about TDD mode. **Default: strict mode (recommended)**.
+
+## TDD Mode Configuration
+
+| User Says | TDD Mode | Effect |
+|-----------|----------|--------|
+| "strict TDD" / "require tests" / "enforce TDD" / (default) | `strict` | Tests REQUIRED for all features |
+| "recommended" / "optional tests" / "no strict" | `recommended` | Tests suggested but not enforced |
+| "disable TDD" / "no TDD" | `disabled` | No TDD guidance |
+
+When prompted "Enable strict TDD mode?":
+- Press **Y** (default) for strict mode - tests required
+- Press **N** for recommended mode - tests optional
+
 ## Context-Based Behavior
 
 The command auto-detects and handles:
@@ -35,7 +49,19 @@ The command auto-detects and handles:
 
 Report what was created:
 
-- `ai/feature_list.json` - Feature backlog
+- `ai/feature_list.json` - Feature backlog (with tddMode in metadata)
 - `ai/progress.log` - Session log
 - `ai/init.sh` - Bootstrap script
 - `CLAUDE.md` - AI instructions
+
+## Manual TDD Mode Change
+
+To change TDD mode after init, edit `ai/feature_list.json`:
+
+```json
+{
+  "metadata": {
+    "tddMode": "strict"  // or "recommended" or "disabled"
+  }
+}
+```

@@ -100,12 +100,47 @@ agent-foreman done <id>        # 5. Mark complete + commit
 2. `failing` status
 3. Lower priority number
 
+## TDD Mode Configuration
+
+The project's TDD enforcement is controlled by `metadata.tddMode` in `ai/feature_list.json`:
+
+| Mode | Effect |
+|------|--------|
+| `strict` (default) | Tests REQUIRED - check/done fail without tests |
+| `recommended` | Tests suggested but not enforced |
+| `disabled` | No TDD guidance |
+
+### Strict Mode Behavior
+
+When `tddMode: "strict"`:
+- `agent-foreman check` blocks if test files missing
+- `agent-foreman done` blocks if test files missing
+- All features auto-migrate to `testRequirements.unit.required: true`
+- TDD workflow enforced: RED → GREEN → REFACTOR
+
+### User Control via Natural Language
+
+| User Says | Action |
+|-----------|--------|
+| "enable strict TDD" / "require tests" | Set `tddMode: "strict"` |
+| "disable strict TDD" / "optional tests" | Set `tddMode: "recommended"` |
+| "turn off TDD" | Set `tddMode: "disabled"` |
+
+To change mode, edit `ai/feature_list.json`:
+```json
+{
+  "metadata": {
+    "tddMode": "strict"
+  }
+}
+```
+
 ## Test Requirements Structure
 
 ```json
 "testRequirements": {
   "unit": {
-    "required": false,
+    "required": true,  // Auto-set in strict mode
     "pattern": "tests/auth/**/*.test.ts"
   },
   "e2e": {
@@ -117,6 +152,7 @@ agent-foreman done <id>        # 5. Mark complete + commit
 
 - `required: true` - Feature cannot complete without matching test files
 - `pattern` - Glob pattern for selective test execution (quick mode)
+- In strict mode, `unit.required` auto-migrates to `true` for all features
 
 ## Rules
 

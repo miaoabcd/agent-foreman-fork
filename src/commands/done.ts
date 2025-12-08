@@ -284,10 +284,10 @@ Feature: ${featureId}
 
       console.log(chalk.bold.yellow("\n   LOOP INSTRUCTION (DO NOT IGNORE):"));
       console.log(chalk.white("   You are in ALL-FEATURES loop mode. Continue workflow:"));
-      console.log(chalk.gray("   1. agent-foreman status"));
-      console.log(chalk.gray("   2. agent-foreman next"));
-      console.log(chalk.gray("   3. Implement feature"));
-      console.log(chalk.gray("   4. agent-foreman done <feature_id> --loop"));
+      console.log(chalk.gray("   1. agent-foreman next"));
+      console.log(chalk.gray("   2. Implement feature"));
+      console.log(chalk.gray("   3. agent-foreman check <feature_id>"));
+      console.log(chalk.gray("   4. agent-foreman done <feature_id>"));
       console.log(chalk.gray("   5. REPEAT until all features processed"));
 
       console.log(chalk.bold.green("\n   ➤ Do NOT stop. Continue to next feature NOW."));

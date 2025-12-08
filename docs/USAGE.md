@@ -251,10 +251,11 @@ agent-foreman init "Add authentication feature"
 
 **Development loop:**
 ```bash
-agent-foreman next           # Get next task
+agent-foreman next             # Get next task
 # ... implement feature ...
-agent-foreman done cli.init  # Verify + mark complete + commit
-agent-foreman next           # Continue
+agent-foreman check cli.init   # Verify implementation
+agent-foreman done cli.init    # Mark complete + commit
+agent-foreman next             # Continue
 ```
 
 ---

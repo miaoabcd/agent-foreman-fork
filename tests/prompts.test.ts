@@ -309,8 +309,10 @@ describe("Prompts", () => {
       expect(guidance).toContain("### Workflow");
       expect(guidance).toContain("1. Review acceptance criteria above");
       expect(guidance).toContain("2. Implement the feature");
-      expect(guidance).toContain("3. Run `agent-foreman done");
-      expect(guidance).toContain("(auto-verifies + commits)");
+      expect(guidance).toContain("3. Run `agent-foreman check");
+      expect(guidance).toContain("to verify implementation");
+      expect(guidance).toContain("4. Run `agent-foreman done");
+      expect(guidance).toContain("to mark complete + commit");
     });
   });
 

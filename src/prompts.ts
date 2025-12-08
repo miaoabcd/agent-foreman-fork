@@ -285,7 +285,8 @@ export function generateFeatureGuidance(feature: {
   lines.push("");
   lines.push("1. Review acceptance criteria above");
   lines.push("2. Implement the feature");
-  lines.push(`3. Run \`agent-foreman done ${feature.id}\` (auto-verifies + commits)`);
+  lines.push(`3. Run \`agent-foreman check ${feature.id}\` to verify implementation`);
+  lines.push(`4. Run \`agent-foreman done ${feature.id}\` to mark complete + commit`);
 
   return lines.join("\n");
 }

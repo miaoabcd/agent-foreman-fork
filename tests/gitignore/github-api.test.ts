@@ -250,3 +250,267 @@ describe("integration", () => {
     }
   });
 });
+
+// ============================================================================
+// Additional Coverage Tests
+// ============================================================================
+
+describe("API error handling", () => {
+  afterEach(() => {
+    restoreFetch();
+  });
+
+  it("should handle 304 Not Modified response", async () => {
+    // First mock a successful fetch to populate cache
+    mockFetch({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ name: "Node", source: "# Node content" }),
+      headers: { get: (name: string) => name === "etag" ? '"etag123"' : null },
+    });
+    await fetchGitignoreTemplate("Node");
+
+    // Then mock a 304 response
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 304,
+      json: () => Promise.resolve({}),
+      headers: { get: () => null },
+    });
+
+    // Should return cached content
+    const result = await fetchGitignoreTemplate("Node");
+    expect(result.source).toBeDefined();
+  });
+
+  it("should throw error for API errors on non-bundled templates", async () => {
+    mockFetch({ ok: false, status: 500 });
+
+    await expect(fetchGitignoreTemplate("UnknownTemplate999")).rejects.toThrow();
+  });
+
+  it("should return stale cache on network error when available", async () => {
+    // First, successfully fetch a template
+    mockFetch({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ name: "TestTemplate", source: "# Test content" }),
+      headers: { get: () => '"etag456"' },
+    });
+
+    // Force cache by making initial request
+    const cacheDir = getCacheDir();
+    const cachePath = path.join(cacheDir, "TestCache.json");
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    fs.writeFileSync(cachePath, JSON.stringify({
+      name: "TestCache",
+      source: "# Cached content",
+      etag: '"oldEtag"',
+      cachedAt: Date.now() - 8 * 24 * 60 * 60 * 1000, // Stale (8 days old)
+    }));
+
+    // Mock network error
+    global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
+
+    const result = await fetchGitignoreTemplate("TestCache");
+    expect(result.source).toContain("Cached content");
+    expect(result.fromCache).toBe(true);
+
+    // Cleanup
+    fs.unlinkSync(cachePath);
+  });
+});
+
+describe("listGitignoreTemplates error scenarios", () => {
+  afterEach(() => {
+    restoreFetch();
+  });
+
+  it("should handle 304 Not Modified for template list", async () => {
+    // Setup: Write a cache file for templates list
+    const cacheDir = getCacheDir();
+    const listCachePath = path.join(cacheDir, "templates.json");
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    fs.writeFileSync(listCachePath, JSON.stringify({
+      templates: ["Node", "Python", "Go"],
+      etag: '"listeTag123"',
+      cachedAt: Date.now() - 8 * 24 * 60 * 60 * 1000, // Stale cache
+    }));
+
+    // Mock 304 response
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 304,
+      json: () => Promise.resolve([]),
+      headers: { get: () => null },
+    });
+
+    const templates = await listGitignoreTemplates();
+    expect(templates).toContain("Node");
+
+    // Cleanup
+    fs.unlinkSync(listCachePath);
+  });
+
+  it("should return stale cache on API error for template list", async () => {
+    // Setup stale cache
+    const cacheDir = getCacheDir();
+    const listCachePath = path.join(cacheDir, "templates.json");
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    fs.writeFileSync(listCachePath, JSON.stringify({
+      templates: ["CachedTemplate1", "CachedTemplate2"],
+      etag: '"staleEtag"',
+      cachedAt: Date.now() - 10 * 24 * 60 * 60 * 1000, // Very stale
+    }));
+
+    // Mock API error
+    mockFetch({ ok: false, status: 503 });
+
+    const templates = await listGitignoreTemplates();
+    expect(templates).toContain("CachedTemplate1");
+
+    // Cleanup
+    fs.unlinkSync(listCachePath);
+  });
+
+  it("should handle successful template list fetch", async () => {
+    mockFetch({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(["Node", "Python", "Ruby", "Go"]),
+      headers: { get: (name: string) => name === "etag" ? '"freshEtag"' : null },
+    });
+
+    const templates = await listGitignoreTemplates();
+    expect(Array.isArray(templates)).toBe(true);
+  });
+});
+
+describe("cache file operations", () => {
+  it("should handle corrupted cache file gracefully", async () => {
+    const cacheDir = getCacheDir();
+    const corruptedPath = path.join(cacheDir, "CorruptedTemplate.json");
+
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    fs.writeFileSync(corruptedPath, "{ invalid json }");
+
+    // Should not throw, should proceed to API call or bundled
+    mockFetch({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ name: "CorruptedTemplate", source: "# Fresh content" }),
+      headers: { get: () => null },
+    });
+
+    const result = await fetchGitignoreTemplate("CorruptedTemplate");
+    expect(result.source).toBeDefined();
+
+    // Cleanup
+    restoreFetch();
+    try {
+      fs.unlinkSync(corruptedPath);
+    } catch { /* ignore */ }
+  });
+
+  it("should handle corrupted template list cache gracefully", async () => {
+    const cacheDir = getCacheDir();
+    const listCachePath = path.join(cacheDir, "templates.json");
+
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    fs.writeFileSync(listCachePath, "{ corrupted json }");
+
+    mockFetch({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(["Node", "Python"]),
+      headers: { get: () => null },
+    });
+
+    const templates = await listGitignoreTemplates();
+    expect(Array.isArray(templates)).toBe(true);
+
+    // Cleanup
+    restoreFetch();
+    try {
+      fs.unlinkSync(listCachePath);
+    } catch { /* ignore */ }
+  });
+});
+
+describe("fetchGitignoreTemplate edge cases", () => {
+  afterEach(() => {
+    restoreFetch();
+  });
+
+  it("should use ETag for conditional requests when cache exists", async () => {
+    // Setup cache with ETag
+    const cacheDir = getCacheDir();
+    const cachePath = path.join(cacheDir, "ETagTest.json");
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    fs.writeFileSync(cachePath, JSON.stringify({
+      name: "ETagTest",
+      source: "# Old content",
+      etag: '"testEtag789"',
+      cachedAt: Date.now() - 8 * 24 * 60 * 60 * 1000, // Stale
+    }));
+
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ name: "ETagTest", source: "# New content" }),
+      headers: { get: (name: string) => name === "etag" ? '"newEtag"' : null },
+    });
+    global.fetch = fetchSpy;
+
+    await fetchGitignoreTemplate("ETagTest");
+
+    // Verify ETag was sent in request
+    expect(fetchSpy).toHaveBeenCalled();
+    const callArgs = fetchSpy.mock.calls[0];
+    expect(callArgs[1].headers["If-None-Match"]).toBe('"testEtag789"');
+
+    // Cleanup
+    try {
+      fs.unlinkSync(cachePath);
+    } catch { /* ignore */ }
+  });
+});
+
+describe("clearCache edge cases", () => {
+  it("should only remove .json files from cache", () => {
+    const cacheDir = getCacheDir();
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+
+    // Create a non-json file
+    const nonJsonPath = path.join(cacheDir, "keepme.txt");
+    fs.writeFileSync(nonJsonPath, "keep this");
+
+    // Create a json file
+    const jsonPath = path.join(cacheDir, "deleteme.json");
+    fs.writeFileSync(jsonPath, "{}");
+
+    clearCache();
+
+    // Non-json should still exist
+    expect(fs.existsSync(nonJsonPath)).toBe(true);
+    // Json should be deleted
+    expect(fs.existsSync(jsonPath)).toBe(false);
+
+    // Cleanup
+    fs.unlinkSync(nonJsonPath);
+  });
+});

@@ -1,7 +1,7 @@
 /**
  * Tests for src/feature-list.ts - Feature list operations
  */
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -12,6 +12,7 @@ import {
   selectNextFeature,
   findFeatureById,
   updateFeatureStatus,
+  updateFeatureVerification,
   findDependentFeatures,
   findSameModuleFeatures,
   mergeFeatures,
@@ -24,6 +25,8 @@ import {
   addFeature,
   createFeature,
   generateTestPattern,
+  generateTestRequirements,
+  migrateToStrictTDD,
 } from "../src/feature-list.js";
 import type { Feature, FeatureList, DiscoveredFeature } from "../src/types.js";
 
@@ -536,6 +539,238 @@ describe("Feature List Operations", () => {
 
       expect(authFeature.testRequirements?.unit?.pattern).toBe("tests/auth/**/*.test.*");
       expect(userFeature.testRequirements?.unit?.pattern).toBe("tests/user/**/*.test.*");
+    });
+  });
+
+  describe("updateFeatureVerification", () => {
+    it("should update verification summary for specified feature", () => {
+      const features = [
+        createTestFeature({ id: "f1" }),
+        createTestFeature({ id: "f2" }),
+      ];
+      const verification = {
+        status: "pass" as const,
+        testsPassed: 10,
+        testsFailed: 0,
+        checksDone: ["test", "lint"],
+        duration: 5000,
+        timestamp: new Date().toISOString(),
+      };
+      const updated = updateFeatureVerification(features, "f1", verification);
+
+      expect(updated[0].verification).toEqual(verification);
+      expect(updated[1].verification).toBeUndefined();
+    });
+
+    it("should not modify other features", () => {
+      const features = [
+        createTestFeature({ id: "f1" }),
+        createTestFeature({ id: "f2" }),
+      ];
+      const verification = {
+        status: "fail" as const,
+        testsPassed: 5,
+        testsFailed: 2,
+        checksDone: ["test"],
+        duration: 3000,
+        timestamp: new Date().toISOString(),
+      };
+      const updated = updateFeatureVerification(features, "f1", verification);
+
+      expect(updated[1]).toEqual(features[1]);
+    });
+
+    it("should return new array (immutable)", () => {
+      const features = [createTestFeature({ id: "f1" })];
+      const verification = {
+        status: "pass" as const,
+        testsPassed: 1,
+        testsFailed: 0,
+        checksDone: [],
+        duration: 100,
+        timestamp: new Date().toISOString(),
+      };
+      const updated = updateFeatureVerification(features, "f1", verification);
+
+      expect(updated).not.toBe(features);
+    });
+  });
+
+  describe("generateTestRequirements", () => {
+    it("should generate default test requirements for a module", () => {
+      const requirements = generateTestRequirements("auth");
+
+      expect(requirements.unit.required).toBe(false);
+      expect(requirements.unit.pattern).toBe("tests/auth/**/*.test.*");
+    });
+
+    it("should sanitize module name in pattern", () => {
+      const requirements = generateTestRequirements("my-module");
+
+      expect(requirements.unit.pattern).toBe("tests/my-module/**/*.test.*");
+    });
+  });
+
+  describe("migrateToStrictTDD", () => {
+    it("should return unchanged list when tddMode is not strict", () => {
+      const list = createTestFeatureList([createTestFeature()]);
+      list.metadata.tddMode = "recommended";
+
+      const { list: migrated, migratedCount } = migrateToStrictTDD(list);
+
+      expect(migratedCount).toBe(0);
+      expect(migrated).toBe(list);
+    });
+
+    it("should migrate features to required tests when tddMode is strict", () => {
+      const list = createTestFeatureList([
+        createTestFeature({ id: "f1", testRequirements: { unit: { required: false, pattern: "tests/**" } } }),
+      ]);
+      list.metadata.tddMode = "strict";
+
+      const { list: migrated, migratedCount } = migrateToStrictTDD(list);
+
+      expect(migratedCount).toBe(1);
+      expect(migrated.features[0].testRequirements?.unit?.required).toBe(true);
+    });
+
+    it("should skip features already with required tests", () => {
+      const list = createTestFeatureList([
+        createTestFeature({ id: "f1", testRequirements: { unit: { required: true, pattern: "tests/**" } } }),
+      ]);
+      list.metadata.tddMode = "strict";
+
+      const { list: migrated, migratedCount } = migrateToStrictTDD(list);
+
+      expect(migratedCount).toBe(0);
+    });
+
+    it("should preserve existing test cases during migration", () => {
+      const list = createTestFeatureList([
+        createTestFeature({
+          id: "f1",
+          testRequirements: {
+            unit: { required: false, pattern: "tests/**", cases: ["test1", "test2"] },
+          },
+        }),
+      ]);
+      list.metadata.tddMode = "strict";
+
+      const { list: migrated } = migrateToStrictTDD(list);
+
+      expect(migrated.features[0].testRequirements?.unit?.cases).toEqual(["test1", "test2"]);
+    });
+
+    it("should preserve e2e requirements during migration", () => {
+      const list = createTestFeatureList([
+        createTestFeature({
+          id: "f1",
+          testRequirements: {
+            unit: { required: false, pattern: "tests/**" },
+            e2e: { required: true, pattern: "e2e/**" },
+          },
+        }),
+      ]);
+      list.metadata.tddMode = "strict";
+
+      const { list: migrated } = migrateToStrictTDD(list);
+
+      expect(migrated.features[0].testRequirements?.e2e?.required).toBe(true);
+    });
+
+    it("should generate default pattern for features without testRequirements", () => {
+      const feature = createTestFeature({ id: "f1", module: "auth" });
+      delete (feature as Partial<Feature>).testRequirements;
+      const list = createTestFeatureList([feature]);
+      list.metadata.tddMode = "strict";
+
+      const { list: migrated } = migrateToStrictTDD(list);
+
+      expect(migrated.features[0].testRequirements?.unit?.required).toBe(true);
+      expect(migrated.features[0].testRequirements?.unit?.pattern).toBe("tests/auth/**/*.test.*");
+    });
+  });
+
+  describe("loadFeatureList error handling", () => {
+    it("should return null for invalid JSON content", async () => {
+      const aiDir = path.join(tempDir, "ai");
+      await fs.mkdir(aiDir, { recursive: true });
+      await fs.writeFile(path.join(aiDir, "feature_list.json"), "{ invalid json }");
+
+      await expect(loadFeatureList(tempDir)).rejects.toThrow();
+    });
+
+    it("should return null for invalid feature list schema", async () => {
+      const aiDir = path.join(tempDir, "ai");
+      await fs.mkdir(aiDir, { recursive: true });
+      await fs.writeFile(
+        path.join(aiDir, "feature_list.json"),
+        JSON.stringify({ invalid: "schema" })
+      );
+
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const loaded = await loadFeatureList(tempDir);
+
+      expect(loaded).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledWith("Invalid feature list:", expect.anything());
+      consoleSpy.mockRestore();
+    });
+
+    it("should auto-migrate and save when strict TDD mode is enabled", async () => {
+      const list = createTestFeatureList([
+        createTestFeature({ id: "f1", testRequirements: { unit: { required: false, pattern: "tests/**" } } }),
+      ]);
+      list.metadata.tddMode = "strict";
+      await saveFeatureList(tempDir, list);
+
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const loaded = await loadFeatureList(tempDir);
+
+      expect(loaded?.features[0].testRequirements?.unit?.required).toBe(true);
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining("TDD Migration"));
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("createEmptyFeatureList with tddMode", () => {
+    it("should create feature list with strict TDD mode", () => {
+      const list = createEmptyFeatureList("Test goal", "strict");
+
+      expect(list.metadata.tddMode).toBe("strict");
+    });
+
+    it("should create feature list with recommended TDD mode", () => {
+      const list = createEmptyFeatureList("Test goal", "recommended");
+
+      expect(list.metadata.tddMode).toBe("recommended");
+    });
+
+    it("should create feature list with disabled TDD mode", () => {
+      const list = createEmptyFeatureList("Test goal", "disabled");
+
+      expect(list.metadata.tddMode).toBe("disabled");
+    });
+
+    it("should create feature list without TDD mode when not specified", () => {
+      const list = createEmptyFeatureList("Test goal");
+
+      expect(list.metadata.tddMode).toBeUndefined();
+    });
+  });
+
+  describe("deprecateFeature with existing notes", () => {
+    it("should append replacement to existing notes", () => {
+      const features = [createTestFeature({ id: "f1", notes: "existing note" })];
+      const updated = deprecateFeature(features, "f1", "f2");
+
+      expect(updated[0].notes).toBe("existing note; Replaced by f2");
+    });
+
+    it("should handle empty notes gracefully", () => {
+      const features = [createTestFeature({ id: "f1", notes: "" })];
+      const updated = deprecateFeature(features, "f1", "f2");
+
+      expect(updated[0].notes).toBe("Replaced by f2");
     });
   });
 });

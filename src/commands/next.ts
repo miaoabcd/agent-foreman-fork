@@ -17,7 +17,6 @@ import {
   getCompletionPercentage,
 } from "../feature-list.js";
 import { getRecentEntries } from "../progress-log.js";
-import { generateFeatureGuidance } from "../prompts.js";
 import { detectCapabilities } from "../capabilities/index.js";
 import { isGitRepo, hasUncommittedChanges } from "../git-utils.js";
 import { generateTDDGuidance, type TDDGuidance } from "../tdd-guidance/index.js";
@@ -290,9 +289,6 @@ export async function runNext(
   if (dryRun) {
     console.log(chalk.yellow("   [Dry run - no changes made]"));
   }
-
-  // Output feature guidance (for AI consumption)
-  console.log(generateFeatureGuidance(feature));
 
   // ─────────────────────────────────────────────────────────────────
   // TDD Guidance Section (display only, not in quiet mode)

@@ -3,6 +3,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { ensureMinimalGitignore } from "./gitignore/generator.js";
 
 export interface GitResult {
   success: boolean;
@@ -215,6 +216,7 @@ export function hasStagedChanges(cwd: string): boolean {
 
 /**
  * Initialize a new git repository
+ * Also creates a minimal .gitignore for immediate protection
  */
 export function gitInit(cwd: string): GitResult {
   try {
@@ -228,6 +230,13 @@ export function gitInit(cwd: string): GitResult {
         success: false,
         error: result.stderr || "Failed to initialize git repository",
       };
+    }
+
+    // Create minimal .gitignore for immediate protection
+    const gitignoreResult = ensureMinimalGitignore(cwd);
+    if (!gitignoreResult.success) {
+      // Log warning but don't fail the init
+      console.warn(`Warning: ${gitignoreResult.reason}`);
     }
 
     return { success: true };

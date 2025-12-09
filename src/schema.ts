@@ -282,8 +282,8 @@ export const featureListSchema = {
         },
         tddMode: {
           type: "string",
-          enum: ["strict", "relaxed", "off"],
-          description: "TDD mode setting: strict (require tests), relaxed (suggest tests), off (no TDD)",
+          enum: ["strict", "recommended", "disabled"],
+          description: "TDD mode setting: strict (require tests), recommended (suggest tests), disabled (no TDD)",
         },
       },
       additionalProperties: false,

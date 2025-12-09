@@ -273,7 +273,7 @@ export async function callAgentWithRetry(
 /**
  * Try multiple agents in order until one succeeds
  * Uses AGENT_FOREMAN_AGENTS env var for priority order if set
- * Default priority: Codex > Gemini > Claude
+ * Default priority: Claude > Codex > Gemini
  * No timeout by default - let the AI agent complete
  */
 export async function callAnyAvailableAgent(

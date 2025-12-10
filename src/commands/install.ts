@@ -10,7 +10,7 @@
 import chalk from "chalk";
 import {
   fullInstall,
-  isCompiledBinary,
+  hasEmbeddedPlugins,
   getPluginInstallInfo,
 } from "../plugin-installer.js";
 
@@ -29,14 +29,14 @@ export async function runInstall(force: boolean = false): Promise<void> {
   console.log(`  Enabled:     ${info.isPluginEnabled ? chalk.green("✓ yes") : chalk.gray("no")}`);
   console.log();
 
-  // Check if running in compiled mode
-  if (!isCompiledBinary()) {
-    console.log(chalk.yellow("⚠ Running in development mode (not compiled binary)"));
-    console.log(chalk.gray("  Plugin auto-install only works with compiled binaries."));
-    console.log(chalk.gray("  For development, plugins are loaded directly from source."));
+  // Check if embedded plugins are available
+  if (!hasEmbeddedPlugins()) {
+    console.log(chalk.yellow("⚠ Running in development mode (no embedded plugins)"));
+    console.log(chalk.gray("  Plugins are loaded directly from source in development."));
     console.log();
-    console.log(chalk.white("To build a binary with embedded plugins:"));
-    console.log(chalk.cyan("  npm run build:bin"));
+    console.log(chalk.white("To build with embedded plugins:"));
+    console.log(chalk.cyan("  npm run build        # Build npm package"));
+    console.log(chalk.cyan("  npm run build:bin    # Build standalone binary"));
     console.log();
     console.log(chalk.white("Or install from GitHub:"));
     console.log(chalk.cyan("  /plugin marketplace add mylukin/agent-foreman"));

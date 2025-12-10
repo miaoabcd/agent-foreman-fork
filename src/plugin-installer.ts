@@ -119,6 +119,16 @@ export function isCompiledBinary(): boolean {
 }
 
 /**
+ * Check if embedded plugins are available
+ *
+ * This is true for both compiled binaries AND npm installed packages
+ * that have been built with the plugins embedded.
+ */
+export function hasEmbeddedPlugins(): boolean {
+  return Object.keys(EMBEDDED_PLUGINS).length > 0;
+}
+
+/**
  * Read known marketplaces registry
  */
 function readKnownMarketplaces(): KnownMarketplaces {

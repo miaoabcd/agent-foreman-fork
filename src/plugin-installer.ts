@@ -2,7 +2,7 @@
  * Plugin Marketplace Installer
  *
  * Registers the agent-foreman marketplace in Claude Code's known_marketplaces.json
- * so users can install the plugin via `/plugin install agent-foreman@agent-foreman-plugins`
+ * so users can install the plugin via `/plugin install agent-foreman`
  */
 
 import { existsSync, mkdirSync, writeFileSync, readFileSync, cpSync, rmSync } from "node:fs";

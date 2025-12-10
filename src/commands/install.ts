@@ -40,7 +40,7 @@ export async function runInstall(force: boolean = false): Promise<void> {
     console.log();
     console.log(chalk.white("Or install from GitHub:"));
     console.log(chalk.cyan("  /plugin marketplace add mylukin/agent-foreman"));
-    console.log(chalk.cyan("  /plugin install agent-foreman@agent-foreman-plugins"));
+    console.log(chalk.cyan("  /plugin install agent-foreman"));
     console.log();
     return;
   }

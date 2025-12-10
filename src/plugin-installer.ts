@@ -80,9 +80,42 @@ interface Settings {
 
 /**
  * Check if running in compiled binary mode
+ *
+ * This checks multiple signals to determine if we're running as a compiled
+ * Bun binary vs npm/node execution:
+ *
+ * 1. Must have embedded plugins (packaged at build time)
+ * 2. process.execPath must NOT be a known runtime (node, bun, etc.)
+ *
+ * The second check is crucial because npm installs can also have embedded
+ * plugins, but they run via the node runtime.
  */
 export function isCompiledBinary(): boolean {
-  return Object.keys(EMBEDDED_PLUGINS).length > 0;
+  // Must have embedded plugins
+  if (Object.keys(EMBEDDED_PLUGINS).length === 0) {
+    return false;
+  }
+
+  // Check if process.execPath is a known runtime
+  // For npm installs, execPath is node/bun runtime
+  // For compiled binaries, execPath IS the binary itself
+  const execPath = process.execPath.toLowerCase();
+  const basename = execPath.split(/[/\\]/).pop() || "";
+
+  // Known runtime executables that indicate npm/node execution
+  const runtimes = ["node", "node.exe", "bun", "bun.exe", "deno", "deno.exe"];
+
+  if (runtimes.includes(basename)) {
+    return false;
+  }
+
+  // Additional check: if path contains .nvm, .fnm, .bun, nodejs - it's a runtime
+  const runtimePaths = [".nvm", ".fnm", ".bun", "nodejs", "node_modules"];
+  if (runtimePaths.some((p) => execPath.includes(p))) {
+    return false;
+  }
+
+  return true;
 }
 
 /**

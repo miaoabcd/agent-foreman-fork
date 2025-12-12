@@ -16,6 +16,22 @@ The `done` command completes the feature workflow: optionally verifies the imple
 
 > `done` 命令完成功能工作流：可选地验证实现、将功能状态更新为 `passing`、自动提交更改，并建议下一个功能。它专为人类开发者和 AI 代理设计，支持自主处理的循环模式。
 
+## Important: Verification Behavior
+
+**By default, `done` skips verification** (`--skip-check=true`). This is intentional:
+
+> **重要：默认情况下，`done` 命令跳过验证**（`--skip-check=true`）。这是有意设计的：
+
+| Workflow | Commands | Description |
+|----------|----------|-------------|
+| **Recommended** | `check` → `done` | Verify first, then complete (skips re-verification) |
+| **Alternative** | `done --no-skip-check` | Verify and complete in one step |
+| **Trust mode** | `done` | Skip verification entirely (for manual review) |
+
+The flag name `--skip-check` with `--no-skip-check` to enable verification can be confusing. Think of it as:
+- `done` = "I already verified, just mark complete"
+- `done --no-skip-check` = "Verify for me, then mark complete"
+
 ## Arguments
 
 | Argument | Required | Description |

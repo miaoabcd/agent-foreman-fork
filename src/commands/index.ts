@@ -15,6 +15,8 @@ export { runScan } from "./scan.js";
 export { runAgents } from "./agents-cmd.js";
 export { runInstall } from "./install.js";
 export { runUninstall } from "./uninstall.js";
+export { runFail } from "./fail.js";
+export { runTDD } from "./tdd.js";
 
 // Re-export helpers
 export { detectProjectGoal, promptConfirmation } from "./helpers.js";

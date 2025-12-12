@@ -31,11 +31,20 @@ agent-foreman done <feature_id> --no-commit
 # Disable loop mode (no continuation reminder)
 agent-foreman done <feature_id> --no-loop
 
+# Mark feature as failed (for verification failures, continue to next)
+agent-foreman fail <feature_id> --reason "Reason for failure"
+
 # Analyze impact of changes
 agent-foreman impact <feature_id>
 
 # Scan project verification capabilities
 agent-foreman scan
+
+# View or change TDD mode
+agent-foreman tdd                    # Show current mode
+agent-foreman tdd strict             # Enable strict TDD
+agent-foreman tdd recommended        # Enable recommended TDD (default)
+agent-foreman tdd disabled           # Disable TDD guidance
 
 # Bootstrap/development/testing
 ./ai/init.sh bootstrap

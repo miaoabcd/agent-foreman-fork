@@ -156,20 +156,19 @@ agent-foreman done <feature_id>
 
 ## On Verification Failure
 
-When `agent-foreman done` reports verification failure:
+When `agent-foreman check` or `agent-foreman done` reports verification failure:
 
 1. **DO NOT STOP** - Continue to the next feature
-2. Mark the failed feature as `failed`:
-   - Edit `ai/feature_list.json`
-   - Change `"status": "failing"` to `"status": "failed"`
-   - Add to notes: `"Verification failed: [reason from output]"`
-3. Log the failure in `ai/progress.log`:
+2. Mark the feature as failed using the `fail` command:
+   ```bash
+   agent-foreman fail <feature_id> --reason "Verification failed: [brief reason]"
    ```
-   YYYY-MM-DDTHH:MM:SSZ VERIFY feature=<id> verdict=fail summary="Marked as failed"
+3. Continue to the next feature immediately:
+   ```bash
+   agent-foreman next
    ```
-4. Continue to the next feature immediately
 
-**CRITICAL: NEVER stop due to verification failure - always mark as `failed` and continue!**
+**CRITICAL: NEVER stop due to verification failure - always use `fail` and continue!**
 
 ---
 

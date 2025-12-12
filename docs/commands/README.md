@@ -18,6 +18,7 @@ flowchart TB
         next[next]
         check[check]
         done[done]
+        fail[fail]
     end
 
     subgraph Status["Status Commands"]
@@ -33,13 +34,16 @@ flowchart TB
 
     init --> next
     next --> check
-    check --> done
+    check -->|pass| done
+    check -->|fail| fail
     done --> next
+    fail --> next
 
     style init fill:#4CAF50
     style next fill:#2196F3
     style check fill:#FF9800
     style done fill:#4CAF50
+    style fail fill:#F44336
 ```
 
 ## Commands by Category
@@ -59,6 +63,7 @@ flowchart TB
 | [next](./next.md) | Show next feature to work on with TDD guidance |
 | [check](./check.md) | AI-powered verification of feature completion |
 | [done](./done.md) | Mark feature as complete with auto-commit |
+| [fail](./fail.md) | Mark feature as failed and continue to next |
 
 ### Status & Analysis Commands
 
@@ -86,8 +91,10 @@ flowchart LR
     subgraph Phase2["Phase 2: Development Loop"]
         B1[agent-foreman next] --> B2[Implement Feature]
         B2 --> B3[agent-foreman check]
-        B3 --> B4[agent-foreman done]
+        B3 -->|pass| B4[agent-foreman done]
+        B3 -->|fail| B5[agent-foreman fail]
         B4 --> B1
+        B5 --> B1
     end
 
     subgraph Phase3["Phase 3: Monitoring"]
@@ -150,8 +157,11 @@ agent-foreman next
 # Verify feature
 agent-foreman check <feature_id>
 
-# Complete feature
+# Complete feature (if check passes)
 agent-foreman done <feature_id>
+
+# Mark failed (if check fails, continue to next)
+agent-foreman fail <feature_id> --reason "..."
 
 # View status
 agent-foreman status
@@ -181,7 +191,7 @@ Commands interact with these files in the `ai/` directory:
 | File | Purpose | Commands |
 |------|---------|----------|
 | `ai/feature_list.json` | Feature backlog | All workflow commands |
-| `ai/progress.log` | Activity log | next, check, done, status |
+| `ai/progress.log` | Activity log | next, check, done, fail, status |
 | `ai/capabilities.json` | Tool detection cache | scan, check, done |
 | `ai/init.sh` | Bootstrap script | init |
 

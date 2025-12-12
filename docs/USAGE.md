@@ -274,9 +274,11 @@ npx agent-foreman <command>
 | `init [goal]` | Initialize or upgrade the harness |
 | `next [feature_id]` | Show next feature to work on |
 | `status` | Show current project status |
-| `done <feature_id>` | Verify, mark complete, and auto-commit |
-| `check <feature_id>` | Preview verification without completing |
+| `check <feature_id>` | Verify implementation (without marking complete) |
+| `done <feature_id>` | Mark complete and auto-commit |
+| `fail <feature_id>` | Mark as failed and continue to next |
 | `impact <feature_id>` | Analyze impact of changes |
+| `tdd [mode]` | View or change TDD mode |
 | `agents` | Show available AI agents |
 | `scan` | Scan project verification capabilities |
 | `install` | Install Claude Code plugin |
@@ -319,6 +321,169 @@ agent-foreman check cli.init   # Verify implementation
 agent-foreman done cli.init    # Mark complete + commit
 agent-foreman next             # Continue
 ```
+
+---
+
+## Command Relationships
+
+Understanding when to use each command:
+
+### `analyze` vs `init`
+
+| Command | Purpose | When to Use |
+|---------|---------|-------------|
+| `analyze` | **Documentation only** - Generate ARCHITECTURE.md | Before init (for existing projects), or anytime you want updated docs |
+| `init` | **Setup harness** - Create feature list + rules | Once per project, or to add new features |
+
+**Typical flow for existing projects:**
+
+```bash
+# Step 1: Analyze first (creates ARCHITECTURE.md)
+agent-foreman analyze
+
+# Step 2: Init reads ARCHITECTURE.md to generate features
+agent-foreman init "Add new features"
+```
+
+**Typical flow for new projects:**
+
+```bash
+# Just init - it will scan the codebase if needed
+agent-foreman init "Build a REST API"
+```
+
+### `scan` Command Role
+
+The `scan` command detects project verification capabilities:
+
+```bash
+agent-foreman scan          # Detect and cache capabilities
+agent-foreman scan --force  # Force re-detection
+```
+
+**When to use:**
+
+- After `init` to verify capabilities were detected correctly
+- After changing package.json, tsconfig, or test configuration
+- When `check`/`done` verification commands fail unexpectedly
+
+**What it detects:**
+
+- Test framework (Jest, Vitest, pytest, etc.)
+- Test command
+- Linter (ESLint, Biome, etc.)
+- Type checker
+- Build command
+- E2E framework (Playwright, Cypress, etc.)
+
+### `impact` for Re-verification
+
+Use `impact` to analyze dependency chains before modifying shared code:
+
+```bash
+agent-foreman impact auth.login
+```
+
+**Workflow for modifying passing features:**
+
+```bash
+# 1. Check impact first
+agent-foreman impact auth.login
+# Shows: dashboard.profile, api.protected-routes depend on this
+
+# 2. Make your changes
+
+# 3. Re-verify the changed feature
+agent-foreman check auth.login
+
+# 4. If check passes, dependent features may need review
+# Manually mark them as needs_review or re-run check on them
+```
+
+---
+
+## Error Recovery
+
+When verification fails, use the `fail` command to continue the loop:
+
+### Using `fail` Command
+
+```bash
+# After check fails
+agent-foreman check auth.login
+# Output: ✗ Verification failed
+
+# Mark as failed and continue
+agent-foreman fail auth.login --reason "Tests failing: API not implemented"
+
+# Continue to next feature
+agent-foreman next
+```
+
+### Error Recovery Workflow
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    ERROR RECOVERY                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│    ┌──────────────────┐                                     │
+│    │ check fails or   │                                     │
+│    │ done fails       │                                     │
+│    └────────┬─────────┘                                     │
+│             │                                                │
+│             ↓                                                │
+│    ┌──────────────────┐                                     │
+│    │ agent-foreman    │                                     │
+│    │ fail <id>        │  ← Mark as failed with reason       │
+│    │ --reason "..."   │                                     │
+│    └────────┬─────────┘                                     │
+│             │                                                │
+│             ↓                                                │
+│    ┌──────────────────┐                                     │
+│    │ agent-foreman    │                                     │
+│    │ next             │  ← Continue to next feature         │
+│    └────────┬─────────┘                                     │
+│             │                                                │
+│             └──────────→ Continue loop                      │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Rules for AI Agents
+
+When in loop mode (processing all features):
+
+1. **NEVER STOP** for verification failures
+2. Use `agent-foreman fail` to mark and continue
+3. Only stop when all features are processed
+4. Review failed features in the summary
+
+---
+
+## TDD Mode Configuration
+
+Change TDD mode anytime after initialization:
+
+```bash
+# View current mode
+agent-foreman tdd
+
+# Enable strict TDD (tests required)
+agent-foreman tdd strict
+
+# Enable recommended TDD (tests suggested, default)
+agent-foreman tdd recommended
+
+# Disable TDD guidance
+agent-foreman tdd disabled
+```
+
+| Mode | Effect |
+|------|--------|
+| `strict` | Tests REQUIRED - check/done fail without tests |
+| `recommended` | Tests suggested - TDD guidance shown |
+| `disabled` | No TDD guidance or requirements |
 
 ---
 
@@ -369,12 +534,11 @@ agent-foreman next             # Continue
 ├─────────────────────────────────────────────────────────────┤
 │                                                              │
 │    ┌──────────────────┐                                     │
-│    │ /agent-foreman:  │                                     │
+│    │ agent-foreman    │                                     │
 │    │     next         │  ← External memory sync             │
-│    └────────┬─────────┘    - pwd                            │
-│             │              - git log                         │
-│             │              - progress.log                    │
-│             ↓              - feature status                  │
+│    └────────┬─────────┘    - pwd, git log, progress.log     │
+│             │                                                │
+│             ↓                                                │
 │    ┌──────────────────┐                                     │
 │    │   Implement      │                                     │
 │    │   Feature        │  ← Human or AI agent                │
@@ -383,14 +547,20 @@ agent-foreman next             # Continue
 │             ↓                                                │
 │    ┌──────────────────┐                                     │
 │    │ agent-foreman    │                                     │
-│    │   check <id>     │  ← Required: verify before done      │
+│    │   check <id>     │  ← Verify implementation            │
 │    └────────┬─────────┘                                     │
 │             │                                                │
-│             ↓                                                │
-│    ┌──────────────────┐                                     │
-│    │ agent-foreman    │                                     │
-│    │   done <id>      │  ← Mark complete + auto-commit      │
-│    └────────┬─────────┘                                     │
+│         ┌───┴───┐                                           │
+│         │       │                                           │
+│       pass    fail                                          │
+│         │       │                                           │
+│         ↓       ↓                                           │
+│    ┌────────┐ ┌────────┐                                   │
+│    │  done  │ │  fail  │                                   │
+│    │  <id>  │ │  <id>  │  ← Mark failed + continue         │
+│    └───┬────┘ └───┬────┘                                   │
+│        │          │                                         │
+│        └────┬─────┘                                         │
 │             │                                                │
 │             └──────────→ Loop back to next                  │
 │                                                              │

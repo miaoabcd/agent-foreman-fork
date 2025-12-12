@@ -25,6 +25,8 @@ import {
   runAgents,
   runInstall,
   runUninstall,
+  runFail,
+  runTDD,
   detectProjectGoal,
 } from "./commands/index.js";
 
@@ -361,6 +363,43 @@ async function main() {
       {},
       async () => {
         await runUninstall();
+      }
+    )
+    .command(
+      "fail <feature_id>",
+      "Mark a feature as failed and continue to next",
+      (yargs) =>
+        yargs
+          .positional("feature_id", {
+            describe: "Feature ID to mark as failed",
+            type: "string",
+            demandOption: true,
+          })
+          .option("reason", {
+            alias: "r",
+            type: "string",
+            describe: "Reason for failure",
+          })
+          .option("no-loop", {
+            type: "boolean",
+            default: false,
+            describe: "Disable loop continuation guidance",
+          }),
+      async (argv) => {
+        await runFail(argv.feature_id!, argv.reason, !argv.noLoop);
+      }
+    )
+    .command(
+      "tdd [mode]",
+      "View or change TDD mode (strict, recommended, disabled)",
+      (yargs) =>
+        yargs.positional("mode", {
+          describe: "TDD mode to set (strict, recommended, disabled)",
+          type: "string",
+          choices: ["strict", "recommended", "disabled"],
+        }),
+      async (argv) => {
+        await runTDD(argv.mode);
       }
     )
     .demandCommand(1, "You need at least one command")

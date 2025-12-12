@@ -34,10 +34,10 @@ flowchart TD
     CheckInstalled -->|No| NotInstalled[Show Not Installed]
     NotInstalled --> End([End])
 
-    CheckInstalled -->|Yes| Uninstall
+    CheckInstalled -->|Yes| RunUninstall
 
-    subgraph Uninstall["Uninstallation Process"]
-        Uninstall[fullUninstall] --> CheckEnabled{Plugin Enabled?}
+    subgraph UninstallPhase["Uninstallation Process"]
+        RunUninstall[fullUninstall] --> CheckEnabled{Plugin Enabled?}
         CheckEnabled -->|Yes| Step1[Disable in settings.json]
         CheckEnabled -->|No| CheckPlugin
 

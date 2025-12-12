@@ -58,11 +58,11 @@ flowchart TD
         TDDPassed -->|Yes| ShowTestsExist[Show Found Tests]
     end
 
-    SkipTDDGate --> Verification
-    ShowTestsExist --> Verification
+    SkipTDDGate --> SelectMode
+    ShowTestsExist --> SelectMode
 
-    subgraph Verification["Feature Verification"]
-        Verification[Select Verification Mode] --> ModeSelect{Autonomous?}
+    subgraph VerificationPhase["Feature Verification"]
+        SelectMode[Select Verification Mode] --> ModeSelect{Autonomous?}
         ModeSelect -->|Yes| AutonomousVerify[verifyFeatureAutonomous]
         ModeSelect -->|No| StandardVerify[verifyFeature]
 

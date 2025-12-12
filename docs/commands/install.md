@@ -41,10 +41,10 @@ flowchart TD
     CheckInstalled -->|Yes, not forced| AlreadyInstalled[Show Already Installed]
     AlreadyInstalled --> End
 
-    CheckInstalled -->|No or forced| Install
+    CheckInstalled -->|No or forced| RunInstall
 
-    subgraph Install["Installation Process"]
-        Install[fullInstall] --> Step1[Install Marketplace Files]
+    subgraph InstallPhase["Installation Process"]
+        RunInstall[fullInstall] --> Step1[Install Marketplace Files]
         Step1 --> Step2[Register in known_marketplaces.json]
         Step2 --> Step3[Install Plugin to Cache]
         Step3 --> Step4[Enable in settings.json]

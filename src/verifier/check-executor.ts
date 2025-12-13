@@ -2,7 +2,6 @@
  * Automated check execution
  */
 
-import * as path from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import chalk from "chalk";
@@ -192,75 +191,10 @@ export async function runAutomatedChecks(
     e2eInfo,
     e2eTags = [],
     e2eMode: explicitE2EMode,
-    useInitScript = false,
-    initScriptPath,
     parallel = false,
+    skipBuild = false,
   } = options;
   const results: AutomatedCheckResult[] = [];
-
-  // ========================================================================
-  // Init Script Mode: Delegate all checks to ai/init.sh
-  // ========================================================================
-  if (useInitScript) {
-    const scriptPath = initScriptPath || path.join(cwd, "ai/init.sh");
-
-    // Build command with appropriate flags
-    let command = `"${scriptPath}" check`;
-
-    // Add mode flags
-    if (testMode === "quick") {
-      command += " --quick";
-    } else if (testMode === "full") {
-      command += " --full";
-    }
-
-    if (skipE2E) {
-      command += " --skip-e2e";
-    }
-
-    // Add test pattern if selective testing
-    if (testMode === "quick" && testDiscovery?.pattern) {
-      command += ` "${testDiscovery.pattern}"`;
-    }
-
-    // Prepare environment variables
-    const env: Record<string, string> = {};
-    if (e2eTags.length > 0) {
-      env.E2E_TAGS = e2eTags.join(",");
-    }
-
-    // Log init script mode
-    const modeLabel = testMode === "quick" ? "quick" : testMode === "full" ? "full" : "default";
-    if (verbose) {
-      console.log(chalk.blue(`   Using init.sh check (${modeLabel} mode)`));
-      if (testDiscovery?.pattern) {
-        console.log(chalk.gray(`   Test pattern: ${testDiscovery.pattern}`));
-      }
-      if (e2eTags.length > 0) {
-        console.log(chalk.gray(`   E2E_TAGS: ${e2eTags.join(",")}`));
-      }
-    }
-
-    // Create progress bar for init script
-    const progressBar = createProgressBar("Running init.sh check", 1);
-    progressBar.start();
-    progressBar.update(0, `Running init.sh check (${modeLabel})`);
-
-    const result = await runCheckWithEnv(cwd, "init-script", command, env);
-    results.push(result);
-
-    if (result.success) {
-      progressBar.complete("init.sh check passed");
-    } else {
-      progressBar.complete("init.sh check failed");
-    }
-
-    return results;
-  }
-
-  // ========================================================================
-  // Direct Command Mode: Run individual checks
-  // ========================================================================
 
   // Collect checks to run
   const checks: CheckDefinition[] = [];
@@ -292,7 +226,7 @@ export async function runAutomatedChecks(
   if (capabilities.hasLint && capabilities.lintCommand) {
     checks.push({ type: "lint", command: capabilities.lintCommand, name: "linter" });
   }
-  if (capabilities.hasBuild && capabilities.buildCommand) {
+  if (capabilities.hasBuild && capabilities.buildCommand && !skipBuild) {
     checks.push({ type: "build", command: capabilities.buildCommand, name: "build" });
   }
 

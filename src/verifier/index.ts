@@ -76,3 +76,19 @@ export { determineVerificationMode, verifyFeature } from "./core.js";
 
 // Re-export result utilities
 export { createVerificationSummary, formatVerificationResult } from "./results.js";
+
+// Re-export layered check mode
+export {
+  runLayeredCheck,
+  isHighRiskChange,
+  type LayeredCheckOptions,
+  type LayeredCheckResult,
+} from "./layered-check.js";
+
+// Re-export task impact detection
+export {
+  getTaskImpact,
+  testPatternToSourcePath,
+  buildFileTaskIndex,
+  type TaskImpact,
+} from "./task-impact.js";

@@ -10,7 +10,16 @@ agent-foreman next
 # Work on specific feature
 agent-foreman next <feature_id>
 
-# Verify feature implementation (without marking complete)
+# Fast check (default, no task_id): Git diff → selective tests + task impact
+agent-foreman check
+
+# Fast check with AI verification for affected tasks
+agent-foreman check --ai
+
+# Full check (all tests + build + E2E): Auto-selects next task
+agent-foreman check --full
+
+# Full check for specific task
 agent-foreman check <feature_id>
 
 # Mark feature as done (skips verification by default, use after check)
@@ -46,9 +55,12 @@ agent-foreman tdd strict             # Enable strict TDD
 agent-foreman tdd recommended        # Enable recommended TDD (default)
 agent-foreman tdd disabled           # Disable TDD guidance
 
-# Bootstrap/development/testing
-./ai/init.sh bootstrap
-./ai/init.sh dev
-./ai/init.sh check
-./ai/init.sh check --quick  # Selective testing mode
+# Bootstrap/development/testing (init.sh)
+./ai/init.sh bootstrap              # Install dependencies
+./ai/init.sh dev                    # Start dev server
+./ai/init.sh check                  # Run all checks (tests, types, lint, build, e2e)
+./ai/init.sh check --quick          # Quick mode: unit tests + E2E by tags only
+./ai/init.sh check --full           # Full mode: all tests including full E2E suite
+./ai/init.sh check --skip-e2e       # Skip E2E tests entirely
+./ai/init.sh check "pattern"        # Run tests matching pattern
 ```

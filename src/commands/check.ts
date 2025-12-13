@@ -1,7 +1,12 @@
 /**
- * Check command - AI-powered verification of feature completion
+ * 'check' command implementation
+ * AI-powered verification of task/feature completion
+ *
+ * Modes:
+ * - Fast check (default, no task_id): Git diff → selective tests + task impact notification
+ * - Full check (--full): All tests + build + E2E + AI analysis
+ * - Task check (<task_id>): Task-scoped full verification
  */
-
 import chalk from "chalk";
 
 import {
@@ -9,42 +14,79 @@ import {
   saveFeatureList,
   findFeatureById,
   updateFeatureVerification,
+  selectNextFeature,
 } from "../feature-list.js";
-import { appendProgressLog, createVerifyEntry } from "../progress-log.js";
-import { verifyTDDGate } from "../test-gate.js";
 import {
   verifyFeature,
   verifyFeatureAutonomous,
   createVerificationSummary,
   formatVerificationResult,
 } from "../verifier/index.js";
+import { runLayeredCheck } from "../verifier/layered-check.js";
+import { appendProgressLog, createVerifyEntry } from "../progress-log.js";
+import { verifyTDDGate } from "../test-gate.js";
 
 /**
  * Run the check command
  */
 export async function runCheck(
-  featureId: string,
-  verbose: boolean,
-  skipChecks: boolean,
+  featureId?: string,
+  verbose: boolean = false,
+  skipChecks: boolean = false,
   autonomous: boolean = false,
   testMode: "full" | "quick" | "skip" = "full",
   testPattern?: string,
   skipE2E: boolean = false,
-  e2eMode?: "full" | "smoke" | "tags" | "skip"
+  e2eMode?: "full" | "smoke" | "tags" | "skip",
+  full: boolean = false,
+  ai: boolean = false
 ): Promise<void> {
   const cwd = process.cwd();
 
-  // Load feature list
+  // ═══════════════════════════════════════════════════════════════════════════
+  // LAYERED CHECK MODE: When no task_id and not --full
+  // Fast git-diff-based verification with task impact notification
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (!featureId && !full) {
+    const featureList = await loadFeatureList(cwd);
+    const tddMode = featureList?.metadata?.tddMode;
+
+    await runLayeredCheck(cwd, {
+      verbose,
+      ai,
+      tddMode,
+    });
+    return;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TASK-BASED VERIFICATION: Standard behavior for task_id or --full
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Load task list
   const featureList = await loadFeatureList(cwd);
   if (!featureList) {
     console.log(chalk.red("✗ No feature list found. Run 'agent-foreman init' first."));
     process.exit(1);
   }
 
-  // Find feature
-  const feature = findFeatureById(featureList.features, featureId);
+  // Auto-select task if not provided (for --full mode)
+  let targetFeatureId = featureId;
+  if (!targetFeatureId) {
+    const next = selectNextFeature(featureList.features);
+    if (!next) {
+      console.log(chalk.yellow("No pending tasks to check."));
+      console.log(chalk.gray("All tasks are either passing, failed, blocked, or deprecated."));
+      return;
+    }
+    targetFeatureId = next.id;
+    console.log(chalk.cyan(`Auto-selected task: ${targetFeatureId}`));
+  }
+
+  // Find task
+  const feature = findFeatureById(featureList.features, targetFeatureId);
   if (!feature) {
-    console.log(chalk.red(`✗ Feature '${featureId}' not found.`));
+    console.log(chalk.red(`✗ Task '${targetFeatureId}' not found.`));
     process.exit(1);
   }
 
@@ -106,10 +148,10 @@ export async function runCheck(
       console.log(chalk.gray("   1. Create test file(s) matching the pattern(s) above"));
       console.log(chalk.gray("   2. Write failing tests for acceptance criteria"));
       console.log(chalk.gray("   3. Implement the feature to make tests pass"));
-      console.log(chalk.gray(`   4. Run 'agent-foreman check ${featureId}' again`));
+      console.log(chalk.gray(`   4. Run 'agent-foreman check ${targetFeatureId}' again`));
 
       console.log(
-        chalk.cyan(`\n   Run 'agent-foreman next ${featureId}' for TDD guidance\n`)
+        chalk.cyan(`\n   Run 'agent-foreman next ${targetFeatureId}' for TDD guidance\n`)
       );
       process.exit(1);
     }
@@ -170,7 +212,7 @@ export async function runCheck(
   const summary = createVerificationSummary(result);
   featureList.features = updateFeatureVerification(
     featureList.features,
-    featureId,
+    targetFeatureId,
     summary
   );
 
@@ -181,9 +223,9 @@ export async function runCheck(
   await appendProgressLog(
     cwd,
     createVerifyEntry(
-      featureId,
+      targetFeatureId,
       result.verdict,
-      `Verified ${featureId}: ${result.verdict}`
+      `Verified ${targetFeatureId}: ${result.verdict}`
     )
   );
 
@@ -192,13 +234,13 @@ export async function runCheck(
 
   // Suggest next action
   if (result.verdict === "pass") {
-    console.log(chalk.green("\n   ✓ Feature verified successfully!"));
-    console.log(chalk.cyan(`   Run 'agent-foreman done ${featureId}' to mark as passing`));
+    console.log(chalk.green("\n   ✓ Task verified successfully!"));
+    console.log(chalk.cyan(`   Run 'agent-foreman done ${targetFeatureId}' to mark as passing`));
   } else if (result.verdict === "fail") {
     console.log(chalk.red("\n   ✗ Verification failed. Review the criteria above and fix issues."));
     console.log(chalk.yellow("\n   Options:"));
-    console.log(chalk.gray(`   1. Fix issues and run 'agent-foreman check ${featureId}' again`));
-    console.log(chalk.gray(`   2. Mark as failed: 'agent-foreman fail ${featureId} -r "reason"'`));
+    console.log(chalk.gray(`   1. Fix issues and run 'agent-foreman check ${targetFeatureId}' again`));
+    console.log(chalk.gray(`   2. Mark as failed: 'agent-foreman fail ${targetFeatureId} -r "reason"'`));
   } else {
     console.log(chalk.yellow("\n   ⚠ Needs review. Some criteria could not be verified automatically."));
   }

@@ -255,20 +255,29 @@ async function main() {
       }
     )
     .command(
-      "check <feature_id>",
-      "AI-powered verification of feature completion",
+      "check [feature_id]",
+      "Verify code changes (fast mode) or task completion",
       (yargs) =>
         yargs
           .positional("feature_id", {
-            describe: "Feature ID to verify",
+            describe: "Task/feature ID for full verification (omit for fast mode)",
             type: "string",
-            demandOption: true,
+          })
+          .option("full", {
+            type: "boolean",
+            default: false,
+            describe: "Run full verification (all tests + build + E2E)",
+          })
+          .option("ai", {
+            type: "boolean",
+            default: false,
+            describe: "Run AI verification for affected tasks",
           })
           .option("verbose", {
             alias: "v",
             type: "boolean",
             default: false,
-            describe: "Show detailed AI reasoning",
+            describe: "Show detailed output",
           })
           .option("skip-checks", {
             alias: "s",
@@ -279,38 +288,38 @@ async function main() {
           .option("no-autonomous", {
             type: "boolean",
             default: false,
-            describe: "Disable autonomous AI exploration (use diff-based)",
+            describe: "Disable autonomous AI exploration",
           })
           .option("quick", {
-            alias: "q",
             type: "boolean",
             default: true,
-            describe: "Run only related tests (selective test execution, default)",
-          })
-          .option("full", {
-            type: "boolean",
-            default: false,
-            describe: "Force full test suite",
+            describe: "Run only related tests (for task mode)",
           })
           .option("test-pattern", {
             type: "string",
-            describe: "Explicit test pattern to use (e.g., \"tests/auth/**\")",
+            describe: "Explicit test pattern to use",
           })
           .option("skip-e2e", {
             type: "boolean",
             default: false,
-            describe: "Skip E2E tests entirely (run unit tests only)",
+            describe: "Skip E2E tests entirely",
           }),
       async (argv) => {
-        // Determine test mode: --full > --quick (default)
+        // Determine test mode based on flags
         const testMode = argv.full ? "full" : "quick";
-        // Determine E2E mode same as complete command
-        const e2eMode = argv.skipE2e
-          ? "skip"
-          : argv.full
-            ? "full"
-            : undefined; // Quick mode: determined by tags in verifier
-        await runCheck(argv.feature_id!, argv.verbose, argv.skipChecks, !argv.noAutonomous, testMode, argv.testPattern, argv.skipE2e, e2eMode);
+        const e2eMode = argv.skipE2e ? "skip" : argv.full ? "full" : undefined;
+        await runCheck(
+          argv.feature_id,
+          argv.verbose,
+          argv.skipChecks,
+          !argv.noAutonomous,
+          testMode,
+          argv.testPattern,
+          argv.skipE2e,
+          e2eMode,
+          argv.full,
+          argv.ai
+        );
       }
     )
     .command(

@@ -175,6 +175,12 @@ export interface Feature {
    * Regenerated when feature.version changes
    */
   tddGuidance?: CachedTDDGuidance;
+  /**
+   * File patterns that affect this task (for task impact detection).
+   * When files matching these patterns change, this task is flagged as potentially affected.
+   * Supports glob patterns like "src/auth/**" or "src/utils/hash.ts".
+   */
+  affectedBy?: string[];
 }
 
 /**

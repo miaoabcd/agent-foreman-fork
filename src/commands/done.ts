@@ -29,6 +29,7 @@ import {
 } from "../verifier/index.js";
 import { isGitRepo, gitAdd, gitCommit } from "../git-utils.js";
 import { verifyTestFilesExist, discoverFeatureTestFiles, verifyTDDGate } from "../test-gate.js";
+import { runFail } from "./fail.js";
 import { aiScanProject, aiResultToSurvey, generateAISurveyMarkdown } from "../ai-scanner.js";
 import { scanDirectoryStructure } from "../project-scanner.js";
 import { promptConfirmation } from "./helpers.js";
@@ -264,6 +265,15 @@ export async function runDone(
     // Handle verdict
     if (result.verdict === "fail") {
       console.log(chalk.red("\n   ✗ Verification failed. Feature NOT marked as complete."));
+
+      // In loop mode: auto-fail and continue to next task
+      if (loopMode) {
+        console.log(chalk.yellow("\n   Auto-failing in loop mode..."));
+        await runFail(featureId, "Verification failed", true);
+        return;
+      }
+
+      // Manual mode: show options and exit
       console.log(chalk.yellow("\n   Options:"));
       console.log(chalk.gray(`   1. Fix the issues above and run 'agent-foreman done ${featureId}' again`));
       console.log(chalk.gray(`   2. Mark as failed and continue: 'agent-foreman fail ${featureId} -r "reason"'`));

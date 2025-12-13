@@ -46,6 +46,12 @@ export interface AutomatedCheckOptions {
    * Default: false for backward compatibility
    */
   parallel?: boolean;
+  /**
+   * Skip build step (for fast check mode)
+   * When true, build check is skipped even if capabilities.hasBuild is true
+   * Default: false
+   */
+  skipBuild?: boolean;
 }
 
 /**

@@ -21,3 +21,9 @@ export {
 
 // Re-export frontendEngineer
 export * from "./frontendEngineer.js";
+
+// Re-export backendEngineer
+export * from "./backendEngineer.js";
+
+// Re-export tester
+export * from "./tester.js";

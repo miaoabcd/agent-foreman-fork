@@ -27,3 +27,6 @@ export * from "./backendEngineer.js";
 
 // Re-export tester
 export * from "./tester.js";
+
+// Re-export aggregator
+export * from "./aggregator.js";

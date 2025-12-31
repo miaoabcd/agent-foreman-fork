@@ -18,3 +18,6 @@ export {
   Dependency,
   AnalysisMetadata,
 } from "./productManager.js";
+
+// Re-export frontendEngineer
+export * from "./frontendEngineer.js";

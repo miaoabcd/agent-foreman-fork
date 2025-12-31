@@ -39,3 +39,5 @@ src/gitignore/embedded-templates.generated.ts
 src/plugins-bundle.generated.ts
 src/version.generated.ts
 dist/bin/
+# === Added by agent-foreman ===
+ai/capabilities.json

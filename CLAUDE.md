@@ -104,3 +104,6 @@ npm version patch && git push origin main --tags
 ```
 
 Version auto-syncs across `package.json`, `marketplace.json`, and `plugin.json`.
+## Project Goal
+
+Long Task Harness for AI agents - feature-driven development with external memory

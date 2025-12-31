@@ -2,7 +2,7 @@
 
 ## Summary
 
-agent-foreman is a Long Task Harness CLI tool for AI agents, enabling feature-driven development with external memory. It provides AI-powered project analysis, feature tracking, TDD workflow enforcement, and verification via Claude, Gemini, or Codex agents. The tool manages feature lists, progress logs, and generates CLAUDE.md documentation for seamless AI agent session handoffs.
+agent-foreman is a Long-Task Harness for AI agents providing feature-driven development with external memory. It helps AI coding agents avoid common failure modes by providing structured workflows, acceptance criteria verification, TDD enforcement, and clean session handoffs through ai/feature_list.json and ai/progress.log.
 
 > Analyzed by: claude
 
@@ -12,9 +12,9 @@ agent-foreman is a Long Task Harness CLI tool for AI agents, enabling feature-dr
 |--------|-------|
 | Language | TypeScript |
 | Framework | none |
-| Build Tool | tsc (TypeScript Compiler) |
+| Build Tool | TypeScript Compiler (tsc) |
 | Test Framework | Vitest |
-| Package Manager | npm |
+| Package Manager | pnpm |
 
 ## Directory Structure
 
@@ -26,210 +26,197 @@ agent-foreman is a Long Task Harness CLI tool for AI agents, enabling feature-dr
 
 ## Modules
 
-### cli
-- **Path**: `src/index.ts`
-- **Status**: complete
-- **Description**: CLI entry point using yargs for command parsing with commands: analyze, init, next, status, impact, done, check, agents, scan
-
 ### commands
-- **Path**: `src/commands/`
+- **Path**: `src/commands`
 - **Status**: complete
-- **Description**: Command handlers for all CLI subcommands (init, next, status, check, done, impact, analyze, scan, agents)
-
-### feature-list
-- **Path**: `src/feature-list.ts`
-- **Status**: complete
-- **Description**: Feature list CRUD operations, selection algorithms, status management, TDD migration, and statistics
-
-### types
-- **Path**: `src/types.ts`
-- **Status**: complete
-- **Description**: Core TypeScript type definitions for features, progress logs, surveys, and CLI options
-
-### verifier
-- **Path**: `src/verifier/`
-- **Status**: complete
-- **Description**: AI-powered feature verification system with TDD verification, autonomous mode, check execution, and result formatting
-
-### capabilities
-- **Path**: `src/capabilities/`
-- **Status**: complete
-- **Description**: Project capability detection with memory cache, disk cache, git invalidation, and AI discovery
-
-### tdd-guidance
-- **Path**: `src/tdd-guidance/`
-- **Status**: complete
-- **Description**: TDD guidance generation with criterion mapping, skeleton generation, and E2E scenario generation
-
-### verification-store
-- **Path**: `src/verification-store/`
-- **Status**: complete
-- **Description**: Verification result persistence with index operations, migration support, and legacy store compatibility
-
-### gitignore
-- **Path**: `src/gitignore/`
-- **Status**: complete
-- **Description**: .gitignore generation with GitHub API client, bundled templates, and language-based detection
+- **Description**: CLI command handlers for all agent-foreman commands (analyze, init, next, status, check, done, fail, scan, impact, install, uninstall, agents, tdd)
 
 ### agents
 - **Path**: `src/agents.ts`
 - **Status**: complete
-- **Description**: AI agent subprocess management for Claude, Gemini, and Codex CLI tools
+- **Description**: AI agent subprocess management for Claude, Gemini, and Codex CLI tools with retry logic and priority ordering
 
-### ai-scanner
-- **Path**: `src/ai-scanner.ts`
+### capabilities
+- **Path**: `src/capabilities`
 - **Status**: complete
-- **Description**: AI-powered project scanner for autonomous codebase analysis and feature discovery
+- **Description**: Project capability detection with memory and disk caching, git invalidation, and AI-powered discovery
 
-### progress-log
-- **Path**: `src/progress-log.ts`
+### verifier
+- **Path**: `src/verifier`
 - **Status**: complete
-- **Description**: Progress log operations for session handoff with entry formatting and parsing
+- **Description**: Feature verification system including automated checks, AI analysis, TDD verification, and autonomous exploration
 
-### impact-analyzer
-- **Path**: `src/impact-analyzer.ts`
+### tdd-guidance
+- **Path**: `src/tdd-guidance`
 - **Status**: complete
-- **Description**: Impact analysis for feature changes with dependency graphs and topological sorting
+- **Description**: TDD workflow guidance generator converting acceptance criteria to test case suggestions with skeleton generation
 
-### test-gate
-- **Path**: `src/test-gate.ts`
+### gitignore
+- **Path**: `src/gitignore`
 - **Status**: complete
-- **Description**: Test file gate verification for TDD workflow enforcement
+- **Description**: Gitignore generation with GitHub API integration and bundled templates for comprehensive project protection
 
-### git-utils
-- **Path**: `src/git-utils.ts`
+### rules
+- **Path**: `src/rules`
 - **Status**: complete
-- **Description**: Git utility functions for commit, add, status checks, and repository initialization
+- **Description**: Rule template management for Claude Code integration with embedded rules support
 
-### schema
-- **Path**: `src/schema.ts`
+### verification-store
+- **Path**: `src/verification-store`
 - **Status**: complete
-- **Description**: JSON Schema validation for feature_list.json using AJV
+- **Description**: Verification result persistence with migration support and index operations
 
-### upgrade
-- **Path**: `src/upgrade.ts`
+### feature-list
+- **Path**: `src/feature-list.ts`
 - **Status**: complete
-- **Description**: Auto-upgrade utility with npm registry version checking and interactive upgrade prompts
-
-### prompts
-- **Path**: `src/prompts.ts`
-- **Status**: complete
-- **Description**: Prompt templates for CLAUDE.md generation and feature guidance
-
-### init-helpers
-- **Path**: `src/init-helpers.ts`
-- **Status**: complete
-- **Description**: Helper functions for init command including project detection and file generation
+- **Description**: Feature list CRUD operations with optimistic locking, TDD migration, and conflict detection
 
 ### plugins
-- **Path**: `plugins/`
+- **Path**: `plugins/agent-foreman`
 - **Status**: complete
-- **Description**: Claude Code plugin with slash commands, skills, and agent definitions
+- **Description**: Claude Code plugin with agents, skills, and slash commands for IDE integration
 
-## Feature Completion Status
+## Discovered Features
 
-| ID | Description | Module | Status |
-|----|-------------|--------|--------|
-| cli.analyze | Generate AI-powered project survey and write docs/PROJECT_SURVEY.md with summary stats output. | cli | ✅ passing |
-| cli.init | Initialize or upgrade harness by analyzing project/goal, merging features, generating init.sh, CLAUDE.md, and progress log. | cli | ✅ passing |
-| cli.next | Select next feature (or specific ID), optionally run checks, show status, TDD guidance, and feature briefings. | cli | ✅ passing |
-| cli.status | Display project goal, feature stats, completion bar, recent activity, and optional JSON/quiet modes. | cli | ✅ passing |
-| cli.impact | Report dependent and same-module features with recommendations for change impact. | cli | ✅ passing |
-| cli.done | Verify feature (tests/AI), enforce test file gate, update status, log progress, and auto-commit with suggestion fallback. | cli | ✅ passing |
-| cli.check | Run feature verification without marking done, supporting autonomous mode, quick/full tests, and E2E control. | cli | ✅ passing |
-| cli.agents | List available AI agents and their availability. | cli | ✅ passing |
-| cli.scan | Scan or refresh cached project capabilities with optional verbose output. | cli | ✅ passing |
-| goal.autodetect | Infer project goal from package.json description or README before falling back to directory name. | cli | ✅ passing |
-| ai.scanProject | Run autonomous agent to survey repository structure, configs, and code, returning structured tech/modules/features. | ai-scanner | ✅ passing |
-| ai.generateFromSurvey | Convert existing PROJECT_SURVEY.md and goal into feature list via AI. | ai-scanner | ✅ passing |
-| ai.generateFromGoal | Create initial tech stack and feature backlog from goal text for empty projects. | ai-scanner | ✅ passing |
-| ai.surveyMarkdown | Render AI survey data into Markdown with tech stack, structure, modules, features, completion, recommendations, and commands. | ai-scanner | ✅ passing |
-| agents.callAny | Try prioritized agents with spinners, timeouts, and verbose errors until one succeeds. | agents | ✅ passing |
-| agents.callWithRetry | Retry single-agent execution with configurable attempts and delays. | agents | ✅ passing |
-| agents.checkAvailable | Detect installed AI CLIs and report availability list or detailed status. | agents | ✅ passing |
-| structure.scan | Gather entry points, src/test directories, and config files across common patterns. | project-scanner | ✅ passing |
-| structure.isEmpty | Determine if project lacks source files across multiple languages/directories. | project-scanner | ✅ passing |
-| features.loadSave | Read/write ai/feature_list.json with schema validation and metadata updates. | feature-list | ✅ passing |
-| features.selection | Select next feature prioritizing needs_review then failing by priority. | feature-list | ✅ passing |
-| features.dependencyQueries | Find dependents, same-module peers, and generate deprecation or dependency-aware updates. | feature-list | ✅ passing |
-| features.testRequirements | Auto-generate testRequirements and module-based test patterns for discovered features. | feature-list | ✅ passing |
-| features.stats | Compute feature status counts and completion percentages excluding deprecated items. | feature-list | ✅ passing |
-| progress.logOps | Format, append, and parse single-line progress log entries with escape handling. | progress-log | ✅ passing |
-| progress.recent | Retrieve recent progress entries and render for display. | progress-log | ✅ passing |
-| init.detectAnalyze | Choose between survey reuse, empty-goal generation, or fresh AI scan before init. | init-helpers | ✅ passing |
-| init.mergeFeatures | Merge discovered features into existing list respecting mode (merge/new/scan) and goal updates. | init-helpers | ✅ passing |
-| init.generateHarness | Detect capabilities, generate or AI-merge init.sh, update CLAUDE.md, log init, and suggest commit. | init-helpers | ✅ passing |
-| initScript.generate | Produce init.sh from capabilities with bootstrap/dev/check/build/status commands and quick/full/E2E flags. | init-script | ✅ passing |
-| prompts.harnessDocs | Generate harness instructions section and CLAUDE.md content from goal. | prompts | ✅ passing |
-| prompts.featureGuidance | Emit feature guidance with acceptance checklist, dependencies, notes, and workflow steps. | prompts | ✅ passing |
-| tdd.guidance | Convert acceptance to unit/E2E cases, suggest test files, and map criteria to tests. | tdd-guidance | ✅ passing |
-| tdd.unitSkeletons | Generate unit test skeletons for Vitest/Jest/Mocha/Pytest/Go/Cargo frameworks. | tdd-guidance | ✅ passing |
-| tdd.e2eSkeletons | Generate Playwright-style E2E skeletons with page object template and tag support. | tdd-guidance | ✅ passing |
-| tests.discovery | Map source changes to test candidates, detect existing tests, and choose patterns or files for selective runs. | test-discovery | ✅ passing |
-| tests.selectiveCommand | Build selective test commands via AI-discovered templates or framework fallbacks. | test-discovery | ✅ passing |
-| tests.e2eCommand | Assemble E2E commands with tag-based grep modes (full/smoke/tags/skip). | test-discovery | ✅ passing |
-| verification.runAutomated | Execute tests/typecheck/lint/build/E2E (or init.sh) with progress bars and CI env handling. | verification | ✅ passing |
-| verification.analyzeWithAI | Build verification prompt with diff, automated results, related files, and call AI with retries/backoff. | verification | ✅ passing |
-| verification.verifyFeature | Full verification pipeline using git diff, selective tests, AI analysis, result formatting, and saving. | verification | ✅ passing |
-| verification.autonomous | Autonomous verification mode that lets AI explore codebase with optional automated checks. | verification | ✅ passing |
-| verification.tdd | TDD verification that runs specified test files (and E2E if required) to derive verdict without AI. | verification | ✅ passing |
-| verification.diffTruncation | Intelligently truncate diffs preserving structure for prompts and fallback quick-check prompts. | verification-support | ✅ passing |
-| verification.reports | Generate markdown verification reports and compact summaries. | verification-support | ✅ passing |
-| verification.store | Persist verification runs per feature, maintain index, migrate legacy results, and query history/stats. | verification-support | ✅ passing |
-| capabilities.detect | AI-driven discovery of test/build/typecheck/lint/E2E commands with confidence scoring and config tracking. | project-capabilities | ✅ passing |
-| capabilities.cache | Load/save/invalidate capabilities cache with staleness checks against git commit and tracked files. | project-capabilities | ✅ passing |
-| impact.analysis | Compute directly and potentially affected features, recommend needs_review/deprecation/notes updates. | impact-analyzer | ✅ passing |
-| impact.graphOps | Build dependency graph, detect cycles, compute readiness/topological order and dependency depth. | impact-analyzer | ✅ passing |
-| git.statusOps | Detect git repo, dirty state, changed/staged files, and current branch. | utilities | ✅ passing |
-| git.commitOps | Stage paths or all changes and create commits with hash retrieval. | utilities | ✅ passing |
-| file.safety | Safe path validation/joining, existence checks, and guarded file reads. | utilities | ✅ passing |
-| timeout.config | Configurable operation timeouts via env/.env with formatting and agent priority parsing. | utilities | ✅ passing |
-| progress.ui | Spinner, progress bar, and step progress utilities for CLI-friendly feedback. | utilities | ✅ passing |
-| test.gate | Validate required unit/E2E test files exist for a feature and discover matching tests. | utilities | ✅ passing |
-| upgrade.check | Check npm for newer agent-foreman versions, prompt to upgrade, update plugin, and run installs. | utilities | ✅ passing |
-| refactor.verifier.split | Split verifier.ts (1,568 lines) into 8 focused modules under src/verifier/ directory. | refactor | ✅ passing |
-| refactor.index.split | Split index.ts (1,530 lines) into 11 focused modules under src/commands/ directory. | refactor | ✅ passing |
-| refactor.capabilities.split | Split project-capabilities.ts (837 lines) into 5 focused modules under src/capabilities/ directory. | refactor | ✅ passing |
-| refactor.verification-store.split | Split verification-store.ts (773 lines) into 4 focused modules under src/verification-store/ directory. | refactor | ✅ passing |
-| refactor.tdd-guidance.split | Split tdd-guidance.ts (705 lines) into 5 focused modules under src/tdd-guidance/ directory. | refactor | ✅ passing |
-| gitignore.bundledTemplates | Bundle top 6 GitHub gitignore templates (Node, Python, Go, Rust, Java, Nextjs) for offline/instant access. | gitignore | ✅ passing |
-| gitignore.githubApi | GitHub API client for fetching gitignore templates with local caching (7-day TTL) at ~/.agent-foreman/gitignore-cache/. | gitignore | ✅ passing |
-| gitignore.generator | Main gitignore generator with config file and language detection, template mapping, and section-based content generation. | gitignore | ✅ passing |
-| gitignore.minimalProtection | Add minimal .gitignore creation in gitInit() for immediate protection when initializing a new git repository. | gitignore | ✅ passing |
-| gitignore.comprehensiveGeneration | Add comprehensive .gitignore generation in generateHarnessFiles() using detected capabilities and config files. | gitignore | ✅ passing |
-| gitignore.tests | Comprehensive test coverage for gitignore generation including API client, generator, and integration tests. | gitignore | ✅ passing |
+| ID | Description | Module | Source | Confidence |
+|----|-------------|--------|--------|------------|
+| cli.analyze | Generate AI-powered project analysis report and output to docs/ARCHITECTURE.md | commands | code | 100% |
+| cli.init | Initialize or upgrade the long-task harness with AI analysis, feature discovery, and TDD mode selection | commands | code | 100% |
+| cli.next | Show next feature to work on with external memory sync, TDD guidance, and JSON output support | commands | code | 100% |
+| cli.status | Show current harness status with feature statistics, progress bar, and recent activity | commands | code | 100% |
+| cli.check | Verify code changes with layered check mode (fast git-diff based) or full task verification with AI analysis | commands | code | 100% |
+| cli.done | Mark feature as complete with verification, auto-commit, TDD gate enforcement, and loop mode support | commands | code | 100% |
+| cli.fail | Mark feature as failed and continue to next feature in loop workflow | commands | code | 100% |
+| cli.scan | Scan project verification capabilities and cache to ai/capabilities.json | commands | code | 100% |
+| cli.impact | Analyze impact of changes to a feature including dependent and same-module features | commands | code | 100% |
+| cli.install | Install Claude Code plugin to marketplace, cache, and enable in settings | commands | code | 100% |
+| cli.uninstall | Uninstall Claude Code plugin from all registries and delete cache | commands | code | 100% |
+| cli.agents | Show available AI agents status (Claude, Codex, Gemini) | commands | code | 100% |
+| cli.tdd | View or change TDD mode configuration (strict, recommended, disabled) | commands | code | 100% |
+| agents.call | Call AI agent with prompt and return output | agents | code | 100% |
+| agents.callWithRetry | Call AI agent with retry logic and configurable timeout | agents | code | 100% |
+| agents.callAnyAvailable | Try multiple agents in priority order until one succeeds with progress indicator | agents | code | 100% |
+| agents.checkAvailable | Check which AI agents are available in PATH | agents | code | 100% |
+| agents.filterAvailable | Filter agent configurations to only available ones | agents | code | 100% |
+| agents.commandExists | Cross-platform command existence check using which/where | agents | code | 100% |
+| featureList.load | Load feature list from ai/feature_list.json with validation and TDD migration | feature-list | code | 100% |
+| featureList.save | Save feature list with optimistic locking and conflict detection | feature-list | code | 100% |
+| featureList.selectNext | Select next feature based on status priority (needs_review > failing) and priority number | feature-list | code | 100% |
+| featureList.updateStatus | Update feature status and notes | feature-list | code | 100% |
+| featureList.updateVerification | Update feature verification summary | feature-list | code | 100% |
+| featureList.merge | Merge discovered features with existing features without duplicates | feature-list | code | 100% |
+| featureList.getStats | Get statistics about feature statuses | feature-list | code | 100% |
+| featureList.getCompletion | Calculate completion percentage excluding deprecated features | feature-list | code | 100% |
+| featureList.groupByModule | Group features by module name | feature-list | code | 100% |
+| featureList.optimisticRetry | Execute operations with optimistic retry on conflict using exponential backoff | feature-list | code | 100% |
+| featureList.migrateToStrictTDD | Migrate features to strict TDD mode by setting testRequirements.unit.required | feature-list | code | 100% |
+| capabilities.detect | Detect project capabilities using memory cache, disk cache, or AI discovery | capabilities | code | 100% |
+| capabilities.memoryCache | In-memory caching of capabilities with TTL | capabilities | code | 100% |
+| capabilities.diskCache | Disk-based caching to ai/capabilities.json | capabilities | code | 100% |
+| capabilities.gitInvalidation | Git-based cache invalidation by tracking commit hash and build file changes | capabilities | code | 100% |
+| capabilities.aiDiscovery | AI-powered discovery of test, lint, typecheck, and build commands | capabilities | code | 100% |
+| verifier.verify | Main verification orchestration for feature completion checking | verifier | code | 100% |
+| verifier.autonomous | AI-powered autonomous verification mode with exploration | verifier | code | 100% |
+| verifier.tdd | TDD verification mode with test execution | verifier | code | 100% |
+| verifier.layeredCheck | Fast git-diff based verification with selective tests and task impact | verifier | code | 100% |
+| verifier.taskImpact | Detect which tasks are affected by file changes | verifier | code | 100% |
+| verifier.checkExecutor | Run automated checks (tests, lint, typecheck, build) in parallel | verifier | code | 100% |
+| verifier.aiAnalysis | AI analysis with retry logic and related file reading | verifier | code | 100% |
+| verifier.gitOperations | Git diff and commit hash operations for verification | verifier | code | 100% |
+| verifier.report | Generate markdown verification reports and summaries | verifier | code | 100% |
+| tddGuidance.generate | Generate TDD guidance from acceptance criteria | tdd-guidance | code | 100% |
+| tddGuidance.criterionMapper | Map acceptance criteria to unit test cases and E2E scenarios | tdd-guidance | code | 100% |
+| tddGuidance.skeletonGenerator | Generate unit test skeletons for various frameworks (Vitest, Jest, Mocha) | tdd-guidance | code | 100% |
+| tddGuidance.e2eScenarios | Generate Playwright E2E test skeleton | tdd-guidance | code | 100% |
+| tddGuidance.aiGenerator | AI-powered TDD guidance generation with caching | tdd-guidance | code | 100% |
+| testGate.verify | Verify required test files exist before feature completion | test-gate | code | 100% |
+| testGate.discover | Discover all test files for a feature based on configuration | test-gate | code | 100% |
+| testGate.verifyTDD | Enhanced TDD gate verification respecting project-level strict mode | test-gate | code | 100% |
+| gitUtils.isRepo | Check if directory is a git repository | git-utils | code | 100% |
+| gitUtils.hasUncommittedChanges | Check for staged, unstaged, or untracked changes | git-utils | code | 100% |
+| gitUtils.getChangedFiles | Get list of all changed files | git-utils | code | 100% |
+| gitUtils.add | Stage files for commit | git-utils | code | 100% |
+| gitUtils.commit | Create git commit with message | git-utils | code | 100% |
+| gitUtils.init | Initialize git repository with minimal gitignore | git-utils | code | 100% |
+| progressLog.append | Append entry to ai/progress.log | progress-log | code | 100% |
+| progressLog.read | Read all entries from progress log | progress-log | code | 100% |
+| progressLog.getRecent | Get most recent entries from log | progress-log | code | 100% |
+| progressLog.parse | Parse progress log entry from line format | progress-log | code | 100% |
+| progressLog.createEntry | Create INIT, STEP, CHANGE, REPLAN, or VERIFY entries | progress-log | code | 100% |
+| aiScanner.scan | AI-powered project scan using autonomous exploration | ai-scanner | code | 100% |
+| aiScanner.generateFromSurvey | Generate features from existing ARCHITECTURE.md | ai-scanner | code | 100% |
+| aiScanner.generateFromGoal | Generate features from goal description for new projects | ai-scanner | code | 100% |
+| aiScanner.parseResponse | Parse AI response to extract analysis results | ai-scanner | code | 100% |
+| aiScanner.toSurvey | Convert AI analysis result to ProjectSurvey format | ai-scanner | code | 100% |
+| aiScanner.generateMarkdown | Generate enhanced survey markdown with AI insights | ai-scanner | code | 100% |
+| projectScanner.scanStructure | Scan directory structure for entry points, source dirs, and configs | project-scanner | code | 100% |
+| projectScanner.isEmpty | Check if project has no source files | project-scanner | code | 100% |
+| schema.validate | Validate feature list against JSON schema using AJV | schema | code | 100% |
+| schema.parse | Validate and return typed feature list | schema | code | 100% |
+| schema.isValidFeatureId | Validate feature ID format | schema | code | 100% |
+| initHelpers.detectAndAnalyze | Detect project type and analyze with AI | init-helpers | code | 100% |
+| initHelpers.mergeOrCreate | Merge or create features based on init mode | init-helpers | code | 100% |
+| initHelpers.generateHarness | Generate harness files (init.sh, rules, progress.log) | init-helpers | code | 100% |
+| pluginInstaller.install | Full plugin installation to Claude Code marketplace | plugin-installer | code | 100% |
+| pluginInstaller.uninstall | Full plugin uninstallation from all registries | plugin-installer | code | 100% |
+| pluginInstaller.checkAndInstall | Auto-install/update plugins on CLI startup | plugin-installer | code | 100% |
+| pluginInstaller.isCompiled | Check if running as compiled binary vs npm install | plugin-installer | code | 100% |
+| pluginInstaller.hasEmbedded | Check if embedded plugins are available | plugin-installer | code | 100% |
+| upgrade.check | Check for available upgrades from npm or GitHub | upgrade | code | 100% |
+| upgrade.interactive | Interactive upgrade check on CLI startup with user prompt | upgrade | code | 100% |
+| upgrade.perform | Perform full upgrade (npm package + Claude Code plugin) | upgrade | code | 100% |
+| upgrade.compareVersions | Compare semantic version strings | upgrade | code | 100% |
+| impactAnalyzer.analyze | Analyze impact of changes to a feature | impact-analyzer | code | 100% |
+| impactAnalyzer.applyRecommendations | Apply impact recommendations to feature list | impact-analyzer | code | 100% |
+| impactAnalyzer.buildDependencyGraph | Build reverse dependency graph for features | impact-analyzer | code | 100% |
+| impactAnalyzer.getBlockingFeatures | Get features blocking a given feature | impact-analyzer | code | 100% |
+| impactAnalyzer.sortByDependency | Topological sort of features by dependency order | impact-analyzer | code | 100% |
+| rules.copy | Copy rule templates to project .claude/rules/ directory | rules | code | 100% |
+| rules.getTemplate | Get rule template by name from embedded or filesystem | rules | code | 100% |
+| rules.verify | Verify rule templates are available | rules | code | 100% |
+| rules.update | Update project rules if already installed | rules | code | 100% |
+| gitignore.ensureMinimal | Create minimal gitignore for immediate protection | gitignore | code | 100% |
+| gitignore.ensureComprehensive | Create comprehensive gitignore with language templates | gitignore | code | 100% |
+| gitignore.fetchTemplates | Fetch gitignore templates from GitHub API | gitignore | code | 100% |
+| gitignore.bundledTemplates | Use bundled gitignore templates when offline | gitignore | code | 100% |
+| plugin.agent.foreman | Claude Code foreman agent for feature management orchestration | plugins | code | 100% |
+
+*... and 9 more features*
 
 ## Completion Assessment
 
-**Overall: 100%**
+**Overall: 95%**
 
 **Notes:**
-- All features are passing
-- Completed 68/68 features
-- Last updated: 2025-12-08
+- Comprehensive CLI tool with 13 commands fully implemented
+- AI agent integration with Claude, Codex, and Gemini support
+- TDD workflow with strict/recommended/disabled modes
+- Plugin system for Claude Code IDE integration
+- Extensive test coverage with 43+ test files
+- Optimistic locking for concurrent feature list access
+- Two-tier caching (memory + disk) for capabilities
 
 ## Recommendations
 
-- Add integration tests for full CLI workflow end-to-end scenarios
-- Consider adding web dashboard for visual feature tracking
-- Add support for additional AI agents as they become available
-- Implement feature branching support for parallel development
-- Add metrics/analytics for feature completion velocity tracking
+- Consider adding E2E tests for CLI commands to complement existing unit and integration tests
+- Document the plugin development workflow for third-party plugin creation
+- Add timeout configuration documentation for different AI agents
+- Consider implementing feature priority auto-rebalancing based on dependency completion
 
 ## Commands
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Start development server
-npm run dev
+pnpm dev
 
 # Build for production
-npm run build
+pnpm build
 
 # Run tests
-npm test
+CI=true pnpm test
 ```
 
 ---
